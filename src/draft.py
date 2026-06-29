@@ -53,7 +53,7 @@ REQUIRED_SECTIONS: list[str] = [
     "5. 절세 기회",
     "6. 선택지별 세부담·리스크 비교표",
     "7. 쟁점별 검토 메모",
-    "8. 관련 법령·예규·판례 근거",
+    "8. 관련 법령·근거 자료",
     "9. 추가 요청 자료",
     "10. 회계사 검토 필요사항",
     "11. 결론 초안·추천 검토 순서",
@@ -204,7 +204,7 @@ class DraftPackageData:
     # 7. 쟁점별 검토메모
     issue_memos: list[IssueMemo]
 
-    # 8. 관련 법령·예규·판례 근거 (버전객체 Citation 상속 — 슬라이스 ①~④)
+    # 8. 관련 법령·근거 자료 (버전객체 Citation 상속 — 슬라이스 ①~④; 법령·예규·판례·웹 모두 수용)
     citations: list[Citation]
 
     # 9. 추가 요청 자료
@@ -309,7 +309,7 @@ def validate_draft_package(data: DraftPackageData) -> None:
     need({"보수", "중립", "적극"}.issubset(keys),
          "6. 선택지 비교표는 보수/중립/적극 3종 필수")
     need(bool(data.issue_memos), "7. 쟁점별 검토 메모(≥1)")
-    need(bool(data.citations), "8. 관련 법령·예규·판례 근거(≥1 버전객체 인용)")
+    need(bool(data.citations), "8. 관련 법령·근거 자료(≥1 버전객체 인용)")
     need(bool(data.additional_requests), "9. 추가 요청 자료(≥1)")
     need(bool(data.review_items), "10. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
     need(bool(data.conclusion.strip()) and bool(data.recommended_order),
@@ -485,7 +485,7 @@ def _render_package_docx(
                 doc.add_paragraph(f"escalation: {memo.escalation}")
         rendered.append(REQUIRED_SECTIONS[6])
 
-    # 8. 관련 법령·예규·판례 근거
+    # 8. 관련 법령·근거 자료 (법령·예규·판례·웹 — 실제 인용된 근거만 본문에 나열)
     doc.add_heading(REQUIRED_SECTIONS[7], level=1)
     for cv in cviews.values():
         rank = f"(권위 {cv.authority_rank})" if cv.authority_rank else ""

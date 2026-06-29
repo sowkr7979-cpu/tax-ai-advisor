@@ -131,7 +131,7 @@ export function DraftScreen({ draft }: { draft: Draft }) {
         ))}
 
         {/* 8 */}
-        <h2 data-section="8">8. 관련 법령·예규·판례 근거</h2>
+        <h2 data-section="8">8. 관련 법령·근거 자료</h2>
         <ul className="cite-list" data-testid="draft-citations">
           {draft.citations.map((c) => (
             <li key={c.citation_id}>

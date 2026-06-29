@@ -203,7 +203,7 @@ def test_client_deliverable_with_proof_excludes_internal_sections(tmp_path):
     assert "10. 회계사 검토 필요사항" not in headings
     # 그 외 9개 섹션은 유지
     assert "6. 선택지별 세부담·리스크 비교표" in headings
-    assert "8. 관련 법령·예규·판례 근거" in headings
+    assert "8. 관련 법령·근거 자료" in headings
     assert len(headings) == 9
 
 
