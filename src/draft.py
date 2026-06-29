@@ -284,13 +284,19 @@ def validate_draft_package(data: DraftPackageData) -> None:
                 raise DraftValidationError(
                     f"OUT-003 인용 미해소: {label}의 인용 {cid} 가 근거목록에 없음"
                 )
-            if registry is not None:
-                try:
-                    registry.require_citation(cit)
-                except CitationVerificationError as exc:
-                    raise DraftValidationError(
-                        f"OUT-003 인용 검증 실패(SourceRegistry/날조): {label}의 인용 {cid} — {exc}"
-                    ) from exc
+            # fail-closed: source_objects(버전 소스객체)로 만든 SourceRegistry가 없으면
+            # 날조 인용을 검증할 수 없으므로 통과시키지 않는다(인덱스 존재만으로는 부족).
+            if registry is None:
+                raise DraftValidationError(
+                    f"OUT-003 인용 미검증(날조 차단): {label}의 인용 {cid} 를 검증할 "
+                    f"SourceRegistry 없음 — 법적 주장 인용은 source_objects(버전 소스객체) 필수"
+                )
+            try:
+                registry.require_citation(cit)
+            except CitationVerificationError as exc:
+                raise DraftValidationError(
+                    f"OUT-003 인용 검증 실패(SourceRegistry/날조): {label}의 인용 {cid} — {exc}"
+                ) from exc
 
     need(bool(data.executive_summary.strip()), "1. Executive Summary 본문")
     need(bool(data.company_name.strip()) and bool(data.review_scope.strip()),

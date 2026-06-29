@@ -130,6 +130,18 @@ def test_unresolved_citation_reference_is_rejected():
         validate_draft_package(dangling)
 
 
+def test_cited_claim_without_source_objects_is_rejected():
+    """OUT-003 (codex stop-gate): source_objects(버전 소스객체)로 만든 SourceRegistry가
+    없으면 인용을 검증할 수 없으므로, citation_index에만 존재하는 날조 인용이라도 통과시키지
+    않는다(fail-closed). registry None → 검증 skip 이던 우회 경로 차단."""
+    data, _, _ = build_demo_draft_package()
+    assert data.source_objects, "데모는 버전 소스객체를 가져야 한다"
+    # source_objects 제거 → registry None: 예전엔 인덱스 존재만 보고 통과(날조 우회)
+    stripped = dataclasses.replace(data, source_objects=[])
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(stripped)
+
+
 def test_citations_and_review_items_present_in_docx(tmp_path):
     data, titles, articles = build_demo_draft_package()
     out = build_review_package_docx(data, tmp_path / "pkg.docx", titles=titles, articles=articles)
