@@ -143,6 +143,18 @@
     "recorded_at": "2026-06-29T08:11:52.159850+00:00",
     "tag": "judge_S2-PUB-001_S2-PUB-001-q1"
   },
+  "e3c60159ddc1bb9a96e9e8da31f7a352db7e24a19e1baf8e88f8f94f7eaa062a": {
+    "file": "gen_sa_matter_amfg_2026_law_e3c60159ddc1bb9a.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T17:02:04.322462+00:00",
+    "tag": "gen_sa_matter_amfg_2026_law"
+  },
+  "ee7cc1037f2d6f8a913d32f083024f04a92cd8734b78ecf777cda6f1fc791aef": {
+    "file": "strategy_matter_amfg_2026_기업업무추진비_ee7cc1037f2d6f8a.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T17:02:50.496788+00:00",
+    "tag": "strategy_matter_amfg_2026_기업업무추진비"
+  },
   "eee7cbf5c31ea1c3abcc7185e2cb748bb9b9611ba94fbb17b11444bab8e393e8": {
     "file": "gen_sa_S4-HID-001_S4-HID-001-s1_①_eee7cbf5c31ea1c3.json",
     "model": "claude-opus-4-8",

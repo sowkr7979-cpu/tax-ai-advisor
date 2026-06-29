@@ -11,7 +11,15 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**전체 완료** — 6/6 vertical slice PASS + **프론트 목업 3화면 Playwright 렌더 통과** + DOCX Draft(11목차, OUT-002). PROMPT.md 완료조건(6 slice ≥90 + 하드게이트 0 + 목업 3화면 렌더) **전부 충족**.
+**전체 완료 + 라이브 엔드투엔드 앱 구동** — 6/6 vertical slice PASS + 프론트 목업 3화면 Playwright 렌더 통과 + DOCX Draft(11목차) + **오케스트레이터/CLI(`python -m tiw run`)로 "새 질문 → 검토패키지 DOCX"가 한 명령으로 구동**(라이브 1회 실행으로 실제 DOCX 산출 + replay 결정성 증명). PROMPT.md 완료조건 전부 충족. **pytest 206 passed**(203 + 오케스트레이터 8 − 중복 정정; 실측 206).
+
+### ★ 라이브 엔드투엔드 오케스트레이터 + CLI (이번 빌드 — 6 슬라이스 chaining)
+- **Strategy Agent(`src/strategy.py`)**: 종합의견+리스크+회수 조문 → 보수/중립/적극 3종 선택지(§3-5). 인용은 **회수된 버전객체에 한정**(`registry.require_citation` 선행, LLM이 id 주조 불가) · 적극 가드레일/검토경고 fail-closed 복구 · grounding 결정적 재검증(`verify_entailment`, self-report 비신뢰).
+- **오케스트레이터(`src/orchestrator.py`)**: §4-1 흐름 Intake→쟁점도출(TB→조문)→**3소스 Research**(①`legal_research`·②`internal_rag`(Chroma 테넌트격리·L3 외부LLM 미송신)·③`web_research`(공식소스 승격))→**Synthesis**(ConflictResolution)→Risk→**Strategy**→Evidence→**Draft 11목차 DOCX**. `live`/`replay` 토글. ①②③ 동일 gen 프롬프트를 `_MemoLLMClient`로 단일화 → 라이브=replay 결정성.
+- **CLI(`tiw/cli.py`+`tiw/__main__.py`)**: `python -m tiw run [--live|--replay] [--internal|--client] [--approve-demo] --company … --question … --out …`. `python -m tiw.eval` 독립 보존.
+- **데모(`tests/fixtures/company/A제조_2026.json`)**: 제조업 법인(TB 4계정·전기신고·자료 수집/없음/모름/결손·L3 사내메모).
+- **검증**: pytest 206 · 슬라이스 회귀 0(①90.5②97.3③96.8④93.5⑤92.3⑥100) · replay 결정성(라이브=replay doc.xml 내용 동일, sha `a79e46`) · 신규 fixture secret 0 · **L3 메모 외부 LLM 송신 0(독립 스캔 확인)**.
+- **codex 독립 리뷰(P0×3 + P1×3 전부 반영)**: **P0-1** `validate_draft_package`가 `_render`에서만 호출 → write_docx=False 우회 → **assemble 직후 무조건 호출**(OUT-003 항상 강제). **P0-2/3** `_run_internal_rag`/`_run_web`의 broad `except Exception`이 replay fixture·격리·인용 실패를 silent degrade로 은폐 → **replay 모드는 무조건 전파(fail-closed) + `_NEVER_SWALLOW`(IsolationError/CitationVerificationError/TenantBoundaryError)는 모든 모드 미삼킴**, live 운영성 실패만 degrade. **P1-1** web SILENT contribution `client_id="client_eval"` 하드코딩 → `company.client_id`(테넌트 일관). **P1-2** `_unresolved_conflicts` 무조건 하드코딩 충돌 주입 → **주쟁점이 실제 기업업무추진비일 때만 승격**(쟁점 범위 밖 무관 충돌 주입 차단). **P1-3** private `wf._build_release_proof` 직접 호출(감사 우회) → 공개 `wf.produce_client_deliverable`(교차테넌트 차단+미승인 재검증+`record_release` 의무감사) 경유 후 proof 반환. codex 종합: 인용 날조/grounding/L3 격리/HITL fail-closed **불변식 유지 확인**. 회귀테스트 3건(`test_out003_validation_runs_even_without_docx`·`test_replay_failclosed_on_isolation_error`·`test_replay_failclosed_on_fixture_failure`).
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
