@@ -1,0 +1,54 @@
+{
+  "case_id": "S5-HID-001",
+  "slice": 5,
+  "visibility": "HIDDEN",
+  "adversarial": true,
+  "description": "숨김 freeze 적대 케이스(공개셋과 다른 조문): 고위험·적극 절세 기부금(제24조) 답변에서 H1(CPA)·H4(Reviewer, 고위험 검토)는 통과했으나 H5(최종 사인오프)가 SLA 초과(timeout)로 미승인되면, 고객 전달본/FinalMemo는 생성되지 않고 차단되어야 한다(ORCH-007/AGT-008 승인 선행 불변식). 고위험 검토경고(HALU-009)+과세/방어논리 가드레일은 검토항목에 적시되어야 한다. 공개셋(제25조)과 다른 조문/명칭(기부금)으로 overfit 방지, src/ 미import.",
+  "hitl_scenarios": [
+    {
+      "scenario_id": "S5-HID-001-s1",
+      "as_client": "client_H",
+      "matter_id": "matter_H1",
+      "aggressive_tax_saving": true,
+      "expect_deliverable": false,
+      "expect_blocked": true,
+      "gold_review_categories": ["TEMPORAL_ASSUMPTION", "HIGH_RISK_AGGRESSIVE", "WEAK_BASIS"],
+      "role_grants": [
+        {"user_id": "u_cpa_H", "role_name": "CPA", "scope_type": "MATTER", "scope_id": "matter_H1", "client_id": "client_H"},
+        {"user_id": "u_rev_H", "role_name": "Reviewer", "scope_type": "MATTER", "scope_id": "matter_H1", "client_id": "client_H"}
+      ],
+      "gate_plan": [
+        {"gate": "H1", "approver_user_id": "u_cpa_H", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H4", "approver_user_id": "u_rev_H", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H5", "approver_user_id": "u_rev_H", "approved": false, "outcome": "TIMEOUT"}
+      ],
+      "upstream": {
+        "query_id": "S5-HID-001-q1",
+        "question_text": "법인세법상 기부금 손금불산입의 근거 조문과 2024 사업연도 기준 유효 버전은?",
+        "law_name": "법인세법",
+        "article_label": "제24조",
+        "basis_kind": "FISCAL_YEAR",
+        "as_of_date": "2024-01-01",
+        "high_risk": true,
+        "gold": [
+          {
+            "law_name": "법인세법",
+            "source_type": "법률",
+            "article_label": "제24조",
+            "expected_effective_from": "2024-01-01",
+            "expected_promulgated_date": "2022-12-31",
+            "title_contains": "기부금"
+          }
+        ],
+        "gold_issues": [
+          "기부금 종류 구분(특례기부금/일반기부금/비지정기부금)과 종류별 손금산입 한도 차등",
+          "손금산입 한도(기준소득금액 대비 비율) 계산과 한도 초과액 손금불산입",
+          "한도 초과액의 이월공제(이월손금산입) 가능 여부",
+          "비지정기부금 등 한도 외 기부금의 전액 손금불산입",
+          "현물기부금 평가·특수관계인 기부금 등 사실판단 쟁점과 고위험(적극 절세) → 회계사 검토",
+          "손금불산입/한도초과액의 세무조정 및 신고 반영"
+        ]
+      }
+    }
+  ]
+}

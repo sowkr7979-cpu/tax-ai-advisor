@@ -12,7 +12,7 @@ from contract.cluster_a_tenancy import Client, Engagement, Matter, RoleAssignmen
 from contract.cluster_c_documents import Chunk, Document, VectorIndex
 from contract.cluster_e_analysis import FactPattern
 from contract.cluster_f_qa import AnswerRun, Citation, RetrievedEvidence
-from contract.cluster_h_review import FinalMemo
+from contract.cluster_h_review import FinalMemo, ReleaseAuthorization, ReviewerDecision
 
 
 # --- 불변식 ① 격리키 전파 (SEC-001) -------------------------------------- #
@@ -181,12 +181,37 @@ def test_retrieved_evidence_exactly_one_source():
     assert ok.chunk_id == "c1"
 
 
+def _h5_proof(client_id="client_A", matter_id="m1", decision_id="dec1") -> ReleaseAuthorization:
+    return ReleaseAuthorization(
+        high_risk=False, client_id=client_id, matter_id=matter_id,
+        decisions=[
+            ReviewerDecision(
+                decision_id=decision_id, review_id="rev1", approved=True,
+                reviewer_user_id="u_rev", gate="H5", outcome="APPROVED",
+                client_id=client_id, matter_id=matter_id,
+            )
+        ],
+    )
+
+
 def test_finalmemo_requires_approval():
+    # 승인 proof 없이 직접 생성 → 거부(필수 proof 누락, ORCH-007 P0)
     with pytest.raises(ValidationError):
         FinalMemo(
-            final_memo_id="fm1",
-            draft_id="d1",
-            decision_id="dec1",
-            approved=False,  # HITL 미승인 → FinalMemo 금지
-            client_id="client_A",
+            final_memo_id="fm1", draft_id="d1", decision_id="dec1",
+            approved=True, client_id="client_A", matter_id="m1",
         )
+    # proof 가 있어도 approved=False → 거부(미승인 FinalMemo 금지)
+    with pytest.raises(ValidationError):
+        FinalMemo(
+            final_memo_id="fm1", draft_id="d1", decision_id="dec1",
+            approved=False, client_id="client_A", matter_id="m1",
+            release_proof=_h5_proof(),
+        )
+    # 승인 proof + decision_id binding 일치 → 생성 가능(정상경로)
+    memo = FinalMemo(
+        final_memo_id="fm1", draft_id="d1", decision_id="dec1",
+        approved=True, client_id="client_A", matter_id="m1",
+        release_proof=_h5_proof(),
+    )
+    assert memo.approved and memo.client_id == "client_A"

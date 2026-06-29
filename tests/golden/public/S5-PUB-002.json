@@ -1,0 +1,98 @@
+{
+  "case_id": "S5-PUB-002",
+  "slice": 5,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "고위험·적극 절세 승인 흐름 + 에이전트 장애 graceful degrade(HITL). s1: 적극 절세(고위험) 답변을 H1(CPA)→H4(Reviewer)→H5(Reviewer)가 승인하면 검토경고+과세/방어논리 가드레일(HALU-009/AGT-008)을 단 고객 전달본이 생성된다. s2: 판례검색 에이전트 장애로 부분 결과만 생성(ORCH-006) — 누락 분석을 DATA_LIMIT 검토항목으로 적시하고 입력 완전성이 차감되어 만점이 아니다(부분 결과). 동일 채널 ① 답변(제25조 2020 접대비)을 재사용해 결정적으로 재생한다.",
+  "hitl_scenarios": [
+    {
+      "scenario_id": "S5-PUB-002-s1",
+      "as_client": "client_B",
+      "matter_id": "matter_B1",
+      "aggressive_tax_saving": true,
+      "expect_deliverable": true,
+      "expect_blocked": false,
+      "gold_review_categories": ["TEMPORAL_ASSUMPTION", "HIGH_RISK_AGGRESSIVE", "WEAK_BASIS"],
+      "role_grants": [
+        {"user_id": "u_cpa_B", "role_name": "CPA", "scope_type": "MATTER", "scope_id": "matter_B1", "client_id": "client_B"},
+        {"user_id": "u_rev_B", "role_name": "Reviewer", "scope_type": "MATTER", "scope_id": "matter_B1", "client_id": "client_B"}
+      ],
+      "gate_plan": [
+        {"gate": "H1", "approver_user_id": "u_cpa_B", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H4", "approver_user_id": "u_rev_B", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H5", "approver_user_id": "u_rev_B", "approved": true, "outcome": "APPROVED"}
+      ],
+      "upstream": {
+        "query_id": "S5-PUB-002-q1",
+        "question_text": "법인세법 제25조의 2020 사업연도 기준 유효 버전과 조문 명칭은?",
+        "law_name": "법인세법",
+        "article_label": "제25조",
+        "basis_kind": "FISCAL_YEAR",
+        "as_of_date": "2020-01-01",
+        "high_risk": false,
+        "gold": [
+          {
+            "law_name": "법인세법",
+            "source_type": "법률",
+            "article_label": "제25조",
+            "expected_effective_from": "2020-01-01",
+            "expected_promulgated_date": "2018-12-24",
+            "title_contains": "접대비"
+          }
+        ],
+        "gold_issues": [
+          "2020 사업연도 기준 유효 버전은 구 명칭 '접대비'(2024 '기업업무추진비'와 명칭 상이) — 시행일 버전 적용",
+          "접대비 손금불산입 한도 = 기본한도 + 수입금액 구간별 한도; 한도 초과액 손금불산입",
+          "건당 일정금액 초과 접대비의 적격 증빙(신용카드 등) 요건과 미수취 시 손금불산입",
+          "접대비와 광고선전비·기부금의 구분(사실판단)",
+          "손금불산입액의 세무조정 및 신고 반영"
+        ]
+      }
+    },
+    {
+      "scenario_id": "S5-PUB-002-s2",
+      "as_client": "client_B",
+      "matter_id": "matter_B2",
+      "aggressive_tax_saving": false,
+      "expect_deliverable": true,
+      "expect_blocked": false,
+      "agent_failures": ["판례검색"],
+      "expected_agents": ["법령앵커", "내부RAG", "판례검색"],
+      "gold_review_categories": ["TEMPORAL_ASSUMPTION", "DATA_LIMIT", "WEAK_BASIS"],
+      "role_grants": [
+        {"user_id": "u_cpa_B", "role_name": "CPA", "scope_type": "MATTER", "scope_id": "matter_B2", "client_id": "client_B"},
+        {"user_id": "u_rev_B", "role_name": "Reviewer", "scope_type": "MATTER", "scope_id": "matter_B2", "client_id": "client_B"}
+      ],
+      "gate_plan": [
+        {"gate": "H1", "approver_user_id": "u_cpa_B", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H5", "approver_user_id": "u_rev_B", "approved": true, "outcome": "APPROVED"}
+      ],
+      "upstream": {
+        "query_id": "S5-PUB-002-q2",
+        "question_text": "법인세법 제25조의 2020 사업연도 기준 유효 버전과 조문 명칭은?",
+        "law_name": "법인세법",
+        "article_label": "제25조",
+        "basis_kind": "FISCAL_YEAR",
+        "as_of_date": "2020-01-01",
+        "high_risk": false,
+        "gold": [
+          {
+            "law_name": "법인세법",
+            "source_type": "법률",
+            "article_label": "제25조",
+            "expected_effective_from": "2020-01-01",
+            "expected_promulgated_date": "2018-12-24",
+            "title_contains": "접대비"
+          }
+        ],
+        "gold_issues": [
+          "2020 사업연도 기준 유효 버전은 구 명칭 '접대비'(2024 '기업업무추진비'와 명칭 상이) — 시행일 버전 적용",
+          "접대비 손금불산입 한도 = 기본한도 + 수입금액 구간별 한도; 한도 초과액 손금불산입",
+          "건당 일정금액 초과 접대비의 적격 증빙(신용카드 등) 요건과 미수취 시 손금불산입",
+          "접대비와 광고선전비·기부금의 구분(사실판단)",
+          "손금불산입액의 세무조정 및 신고 반영"
+        ]
+      }
+    }
+  ]
+}

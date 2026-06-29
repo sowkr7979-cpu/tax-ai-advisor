@@ -12,7 +12,8 @@ from typing import Optional
 
 from pydantic import Field, computed_field
 
-from .base import BasisKind, TIWModel
+from .base import BasisKind, ScopeType, TIWModel
+from .cluster_a_tenancy import RoleName
 
 
 class Visibility(str, Enum):
@@ -190,6 +191,48 @@ class RagQuery(TIWModel):
     gold_issues: list[str] = Field(default_factory=list)         # issue-spotting (independent)
 
 
+# --- slice ⑤ HITL gold schema (ORCH-007, AGT-008/OUT-004, HALU-008/009) --- #
+class HitlRoleGrant(TIWModel):
+    """A RoleAssignment grant for an approver (SEC-012). The approver may approve a
+    gate ONLY if they hold the gate's required role in the matter scope + client."""
+
+    user_id: str
+    role_name: RoleName
+    scope_type: ScopeType = ScopeType.MATTER
+    scope_id: str                         # the matter_id (or engagement) of the scope
+    client_id: str                        # isolation key — a cross-client grant is a leak
+    expired: bool = False                 # SCIM/expiry negative (SEC-013)
+
+
+class HitlGatePlan(TIWModel):
+    """One HITL gate transition in a scenario: who acts, and the outcome."""
+
+    gate: str                             # "H1".."H5"
+    approver_user_id: str
+    approved: bool = True
+    outcome: str = "APPROVED"             # APPROVED|REJECTED|TIMEOUT
+
+
+class HitlScenario(TIWModel):
+    """One slice-⑤ HITL run over an upstream answer (reuses the slice-① pipeline
+    so generation+judge replay deterministically from the recorded fixtures)."""
+
+    scenario_id: str
+    upstream: LawAnchorQuery              # the answer under review (reuses ① fixtures)
+    as_client: str                        # tenant/isolation key (client_id)
+    matter_id: str
+    aggressive_tax_saving: bool = False   # H4 적극 절세 가드레일
+    unresolved_conflicts: list[str] = Field(default_factory=list)  # H3 → 검토항목
+    agent_failures: list[str] = Field(default_factory=list)        # ORCH-006 graceful degrade
+    expected_agents: list[str] = Field(default_factory=list)       # full agent roster (degrade 분모)
+    data_limits: list[str] = Field(default_factory=list)
+    role_grants: list[HitlRoleGrant] = Field(default_factory=list)
+    gate_plan: list[HitlGatePlan] = Field(default_factory=list)
+    expect_deliverable: bool = True       # normal: 고객 전달본 생성
+    expect_blocked: bool = False          # adversarial: 미승인 → 차단되어야
+    gold_review_categories: list[str] = Field(default_factory=list)  # HALU-008 coverage
+
+
 class EvaluationCase(TIWModel):
     case_id: str
     slice: int
@@ -204,3 +247,5 @@ class EvaluationCase(TIWModel):
     # slice ② only (empty for other slices)
     rag_corpus: list[RagCorpusDoc] = Field(default_factory=list)
     rag_queries: list[RagQuery] = Field(default_factory=list)
+    # slice ⑤ only (empty for other slices)
+    hitl_scenarios: list[HitlScenario] = Field(default_factory=list)

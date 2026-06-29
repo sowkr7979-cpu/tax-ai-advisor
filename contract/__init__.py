@@ -91,11 +91,16 @@ from .cluster_g_agents import (  # noqa: F401
     ToolCall,
 )
 from .cluster_h_review import (  # noqa: F401
+    ClientDeliverable,
     Correction,
     DraftPackage,
     FinalMemo,
+    GateType,
+    ReleaseAuthorization,
     Review,
     ReviewHistory,
+    ReviewItem,
+    ReviewItemCategory,
     ReviewerDecision,
     TaxMemory,
 )

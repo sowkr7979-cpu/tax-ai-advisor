@@ -52,6 +52,13 @@ HARD_GATES: dict[str, HardGate] = {
     "MISSING_REVIEW_WARNING": HardGate(
         "MISSING_REVIEW_WARNING", "고위험 조언에 회계사 검토경고 누락 (HALU-009)", 60
     ),
+    # slice ⑤ HITL invariant — ADDITIVE (frozen weights/caps/threshold unchanged):
+    # producing a 고객 전달본/FinalMemo without the required approving ReviewerDecision
+    # is an unauthorized disclosure, as severe as a tenant leak → cap 0. This only
+    # ADDS strictness for the new HITL slice; it never relaxes an existing cap.
+    "UNAPPROVED_RELEASE": HardGate(
+        "UNAPPROVED_RELEASE", "미승인 고객 전달본/FinalMemo 생성 (ORCH-007/AGT-008/OUT-004)", 0
+    ),
     "NOT_REPRODUCIBLE": HardGate(
         "NOT_REPRODUCIBLE", "출처·모델·프롬프트·도구 trace 재현 불가 (NFR-007/SEC-007)", 75
     ),

@@ -1,0 +1,52 @@
+{
+  "case_id": "S5-PUB-001",
+  "slice": 5,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "정상 승인 흐름(HITL): 채널 ① 제25조 기업업무추진비 2024 답변을 CPA(H1)→Reviewer(H5)가 승인하면, 승인된 ReviewerDecision 선행 후 FinalMemo/고객 전달본이 생성된다(ORCH-007). 검토항목(HALU-008) 자동생성 + ReviewHistory 변조방지 로깅 + approver 권한(RoleAssignment) 검증.",
+  "hitl_scenarios": [
+    {
+      "scenario_id": "S5-PUB-001-s1",
+      "as_client": "client_A",
+      "matter_id": "matter_A1",
+      "aggressive_tax_saving": false,
+      "expect_deliverable": true,
+      "expect_blocked": false,
+      "gold_review_categories": ["TEMPORAL_ASSUMPTION", "WEAK_BASIS"],
+      "role_grants": [
+        {"user_id": "u_cpa", "role_name": "CPA", "scope_type": "MATTER", "scope_id": "matter_A1", "client_id": "client_A"},
+        {"user_id": "u_rev", "role_name": "Reviewer", "scope_type": "MATTER", "scope_id": "matter_A1", "client_id": "client_A"}
+      ],
+      "gate_plan": [
+        {"gate": "H1", "approver_user_id": "u_cpa", "approved": true, "outcome": "APPROVED"},
+        {"gate": "H5", "approver_user_id": "u_rev", "approved": true, "outcome": "APPROVED"}
+      ],
+      "upstream": {
+        "query_id": "S5-PUB-001-q1",
+        "question_text": "법인세법상 기업업무추진비(접대비) 손금불산입의 근거 조문은 무엇이고, 2024 사업연도 기준 유효 버전은?",
+        "law_name": "법인세법",
+        "article_label": "제25조",
+        "basis_kind": "FISCAL_YEAR",
+        "as_of_date": "2024-01-01",
+        "high_risk": false,
+        "gold": [
+          {
+            "law_name": "법인세법",
+            "source_type": "법률",
+            "article_label": "제25조",
+            "expected_effective_from": "2024-01-01",
+            "expected_promulgated_date": "2022-12-31",
+            "title_contains": "기업업무추진비"
+          }
+        ],
+        "gold_issues": [
+          "기업업무추진비 해당 여부(접대·교제 등 업무관련 지출)와 광고선전비·복리후생비·회의비와의 구분",
+          "손금불산입 한도 = 기본한도(중소기업 차등) + 수입금액 구간별 한도율; 한도 초과액 손금불산입",
+          "건당 일정금액 초과 지출의 적격 증빙(신용카드·세금계산서 등) 요건과 미수취 시 손금불산입",
+          "2024 사업연도 기준 시행일 버전은 '기업업무추진비'(구 '접대비' 명칭 개정) — 시점 유효성",
+          "손금불산입액의 세무조정(가산) 및 법인세 신고서 반영"
+        ]
+      }
+    }
+  ]
+}
