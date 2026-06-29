@@ -11,7 +11,7 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**slice ⑥·①·②·⑤ 완료 (4/6 PASS)** (autonomous 루프 진입 전 수동 검증 단계 — '통제된 시작'). 남은: ③(웹, 키 필요)·④(충돌종합) + 목업.
+**slice ⑥·①·②·③·⑤ 완료 (5/6 PASS)** (autonomous 루프 진입 전 수동 검증 단계 — '통제된 시작'). 남은: ④(충돌종합) + 목업.
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
@@ -19,7 +19,7 @@
 | ⑥ | 테넌트 격리 | **100** (min over 4 cases) | 누수0 (TENANT_LEAK 미발생) | **통과 (≥90)** |
 | ① | 법령MCP 앵커 답변 | **90.5** (min: PUB-001=100·PUB-002=96.8·HID-001=90.5) | 0 (TEMPORAL/FABRICATED/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — judge 연결 + codex 하드닝(결정적 entailment·추상 프롬프트). 분모 79(conflict/security는 ④/⑥) |
 | ② | citation 검증 RAG | **97.3** (min: PUB-001=100·PUB-002=97.3·HID-001=97.3) | 0 (TENANT_LEAK/FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 실 Chroma 테넌트 격리(누수0) + 구조분할 + 실 임베딩(model2vec) replay + judge. 분모 93(conflict는 ④) |
-| ③ | 공식소스 Web run | — | — | 미착수 |
+| ③ | 공식소스 Web run | **96.8** (min: PUB-001=100·PUB-002=97.2·HID-001=96.8) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — Tavily 실 wiring(공식도메인 발견·RECORD/REPLAY) + Source Policy(사전/사후) + 승격(WEB-011, 법령 원문 대조) + WEB-012(최신성⟂적용시점 분리) + slice① 생성기 재사용(채널③/WEB). 분모 79(conflict는 ④·웹은 공유 L0 보안은 ⑥) |
 | ④ | 충돌 케이스(3소스 종합) | — | — | 미착수 |
 | ⑤ | CPA HITL 워크플로 | **92.3** (min: PUB-001=100·PUB-002=92.3·HID-001=95.2) | 0 (UNAPPROVED_RELEASE/MISSING_WARNING/TENANT_LEAK 미발생) | **통과 (≥90)** — H1~H5 게이트·승인 전 FinalMemo/고객본 차단(contract proof + 감사로그 이중)·검토항목 자동·graceful degrade·ReviewHistory 해시체인 |
 
@@ -60,11 +60,24 @@
 - **flaky 해소(chromadb 순서의존)**: ephemeral 싱글톤 + Windows HNSW 파일핸들 GC → 스토어별 PersistentClient(임시디렉토리) + `close_all()`/gc teardown + stdio 한계 상향. baseline 4/30 실패 → **수정 후 30/30 green**(순서 독립). 격리 의미 무변(codex 확인).
 - **정직성 증거(동일 채점 경로 적발)**: 누수 store→TENANT_LEAK(cap0)·날조 인용→FABRICATED(cap60)·시점 불일치→TEMPORAL_ERROR(cap55)·임베딩 fixture 부재→NOT_REPRODUCIBLE·비지지 entailment→FABRICATED·임베딩 캐시 변조→EmbeddingNotReproducible. (tests/test_rag_slice2.py 19개)
 
+### slice ③ 공식소스 Web run (이번 빌드 — 실연동 완료)
+- **Tavily 어댑터 실 wiring(`src/ai/tavily_client.py`)**: `POST api.tavily.com/search`, `Authorization: Bearer`(헤더, 응답에 미노출). 공식 도메인 우선 `include_domains`=국세청(nts.go.kr)·법제처(law.go.kr)·기재부(moef.go.kr)·조세심판원(tt.go.kr)·대법원(scourt.go.kr). RECORD/REPLAY 트랜스포트(law_data_source 패턴 재사용) → `tests/fixtures/web/`(raw JSON + content_hash + manifest). **요청 바디 Python in-process UTF-8 구성**(쉘 한글 cp949 회피). rate-limit(429)/timeout/HTTP 에러 fail-closed(`WebSearchUnavailable`). 키 redaction(해시 전) + fixture/manifest 미저장(secret 스캔 테스트 통과). `retrieved_at`는 manifest `recorded_at`에서(replay 재현성, now() 비사용). **Brave 미구현(지시).**
+- **8단계 파이프라인(`src/web_research.py`)**: ① Query Planner(한국어 확장 WEB-008) ② Source Policy 사전(공식 도메인 include) ③ Tavily ④ Page Extraction→**SourceSnapshot**(원문·발행기관·retrieved_at·content_hash, snippet 아님 — `include_raw_content`) ⑤ Source Policy **사후**(반환 url 재검증·블로그/미러 배제 WEB-007) ⑥ Source Scoring(공식성·**최신성**·쟁점관련성·**적용시점 유효성** — WEB-012 분리 저장) ⑦ Conflict(경량; 종합은 ④) ⑧ **Promotion(WEB-011)**: 공식 원문만 **법령 원문(채널①, as_of 시행일 버전)과 대조** 후 승격. **웹 단독 단정 금지(docs/06 §9)**: 승격 0건이면 **abstain**(결론 근거 없음).
+- **WEB-012(최신성⟂적용시점)**: `freshness`(웹 게시 recency, 결정적·wall-clock 비사용) ⟂ `applicable_validity`(후보가 기술하는 시행버전이 as_of 권위버전과 일치하는가; 후보 `제N조(제목)` 헤더 subject 파싱). **fresh-but-stale 함정**(2025 게시·구'접대비'버전 → freshness 高·applicable 0 → 미승격)을 결정적 테스트로 증명.
+- **SourceAnswer(WEB)**: slice① 생성기(`generate_research_answer`) 재사용 — `source_type=WEB`·`channel_label=③`, 승격된 공식 근거(=① 권위 ProvisionVersion)에 grounding. web-provenance **Citation=SourceSnapshot**(url·publisher·retrieved_at·content_hash, quote=대조된 법령 원문 발췌). source_registry·결정적 entailment 재사용.
+- **하버스(`tiw/eval/slices/slice3_web.py`)**: 검색(공식도메인 recall 9)·인용 grounding+entailment(12; pv 2건×4 + web snapshot×4 + judge entailment 2)·법리20/쟁점10/리스크11/산출9(judge 재사용)·요구6(SourceSnapshot provenance)·ops2(재현성). conflict(7)·security(14)=N/A(분모 79). 메트릭에 `freshness_scores`⟂`applicable_validity_scores` 분리 기록·`promoted`·`source_policy_unofficial_promoted`·`web_provenance`.
+- **하드게이트**: NOT_REPRODUCIBLE(tavily/gen/judge fixture 부재·해시불일치·승격실패)·TEMPORAL_ERROR(승격 버전 시행일 불일치)·FABRICATED_CITATION(미등록 인용·entailment 미지지·**비공식 소스 승격(날조 권위)**·**web-provenance 대조 실패**·**web 단독 단정**)·MISSING_REVIEW_WARNING(고위험 검토경고 누락).
+- **gold**: `public/S3-PUB-001`(제25조 기업업무추진비 2024 한도)·`S3-PUB-002`(제25조 적격증빙 — 다른 쟁점)·`hidden/S3-HID-001`(**제24조 기부금 2024, 고위험** — 공개셋(제25조)과 다른 조문, overfit 방지, src/ 미import).
+- **`_extract_json` 견고화(공유)**: 추론 모델이 다중 JSON 블록(초안+최종) 출력 시 first-{ … last-} 가 'Extra data'로 실패 → `_top_level_objects`(brace-매칭·문자열 인식)로 **마지막 완전 객체** 선택. legal_research·judge 양쪽 적용. **단일 객체 fixture(slice①/②)는 동일 결과 — replay 회귀 0**(검증).
+- **실측 점수(정직)**: PUB-001 100·PUB-002 97.2(output=75)·HID-001 96.8(issue=75) → slice③ **96.8 PASS**. 라이브 1회 녹화(Tavily 3 검색 + opus 생성/judge 6콜 ~$0.60) → replay 결정성. judge entail 2/2 전 케이스·citation_grounding 14/14·web_provenance 1/1·recall 1.0·temporal_error False·비공식 승격 0.
+- **정직성 증거(동일 채점 경로 적발, tests/test_web_slice3.py 25개)**: 비공식 블로그 주입→배제(승격 0)·**비공식 강제승격→FABRICATED(cap60)**·날조 인용→FABRICATED·**web-provenance 변조→FABRICATED**·시점불일치→TEMPORAL(cap55)·tavily/gen/judge fixture 부재→NOT_REPRODUCIBLE·비지지 entailment→FABRICATED·**web 단독 단정(미abstain)→차단**·tavily 해시변조→WebNotReproducible.
+
 ## 다음 타겟
-1. slice ③ 공식소스 Web run(WEB-002/003/004/011/012) — **Tavily/Brave 키 필요(미보유)** + 어댑터 실 wiring + SourceSnapshot 녹화 + 공식 도메인 우선.
-2. slice ④ 충돌 케이스(3소스 종합) — ①②③ SourceAnswer claim 단위 정합 + conflict(7) 차원 측정.
+1. slice ④ 충돌 케이스(3소스 종합) — ①②③ SourceAnswer claim 단위 정합 + conflict(7) 차원 측정. **slice③ WEB SourceAnswer가 ④의 세 번째 입력**(LAW_MCP·INTERNAL_RAG·WEB).
+2. 프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기).
 3. (선택) slice① HID-001 lr/is=75 개선 / korean-law-mcp 실 wiring(현재 fallback 법제처).
 4. (선택) slice② children 색인을 dense 회수 경로에 직접 편입(현재 parent-level 회수 + child 메타) — recall 견고성 유지 전제.
+5. (선택) slice③ 공식소스 커넥터(국세청·법제처 직접 연계)·PDF/HWP OCR(WEB-009)·Tavily 게시일 부재 시 freshness 보강.
 
 ## codex 미해결 피드백 (이번 iteration codex 코드리뷰 결과)
 - **반영 완료**: P0-1 평가 fail-closed(예외/빈결과→NOT_REPRODUCIBLE) · P1-2 공백 격리키 거부 · P1-3 FactPattern client_id 전파 · P2-2 미등록 hard gate code 차단(KeyError).
@@ -77,6 +90,7 @@
 - **slice ② RAG codex 리뷰** (P0 없음): 격리(누수 불가능·namespace 건전)·anti-gaming(케이스명 분기 없음·가중치/캡/게이트 불변·hidden≠public 조문)·결정성(RRF/BM25/chroma 정렬 tie-break `(-score,id)`·재생만)·slice①/⑥ 무회귀 모두 **CLEAN**. **P1 1건 반영 완료** — judge replay 실패의 bare `pass` 가 NOT_REPRODUCIBLE 를 안 띄움 → **missing/tampered judge fixture(LLMUnavailable/LLMNotReproducible)=재현불가→`reproducible=False`→NOT_REPRODUCIBLE(cap75)** 로 강화(malformed verdict 는 PENDING 유지). 추가 발견(자체): 생성 fixture 부재가 per-query catch 누락으로 미처리 → `LLMError` 포함해 fail-closed. chromadb EphemeralClient 싱글톤 재초기화 손상("Error finding id") → 프로세스 1개 캐시 client + 인스턴스별 collection namespace 로 해결. 회귀테스트 `test_harness_fail_closed_on_missing_judge_fixture` 추가.
 - **slice ② 독립 codex 리뷰** (P0 없음): 격리 우회불가·flaky 수정 안전·시점필터·anti-gaming(L3 미송신·hidden≠public) 모두 **SOUND** 확인. **P1 2건 반영** — recall 분모 중복집계 제거(`set(gold)|set(shared)` dedupe) · entailment를 **retrieved chunk 직접 검증**(회수 밖 인용→FABRICATED, citation 8/8). codex 종합: "전반적으로 정직, flaky 수정 안전." **pytest 96 passed**(실패하던 순서·전체×3 green, 순서 독립).
 - **slice ⑤ HITL codex 리뷰** (P0 1건 반영): **P0** FinalMemo/ClientDeliverable 모델 생성자가 승인 미검증(워크플로 우회 직접생성 가능) → **contract 레이어에 `ReleaseAuthorization` proof 필수**(필요 게이트 승인+테넌트 정합 없으면 ValidationError) + **P1** 감사이벤트 기반 판정(side-effect release→`record_release` 로그 적발) = **이중 차단**. 견고 확인: 게이트로직(저위험 H5/고위험 H4+H5)·approver 권한(무권한·교차테넌트·timeout 거부)·fixture 재사용 정당(HITL 로직 실제 실행, graceful degrade req<100)·ReviewHistory 변조감지. **pytest 117 passed**(×3 일관). `UNAPPROVED_RELEASE:0` additive(기존 캡 frozen).
+- **slice ③ 공식소스 Web codex 리뷰** (P0 2건 반영): **P0-1** WEB-011 "법령 원문 대조"가 토큰 존재 검사에 그침(공식 도메인 안내 페이지도 승격) → **실질 원문 대조**로 강화: 후보 원문과 ① ProvisionVersion.text 의 **최장 공통 verbatim 부분문자열(difflib, ≥40자)** 을 요구(`content_corroborated`). 실측상 진짜 조문 본문 페이지는 500~924자 일치, 안내 페이지는 ≤28자 → 깨끗이 분리. **P0-2** web `SOURCE_SNAPSHOT` citation 의 quote 가 웹 콘텐츠가 아닌 `pv.text`에서 생성 → **실제 스냅샷 원문 발췌**(원문 대조 verbatim 공유 구간)로 변경: quote 가 공식 웹 콘텐츠 **AND** 법령 원문 양쪽의 verbatim 부분문자열 → 하버스가 `quote ⊂ official_content` 와 `quote ⊂ pv.text` **둘 다** 검증. **P1-1** `expect_promote=False`(정상 abstain) 케이스가 NOT_REPRODUCIBLE 처리 → `abstain_ok` 분리 집계로 정상 abstain 을 PASS 경로로 채점. **P1-2** replay `retrieved_at` 누락 시 wall-clock now() 폴백 → ReplayTavilyTransport 가 manifest `recorded_at` 부재/파싱불가 시 **fail-closed(`WebNotReproducible`)**. **P2** `.env` 없으면 키 스캔 skip → **무조건 secret marker 정적 스캔**(tvly-/Bearer/sk-ant-) 추가. 견고 확인: 가중치/캡/게이트 불변·hidden(제24조)≠public(제25조)·src/ hidden 미import·fixture/judge/citation/temporal fail-closed 경로 정상. 회귀테스트 `test_promotion_requires_real_provision_overlap`·`test_web_citation_quote_comes_from_official_content` 추가. **pytest 145 passed**(×3 일관, 순서 독립).
 
 ## 빌드 환경 메모
 - 스택: Python 3.11+ (검증: 3.14.4). 핵심 deps = `pydantic>=2.7`+`pyyaml`(결정적 경로). 어댑터(fastapi/anthropic/chromadb/python-docx)는 `[adapters]`/`[api]` extra — slice⑥ 테스트는 실키·heavy wheel 없이 통과.

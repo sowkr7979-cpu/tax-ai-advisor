@@ -1,0 +1,36 @@
+{
+  "case_id": "S3-HID-001",
+  "slice": 3,
+  "visibility": "HIDDEN",
+  "adversarial": false,
+  "description": "채널 ③ 공식소스 Web run (hidden freeze) — 법인세법 제24조 기부금 손금산입 한도를 공식 출처로 확인(2024). 공개셋(제25조)과 다른 조문·쟁점(overfit 방지). 고위험(적극 절세 가능성)으로 회계사 검토경고 필수.",
+  "web_queries": [
+    {
+      "query_id": "S3-HID-001-q1",
+      "question_text": "법인세법 제24조에 따른 기부금의 손금산입 한도(일반기부금·특례기부금 구분)와 2024 사업연도 기준 유효 버전을, 국세청·법제처 공식 출처로 확인해줘.",
+      "law_name": "법인세법",
+      "article_label": "제24조",
+      "issue": "기부금",
+      "tax_type": "법인세",
+      "basis_kind": "FISCAL_YEAR",
+      "as_of_date": "2024-01-01",
+      "high_risk": true,
+      "gold_law": {
+        "law_name": "법인세법",
+        "source_type": "법률",
+        "article_label": "제24조",
+        "expected_effective_from": "2024-01-01",
+        "title_contains": "기부금"
+      },
+      "gold_official_domains": ["law.go.kr"],
+      "gold_issues": [
+        "기부금 유형 구분(특례기부금·일반기부금 등)과 유형별 손금산입 한도율 차이",
+        "한도 초과 기부금의 손금불산입 및 이월공제(후속 사업연도) 가능성",
+        "현물기부·특수관계인 기부 등 평가·부인 쟁점(사실판단 의존 — 고위험)",
+        "2024 사업연도 기준 시행일 버전 적용 — 적용시점 유효성(최신성과 구분)",
+        "공식 출처(국세청·법제처) 승격 + 법령 원문 대조 — 웹 단독 단정 금지 + 회계사 검토경고"
+      ],
+      "expect_promote": true
+    }
+  ]
+}

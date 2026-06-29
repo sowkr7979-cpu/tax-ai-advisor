@@ -37,8 +37,8 @@ adapters = [
   "model2vec>=0.3",    # slice ② local on-prem static multilingual embedder (record only)
   "httpx>=0.27",       # tavily / brave / dart / korean-law-mcp HTTP clients
   "python-docx>=1.1",  # DOCX review package
-  "requests>=2.31",    # slice ① 법제처 DRF live recording (lazy; replay uses stdlib)
-  "python-dotenv>=1.0",  # load LAW_OC / API keys from .env (record path only)
+  "requests>=2.31",    # slice ① 법제처 DRF + slice ③ Tavily live recording (lazy; replay uses stdlib)
+  "python-dotenv>=1.0",  # load LAW_OC / TAVILY_API_KEY / API keys from .env (record path only)
 ]
 dev = [
   "pytest>=8.0",

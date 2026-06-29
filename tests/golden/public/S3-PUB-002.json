@@ -1,0 +1,37 @@
+{
+  "case_id": "S3-PUB-002",
+  "slice": 3,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "채널 ③ 공식소스 Web run — 기업업무추진비 적격증빙(신용카드·세금계산서 등) 요건을 공식 출처로 확인(2024). 같은 조문(제25조)의 다른 쟁점. 공식 도메인 발견→법령 원문 대조→승격(WEB-011). 비공식(블로그·요약) 결과는 사후 정책에서 배제(WEB-004/007).",
+  "web_queries": [
+    {
+      "query_id": "S3-PUB-002-q1",
+      "question_text": "법인세법 제25조상 기업업무추진비의 적격증빙(신용카드·현금영수증·세금계산서 등) 요건과 미수취 시 손금불산입 효과를, 국세청·법제처 공식 출처로 확인해줘.",
+      "law_name": "법인세법",
+      "article_label": "제25조",
+      "issue": "적격증빙",
+      "tax_type": "법인세",
+      "basis_kind": "FISCAL_YEAR",
+      "as_of_date": "2024-01-01",
+      "high_risk": false,
+      "gold_law": {
+        "law_name": "법인세법",
+        "source_type": "법률",
+        "article_label": "제25조",
+        "expected_effective_from": "2024-01-01",
+        "expected_promulgated_date": "2022-12-31",
+        "title_contains": "기업업무추진비"
+      },
+      "gold_official_domains": ["law.go.kr"],
+      "gold_issues": [
+        "건당 일정금액 초과 기업업무추진비의 적격 증빙(신용카드·현금영수증·세금계산서 등) 수취 의무",
+        "적격 증빙 미수취 시 손금불산입 효과 및 세무조정(가산)",
+        "적격증빙 요건과 한도 규정(기본한도+수입금액 한도)의 관계 — 별개의 손금불산입 사유",
+        "2024 사업연도 기준 시행일 버전은 '기업업무추진비' — 적용시점 유효성(최신성과 구분)",
+        "공식 출처(국세청·법제처) 승격 + 법령 원문 대조 — 웹 단독 단정 금지"
+      ],
+      "expect_promote": true
+    }
+  ]
+}

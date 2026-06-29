@@ -126,18 +126,59 @@ def build_generation_prompt(lookup: ProvisionLookupResult, question_text: str) -
 # --------------------------------------------------------------------------- #
 # Parsing helpers
 # --------------------------------------------------------------------------- #
+def _top_level_objects(text: str) -> list[str]:
+    """All top-level ``{...}`` substrings, brace-matched with string awareness.
+
+    A reasoning model sometimes emits MULTIPLE JSON blocks (e.g. a short draft, a
+    note, then the full schema). Naïve first-{ … last-} spans all of them and fails
+    json.loads with 'Extra data'. This collects each balanced top-level object so
+    the caller can take the LAST complete one (the final answer). Braces inside
+    strings are ignored. For a single-object output this returns exactly that one
+    object — identical to the old behaviour (no replay regression)."""
+    objs: list[str] = []
+    depth = 0
+    start: Optional[int] = None
+    in_str = False
+    esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                objs.append(text[start : i + 1])
+                start = None
+    return objs
+
+
 def _extract_json(text: str) -> dict:
-    text = text.strip()
+    text = (text or "").strip()
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n", "", text)
         text = re.sub(r"\n```\s*$", "", text)
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+    objs = _top_level_objects(text)
+    if not objs:
         raise ResearchGenerationError("no JSON object in model output")
-    try:
-        return json.loads(text[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise ResearchGenerationError(f"invalid JSON in model output: {exc}") from exc
+    # take the LAST balanced object that parses (final answer wins over drafts)
+    last_err: Optional[Exception] = None
+    for obj in reversed(objs):
+        try:
+            return json.loads(obj)
+        except json.JSONDecodeError as exc:
+            last_err = exc
+    raise ResearchGenerationError(f"invalid JSON in model output: {last_err}")
 
 
 _WS = re.compile(r"\s+")

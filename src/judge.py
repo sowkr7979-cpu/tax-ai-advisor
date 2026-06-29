@@ -34,7 +34,7 @@ from typing import Optional
 
 from rules.hard_gates import SCORE_BUCKETS
 from src.ai.llm_client import LLMClient, LLMResponse, default_llm_client
-from src.legal_research import ResearchLiteAnswer
+from src.legal_research import ResearchLiteAnswer, _top_level_objects
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _JUDGE_PROMPT_PATH = _REPO_ROOT / "prompts" / "judge.md"
@@ -177,13 +177,18 @@ def _extract_json(text: str) -> dict:
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*\n", "", text)
         text = re.sub(r"\n```\s*$", "", text)
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+    # robust to multiple JSON blocks (draft + final): take the LAST balanced
+    # top-level object that parses (codex: reasoning models emit extra blocks).
+    objs = _top_level_objects(text)
+    if not objs:
         raise JudgeError("no JSON object in judge output")
-    try:
-        return json.loads(text[start : end + 1])
-    except json.JSONDecodeError as exc:
-        raise JudgeError(f"invalid JSON in judge output: {exc}") from exc
+    last_err: Optional[Exception] = None
+    for obj in reversed(objs):
+        try:
+            return json.loads(obj)
+        except json.JSONDecodeError as exc:
+            last_err = exc
+    raise JudgeError(f"invalid JSON in judge output: {last_err}")
 
 
 def build_judge_prompt(

@@ -1,0 +1,47 @@
+{
+  "22c8d0b769d17d8d9aaa38f5d257826f223647d10a688233196451e80843b291": {
+    "bytes": 68239,
+    "content_hash": "7d9e27f77bd82ca48ee40b292f4f54eb4825bcdfa358f2314f3831b0b828fa71",
+    "file": "tavily_22c8d0b769d17d8d.json",
+    "include_domains": [
+      "law.go.kr",
+      "moef.go.kr",
+      "nts.go.kr",
+      "scourt.go.kr",
+      "tt.go.kr"
+    ],
+    "max_results": 8,
+    "query": "법인세법 제25조 적격증빙 2024 손금 한도 공식",
+    "recorded_at": "2026-06-29T13:15:07.846077+00:00"
+  },
+  "697077f649da8b5b6dea4ecb9a552a15aedc58f4bc028d358b43d54ffaf373ab": {
+    "bytes": 122231,
+    "content_hash": "8975c61e4014806ab8f7d3e632cecd471314ac727ca2567225fc70d72d7c5542",
+    "file": "tavily_697077f649da8b5b.json",
+    "include_domains": [
+      "law.go.kr",
+      "moef.go.kr",
+      "nts.go.kr",
+      "scourt.go.kr",
+      "tt.go.kr"
+    ],
+    "max_results": 8,
+    "query": "법인세법 제25조 기업업무추진비 2024 손금 한도 공식",
+    "recorded_at": "2026-06-29T13:15:04.474380+00:00"
+  },
+  "c3d9660cf1502ce631ca482d13cc49195eec544b731ef20ddb7ca232bc4dcb75": {
+    "bytes": 113655,
+    "content_hash": "acee505f9140edce94820e2328ee523e5229e2d9bc8d6407ad38bf36750849b3",
+    "file": "tavily_c3d9660cf1502ce6.json",
+    "include_domains": [
+      "law.go.kr",
+      "moef.go.kr",
+      "nts.go.kr",
+      "scourt.go.kr",
+      "tt.go.kr"
+    ],
+    "max_results": 8,
+    "query": "법인세법 제24조 기부금 2024 손금 한도 공식",
+    "recorded_at": "2026-06-29T13:15:15.386048+00:00"
+  }
+}

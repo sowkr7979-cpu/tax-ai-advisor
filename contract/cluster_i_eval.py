@@ -191,6 +191,32 @@ class RagQuery(TIWModel):
     gold_issues: list[str] = Field(default_factory=list)         # issue-spotting (independent)
 
 
+# --- slice ③ WEB gold schema (WEB-002/003/004/011/012) ------------------- #
+class WebQuery(TIWModel):
+    """One slice-③ web-research question.
+
+    Channel ③ DISCOVERS official sources (Tavily, official domains) and PROMOTES
+    only those cross-checked against the 법령 원문 (channel ①, version-pinned by
+    ``as_of_date``). ``gold_official_domains`` are the official authorities a correct
+    run must surface (search recall); ``gold_law`` is the version the promoted
+    conclusion must anchor to; ``expect_promote=False`` is the web-단독-단정 adversarial
+    (no promotable official source → must abstain)."""
+
+    query_id: str
+    question_text: str
+    law_name: str
+    article_label: str
+    issue: str                              # 쟁점 키워드 (query planning + relevance)
+    tax_type: str = "법인세"
+    basis_kind: BasisKind = BasisKind.FISCAL_YEAR
+    as_of_date: date                        # selects the 시행일 version (① cross-check)
+    high_risk: bool = False
+    gold_law: LawAnchorGoldCitation         # the version the promoted conclusion anchors to
+    gold_official_domains: list[str] = Field(default_factory=list)  # official-recall targets
+    gold_issues: list[str] = Field(default_factory=list)            # issue-spotting (independent)
+    expect_promote: bool = True             # False = must abstain (web-alone 금지)
+
+
 # --- slice ⑤ HITL gold schema (ORCH-007, AGT-008/OUT-004, HALU-008/009) --- #
 class HitlRoleGrant(TIWModel):
     """A RoleAssignment grant for an approver (SEC-012). The approver may approve a
@@ -247,5 +273,7 @@ class EvaluationCase(TIWModel):
     # slice ② only (empty for other slices)
     rag_corpus: list[RagCorpusDoc] = Field(default_factory=list)
     rag_queries: list[RagQuery] = Field(default_factory=list)
+    # slice ③ only (empty for other slices)
+    web_queries: list[WebQuery] = Field(default_factory=list)
     # slice ⑤ only (empty for other slices)
     hitl_scenarios: list[HitlScenario] = Field(default_factory=list)
