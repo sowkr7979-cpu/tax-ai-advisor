@@ -290,5 +290,34 @@ def test_spot_issues_promotes_question_named_issue():
     assert issues2[0]["issue_key"] == "기업업무추진비"
 
 
+# --------------------------------------------------------------------------- #
+# CLI fail-closed (비-데모 replay 경로 — raw traceback 금지, 명확한 안내)
+# --------------------------------------------------------------------------- #
+def test_cli_nondemo_replay_fails_closed_cleanly(tmp_path, capsys):
+    """replay 에 녹화 안 된 질문/쟁점 → 크래시가 아니라 exit 2 + 안내, 산출물 없음."""
+    from tiw.cli import main
+
+    out = tmp_path / "x.docx"
+    rc = main([
+        "run", "--replay", "--internal",
+        "--question", "지급이자 가지급금 인정이자 손금불산입 검토해줘",
+        "--out", str(out),
+    ])
+    assert rc == 2, "비-데모 replay 는 깔끔한 fail-closed(exit 2) 여야 함(크래시 금지)"
+    captured = capsys.readouterr().out
+    assert "fail-closed" in captured and "--live" in captured
+    assert not out.exists(), "fail-closed 시 잘못된 산출물을 만들지 않아야 함"
+
+
+def test_cli_demo_replay_succeeds(tmp_path):
+    """데모 기본 질문 + replay 는 정상(exit 0) + DOCX 생성."""
+    from tiw.cli import main
+
+    out = tmp_path / "demo.docx"
+    rc = main(["run", "--replay", "--internal", "--out", str(out)])
+    assert rc == 0
+    assert out.exists()
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

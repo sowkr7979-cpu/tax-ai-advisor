@@ -17,7 +17,18 @@ import argparse
 import sys
 from pathlib import Path
 
+from src.ai.embedding_client import EmbeddingNotReproducible, EmbeddingUnavailable
+from src.ai.law_data_source import LawSourceError
+from src.ai.llm_client import LLMError
+from src.ai.tavily_client import WebSearchError
 from src.orchestrator import DEFAULT_COMPANY_FIXTURE, CompanyProfile, Orchestrator
+
+# 재생 불가/서비스 미가용(transport) — replay 에 녹화 안 된 질문·쟁점은 합성하지 않고
+# fail-closed 한다. CLI 는 이를 raw traceback 대신 **명확한 안내**로 변환한다(아래).
+_REPRO_ERRORS = (
+    LLMError, LawSourceError, WebSearchError,
+    EmbeddingUnavailable, EmbeddingNotReproducible,
+)
 
 
 def _reconfig_utf8() -> None:
@@ -60,6 +71,25 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _explain_unreproducible(exc: Exception, *, mode: str, primary_hint: str) -> int:
+    """transport fail-closed 를 사용자용 안내로 변환(exit code 2). 합성/오답 대신 명확 중단."""
+    print()
+    if mode == "replay":
+        print("⚠ replay 모드로 이 질문/쟁점을 검토할 수 없습니다 — 녹화된 fixture가 없어 "
+              "fail-closed 합니다(잘못된 답을 만들지 않음).")
+        print(f"  사유: {type(exc).__name__}: {str(exc)[:160]}")
+        print("  해결 방법:")
+        print("   • 데모 범위(기업업무추진비·법인세법 제25조)는 질문 없이 결정적으로 실행:")
+        print("       python -m tiw run --replay --out scratchpad/검토패키지.docx")
+        print("   • 새로운 질문/쟁점(예: 지급이자·기부금 등)은 실제 호출로 분석·녹화:")
+        print("       python -m tiw run --live --question \"…\" --out scratchpad/out.docx")
+        print("     (--live 는 네트워크 + API 키(ANTHROPIC 등)가 필요합니다.)")
+    else:
+        print("⚠ 라이브 호출에 실패해 fail-closed 합니다(네트워크/API 키를 확인하세요).")
+        print(f"  사유: {type(exc).__name__}: {str(exc)[:160]}")
+    return 2
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     company = CompanyProfile.from_fixture(args.company)
     question = args.question or company.default_question
@@ -72,11 +102,15 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print("  (live) 실제 LLM/임베딩 호출 + fixture 녹화 — 네트워크/키 사용")
 
     orch = Orchestrator(mode=args.mode)
-    result = orch.run(
-        company=company, question=question, out_path=out,
-        audience=args.audience, approve_demo=args.approve_demo,
-        write_docx=out is not None,
-    )
+    try:
+        result = orch.run(
+            company=company, question=question, out_path=out,
+            audience=args.audience, approve_demo=args.approve_demo,
+            write_docx=out is not None,
+        )
+    except _REPRO_ERRORS as exc:
+        # fail-closed: 잘못된/합성 답변을 내지 않고 명확히 중단한다(raw traceback 금지).
+        return _explain_unreproducible(exc, mode=args.mode, primary_hint=question)
 
     print("\n── 진행 로그(§4-1 단계·소스·인용) ──")
     for line in result.log:
