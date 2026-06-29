@@ -1,0 +1,420 @@
+{
+  "intake": {
+    "goal": "A제조(주) 2026 법인세 절세·리스크 검토",
+    "company": "A제조(주)",
+    "early_stopped": true,
+    "turns": [
+      {
+        "role": "user",
+        "text": "A제조(주) 2026 사업연도 법인세 절세 검토를 시작해줘.",
+        "status": ""
+      },
+      {
+        "role": "bot",
+        "text": "전기(2025) 법인세 신고서가 있나요? 한도·이월 항목 비교에 필요합니다.",
+        "status": ""
+      },
+      {
+        "role": "user",
+        "text": "네, 전기 법인세 신고서 PDF 올렸습니다.",
+        "status": "수집"
+      },
+      {
+        "role": "bot",
+        "text": "당기 합계잔액시산표(TB)와 계정별 원장(접대비·기부금 계정)을 올려주세요.",
+        "status": ""
+      },
+      {
+        "role": "user",
+        "text": "엑셀 TB와 접대비 원장 업로드했습니다.",
+        "status": "수집"
+      },
+      {
+        "role": "bot",
+        "text": "업무용 승용차 운행기록부가 있나요? 손금 한도 검토에 필요합니다.",
+        "status": ""
+      },
+      {
+        "role": "user",
+        "text": "운행기록부는 아직 없습니다.",
+        "status": "없음"
+      },
+      {
+        "role": "bot",
+        "text": "법인카드/세금계산서 등 접대비 적격증빙 매칭 자료는 어떤가요?",
+        "status": ""
+      },
+      {
+        "role": "user",
+        "text": "그건 잘 모르겠어요, 담당자에게 확인해야 합니다.",
+        "status": "모름"
+      },
+      {
+        "role": "bot",
+        "text": "지급이자·가지급금 관련 차입금 명세가 있나요?",
+        "status": ""
+      },
+      {
+        "role": "user",
+        "text": "여기까지만 입력할게요. 나머지는 나중에 보완하겠습니다.",
+        "status": ""
+      },
+      {
+        "role": "bot",
+        "text": "조기 종료를 확인했습니다. 수집 자료로 검토 가능 범위와 결손·한계를 정리하겠습니다.",
+        "status": ""
+      }
+    ],
+    "checklist": [
+      {
+        "name": "전기 법인세 신고서(2025)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "합계잔액시산표(TB, 당기)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "계정별 원장(접대비·기부금)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "재무제표(당기)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "업무용 승용차 운행기록부",
+        "status": "없음",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "접대비 적격증빙(법인카드·세금계산서) 매칭",
+        "status": "모름",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "차입금 명세(지급이자·가지급금)",
+        "status": "결손",
+        "confidentiality": "L2"
+      }
+    ],
+    "closing_scope": "검토 가능 범위: 전기 신고서·TB·접대비 원장 기반으로 기업업무추진비(접대비) 한도 손금불산입과 기부금 한도, 지급이자 손금불산입 1차 검토가 가능합니다.",
+    "deficits": [
+      "업무용 승용차 운행기록부 미보유 → 차량 관련비용 손금 한도 검토 보류(결손)",
+      "접대비 적격증빙 매칭 자료 미확인(모름) → 손금 부인 리스크 정량화 제한",
+      "차입금 명세 결손 → 가지급금 인정이자·지급이자 손금불산입 정밀검토 보류"
+    ],
+    "limits": [
+      "운행기록부·증빙 매칭 자료 결손으로 일부 결론에는 '자료한계' 꼬리표가 부착됩니다.",
+      "적용시점은 2026 사업연도(귀속연도) 기준 가정 — 실제 거래일 확정 필요(PROV-013)."
+    ]
+  },
+  "draft": {
+    "matter_id": "matter_amfg_2026",
+    "client_id": "client_amfg",
+    "company_name": "A제조(주)",
+    "fiscal_year": "2026 사업연도",
+    "as_of_date": "2026-01-01",
+    "review_scope": "전 세무항목 동일 구조 검토(Tax Skill Library) — 기업업무추진비(접대비)·기부금·업무용 승용차·지급이자 중심. 리스크 → 선택지 비교 → 근거 → 검산 → 검토패키지.",
+    "high_risk": true,
+    "data_limits": [
+      "운행기록부·증빙 매칭·차입금 명세 결손으로 일부 결론에 자료한계 꼬리표 부착",
+      "적용시점은 2026 사업연도(귀속연도) 가정 — 실제 거래일 확정 필요"
+    ],
+    "sections": [
+      "1. Executive Summary",
+      "2. 회사 개요·검토 범위",
+      "3. 입력 자료 목록",
+      "4. 주요 세무 리스크",
+      "5. 절세 기회",
+      "6. 선택지별 세부담·리스크 비교표",
+      "7. 쟁점별 검토 메모",
+      "8. 관련 법령·예규·판례 근거",
+      "9. 추가 요청 자료",
+      "10. 회계사 검토 필요사항",
+      "11. 결론 초안·추천 검토 순서"
+    ],
+    "executive_summary": "A제조(주) 2026 사업연도 법인세 검토 결과, 기업업무추진비(접대비) 한도 초과 및 적격증빙 미수취분 손금불산입이 핵심 리스크다. 보수/중립/적극 3개 선택지의 세부담·과세리스크·방어가능성을 비교 제시하며, 적격증빙 부인 범위는 예규·심판례 충돌이 미해소되어 회계사 검토(HITL)로 승격한다. 모든 법적 주장은 법령 원문(버전 객체) 인용을 동반하며, 운행기록부·증빙 매칭 결손에는 자료한계 꼬리표를 부착했다.",
+    "input_materials": [
+      {
+        "name": "전기 법인세 신고서(2025)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "합계잔액시산표(TB, 당기)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "계정별 원장(접대비·기부금)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "재무제표(당기)",
+        "status": "수집",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "업무용 승용차 운행기록부",
+        "status": "없음",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "접대비 적격증빙 매칭",
+        "status": "모름",
+        "confidentiality": "L2"
+      },
+      {
+        "name": "차입금 명세(지급이자·가지급금)",
+        "status": "결손",
+        "confidentiality": "L2"
+      }
+    ],
+    "risks": [
+      {
+        "title": "접대비 한도 초과 손금불산입",
+        "description": "기업업무추진비가 기본한도+수입금액 기준 한도를 초과한 부분은 손금불산입.",
+        "severity": "HIGH",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      },
+      {
+        "title": "적격증빙 미수취분 손금 부인",
+        "description": "건당 기준금액 초과 접대비의 적격증빙(법인카드·세금계산서) 미수취분 손금 부인 리스크.",
+        "severity": "HIGH",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      },
+      {
+        "title": "기부금 한도 초과·이월",
+        "description": "법정·지정기부금 한도 초과액의 손금불산입 및 이월공제 적정성 검토 필요.",
+        "severity": "MEDIUM",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c24_pv_법인세법_제24조_20240101"
+        ]
+      },
+      {
+        "title": "지급이자 손금불산입(가지급금 등)",
+        "description": "업무무관자산·가지급금 관련 지급이자 손금불산입 대상 여부 검토.",
+        "severity": "MEDIUM",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c28_pv_법인세법_제28조_20240101"
+        ]
+      }
+    ],
+    "opportunities": [
+      {
+        "title": "기업업무추진비 한도 최적화",
+        "description": "수입금액 기준 한도·문화접대비 추가한도 활용으로 손금 가능액 확대 여지.",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      },
+      {
+        "title": "업무용 승용차 손금 한도 관리",
+        "description": "운행기록부 작성으로 업무사용비율 인정·손금 한도 확대(자료 보완 전제).",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c27_pv_법인세법_제27조의2_20240101"
+        ]
+      },
+      {
+        "title": "기부금 이월공제 활용",
+        "description": "당기 한도 초과 기부금의 이월공제로 차기 이후 손금 산입 기회.",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c24_pv_법인세법_제24조_20240101"
+        ]
+      }
+    ],
+    "strategy_options": [
+      {
+        "option_key": "보수",
+        "label": "보수적 처리",
+        "expected_tax_burden": "증가 (+약 1,200만원)",
+        "tax_risk": "낮음 — 한도 초과·미증빙분 전액 손금불산입",
+        "defensibility": "높음 — 과세관청 수용 가능성 큼",
+        "required_evidence": "기본 자료(TB·원장)",
+        "cpa_review_point": "고객 세부담 증가 수용 가능성",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      },
+      {
+        "option_key": "중립",
+        "label": "중립적 처리",
+        "expected_tax_burden": "중간 (+약 600만원)",
+        "tax_risk": "중간 — 적격증빙 매칭분만 손금, 한도 내 처리",
+        "defensibility": "중간 — 예규 근거 확보 시 방어 가능",
+        "required_evidence": "계약서·계정별 원장·법인카드 매칭",
+        "cpa_review_point": "예규 근거 확인·증빙 매칭 충실도",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      },
+      {
+        "option_key": "적극",
+        "label": "적극적 처리",
+        "expected_tax_burden": "감소 (-약 300만원)",
+        "tax_risk": "높음 — 업무관련성 폭넓게 인정·전액 손금 주장",
+        "defensibility": "낮음~중간 — 조사 시 부인 가능성",
+        "required_evidence": "추가 소명자료(거래 목적·상대방·업무관련성)",
+        "cpa_review_point": "세무조사 대응 가능성·가산세 노출",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ]
+      }
+    ],
+    "issue_memos": [
+      {
+        "topic": "쟁점 1. 접대비 적격증빙 손금 부인 범위",
+        "analysis": "제25조는 한도 초과액과 적격증빙 미수취분을 손금불산입한다. 증빙 매칭 자료가 '모름' 상태로 부인 범위 정량화가 제한되며, 예규(과세)와 심판례(납세자)가 충돌하므로 단정하지 않고 회계사 검토로 승격한다.",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101"
+        ],
+        "escalation": "H3(충돌/시점) → 미해소 충돌 단정 금지"
+      },
+      {
+        "topic": "쟁점 2. 기부금 한도·이월공제",
+        "analysis": "제24조 한도 계산과 이월공제 잔액의 정합성을 전기 신고서와 대조한다.",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c24_pv_법인세법_제24조_20240101"
+        ],
+        "escalation": "H2(계산) → 한도 계산 검산"
+      },
+      {
+        "topic": "쟁점 3. 업무용 승용차 관련비용 한도",
+        "analysis": "제27조의2 업무사용비율·한도는 운행기록부에 의존하나 운행기록부가 결손이라 검토를 보류한다(자료한계).",
+        "citation_ids": [
+          "cit_sa_matter_amfg_2026_c27_pv_법인세법_제27조의2_20240101"
+        ],
+        "escalation": "H1(입력) → 운행기록부 결손 보완 필요"
+      }
+    ],
+    "citations": [
+      {
+        "citation_id": "cit_sa_matter_amfg_2026_c25_pv_법인세법_제25조_20240101",
+        "label": "법인세법 제25조(기업업무추진비의 손금불산입)",
+        "source_kind": "ProvisionVersion",
+        "locator": "법인세법 제25조",
+        "quote": "제25조(기업업무추진비의 손금불산입) ① 이 조에서 \"기업업무추진비\"란 접대, 교제, 사례 또는 그 밖에 어떠한 명목이든 상관없이 이와 유사한 목적으로 지출한 비용으로서 내국법인이 직접 또는 간접적으로 업무와 관련이 있는 자와 업무를 원활하게 진행하기 위하여 지출한 금액을 말한다. <개정 2018.12.24, 2022.12.31> ② 내국법인이 한 차례의 접대에 지출한 기업업무추진비 중 대통령령으로 정하는 금액을 초과하는 기업업무추진비로서 다음 각 호의 어느 하나에 해당하지 아니하는 것은 각 사업…",
+        "as_of": "2026-01-01",
+        "basis_kind": "FISCAL_YEAR",
+        "authority_rank": 1,
+        "href": "https://www.law.go.kr/법령/법인세법/제25조"
+      },
+      {
+        "citation_id": "cit_sa_matter_amfg_2026_c24_pv_법인세법_제24조_20240101",
+        "label": "법인세법 제24조(기부금의 손금불산입)",
+        "source_kind": "ProvisionVersion",
+        "locator": "법인세법 제24조",
+        "quote": "제24조(기부금의 손금불산입) ① 이 조에서 \"기부금\"이란 내국법인이 사업과 직접적인 관계없이 무상으로 지출하는 금액(대통령령으로 정하는 거래를 통하여 실질적으로 증여한 것으로 인정되는 금액을 포함한다)을 말한다. <개정 2018.12.24> ② 내국법인이 각 사업연도에 지출한 기부금 및 제5항에 따라 이월된 기부금 중 제1호에 따른 특례기부금은 제2호에 따라 산출한 손금산입한도액 내에서 해당 사업연도의 소득금액을 계산할 때 손금에 산입하되, 손금산입한도액을 초과하는 금액은 손금에 산입하지 아니한…",
+        "as_of": "2026-01-01",
+        "basis_kind": "FISCAL_YEAR",
+        "authority_rank": 1,
+        "href": "https://www.law.go.kr/법령/법인세법/제24조"
+      },
+      {
+        "citation_id": "cit_sa_matter_amfg_2026_c27_pv_법인세법_제27조의2_20240101",
+        "label": "법인세법 제27조의2(업무용승용차 관련비용의 손금불산입 등 특례)",
+        "source_kind": "ProvisionVersion",
+        "locator": "법인세법 제27조의2",
+        "quote": "제27조의2(업무용승용차 관련비용의 손금불산입 등 특례) ① 「개별소비세법」 제1조제2항제3호에 해당하는 승용자동차(운수업, 자동차판매업 등에서 사업에 직접 사용하는 승용자동차로서 대통령령으로 정하는 것과 연구개발을 목적으로 사용하는 승용자동차로서 대통령령으로 정하는 것은 제외하며, 이하 이 조 및 제74조의2에서 \"업무용승용차\"라 한다)에 대한 감가상각비는 각 사업연도의 소득금액을 계산할 때 대통령령으로 정하는 바에 따라 손금에 산입하여야 한다. <개정 2018.12.24, 2019.12.31,…",
+        "as_of": "2026-01-01",
+        "basis_kind": "FISCAL_YEAR",
+        "authority_rank": 1,
+        "href": "https://www.law.go.kr/법령/법인세법/제27조의2"
+      },
+      {
+        "citation_id": "cit_sa_matter_amfg_2026_c28_pv_법인세법_제28조_20240101",
+        "label": "법인세법 제28조(지급이자의 손금불산입)",
+        "source_kind": "ProvisionVersion",
+        "locator": "법인세법 제28조",
+        "quote": "제28조(지급이자의 손금불산입) ① 다음 각 호의 차입금의 이자는 내국법인의 각 사업연도의 소득금액을 계산할 때 손금에 산입하지 아니한다. <개정 2010.12.30, 2011.12.31, 2018.12.24> 1.  대통령령으로 정하는 채권자가 불분명한 사채의 이자 2.  「소득세법」 제16조제1항제1호ㆍ제2호ㆍ제5호 및 제8호에 따른 채권ㆍ증권의 이자ㆍ할인액 또는 차익 중 그 지급받은 자가 불분명한 것으로서 대통령령으로 정하는 것 3.  대통령령으로 정하는 건설자금에 충당한 차입금의 이자 4.…",
+        "as_of": "2026-01-01",
+        "basis_kind": "FISCAL_YEAR",
+        "authority_rank": 1,
+        "href": "https://www.law.go.kr/법령/법인세법/제28조"
+      }
+    ],
+    "additional_requests": [
+      "업무용 승용차 운행기록부(2026 사업연도) — 차량 관련비용 손금 한도 검토용",
+      "접대비 적격증빙(법인카드 전표·세금계산서) 및 원장 매칭 명세",
+      "차입금 명세·가지급금 잔액 명세 — 지급이자 손금불산입 검토용",
+      "이사회의사록·주요 계약서 — 거래 업무관련성 소명자료"
+    ],
+    "review_items": [
+      {
+        "item_id": "ri_amfg_0",
+        "category": "INTERPRETATION",
+        "description": "해석·사실판단 필요 결론(해석): 사실인정·법적평가는 회계사 판단(HITL) — 계산엔진/생성기 단정 금지.",
+        "gate": "H1",
+        "severity": "MEDIUM",
+        "requires_warning": false
+      },
+      {
+        "item_id": "ri_amfg_1",
+        "category": "TEMPORAL_ASSUMPTION",
+        "description": "적용시점 가정: 2026-01-01 (FISCAL_YEAR) 기준 시행일 버전 — 실제 거래일/귀속연도 확정 필요.",
+        "gate": "H3",
+        "severity": "MEDIUM",
+        "requires_warning": false
+      },
+      {
+        "item_id": "ri_amfg_2",
+        "category": "WEAK_BASIS",
+        "description": "근거 확인 필요: 적격증빙 미매칭분 손금 부인 가능성(과세논리)",
+        "gate": "H2",
+        "severity": "MEDIUM",
+        "requires_warning": false
+      },
+      {
+        "item_id": "ri_amfg_3",
+        "category": "WEAK_BASIS",
+        "description": "근거 확인 필요: 업무무관성 의심 거래의 손금 부인 리스크",
+        "gate": "H2",
+        "severity": "MEDIUM",
+        "requires_warning": false
+      },
+      {
+        "item_id": "ri_amfg_4",
+        "category": "HIGH_RISK_AGGRESSIVE",
+        "description": "[회계사 검토 필요] 본 답변은 법령 원문 앵커링(결정적 부분)만 제공합니다. 사실관계 적용·법리 판단·시점 가정은 회계사(CPA) 검토·서명이 필요합니다.\n[적극 절세 가드레일] 과세논리(과세관청 입장·부인 가능성)와 방어논리(소명·증빙) 양면을 함께 적시하고, Reviewer 승인 전에는 고객 전달본에 포함 금지(AGT-008/OUT-004).",
+        "gate": "H4",
+        "severity": "HIGH",
+        "requires_warning": true
+      },
+      {
+        "item_id": "ri_amfg_5",
+        "category": "UNRESOLVED_CONFLICT",
+        "description": "미해소 충돌(단정 금지·그대로 노출): 접대비 적격증빙 손금 부인 범위 — 예규(과세) vs 심판례(납세자) 미해소",
+        "gate": "H3",
+        "severity": "HIGH",
+        "requires_warning": false
+      },
+      {
+        "item_id": "ri_amfg_6",
+        "category": "DATA_LIMIT",
+        "description": "자료 한계: 업무용 승용차 운행기록부 결손 — 차량 관련비용 손금 한도 검토 보류",
+        "gate": "H1",
+        "severity": "MEDIUM",
+        "requires_warning": false
+      }
+    ],
+    "conclusion": "접대비 한도 초과 손금불산입은 법령 원문으로 확정되나, 적격증빙 부인 범위와 업무용 승용차 한도는 자료 보완·회계사 판단이 선행되어야 한다. 중립적 처리를 기준안으로 제시하되 최종 선택지와 고객 전달본은 Reviewer 승인(H4·H5) 후 확정한다.",
+    "recommended_order": [
+      "운행기록부·증빙 매칭 자료 보완(결손 해소)",
+      "접대비·기부금 한도 계산 검산(H2)",
+      "적격증빙 부인 범위 예규·심판례 재검토(H3, 미해소 충돌)",
+      "선택지 확정 및 고위험 가드레일 검토(H4)",
+      "검토패키지 사인오프·고객 전달본 생성(H5)"
+    ],
+    "synthesis_opinion": "[종합의견 — 채널 ④ 3소스 종합] ①법령(제25조)·②내부 실무서·③최신 웹이 각각 독립 답변을 낸 뒤 권위 위계(법률>시행령>…>실무서>웹)·시점 유효성으로 정합. 접대비 한도 초과 손금불산입은 ①법령 원문으로 확정, 적격증빙 부인 범위는 예규·심판례 충돌이 미해소되어 회계사 검토로 승격(단정 보류). 종합의견은 새 인용을 만들지 않고 각 소스답변의 인용을 상속한다."
+  }
+}

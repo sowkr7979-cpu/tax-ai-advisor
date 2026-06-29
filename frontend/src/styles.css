@@ -1,0 +1,292 @@
+:root {
+  --ink: #1c2530;
+  --muted: #5d6b7a;
+  --line: #d9e0e8;
+  --bg: #f4f6f9;
+  --accent: #1f6feb;
+  --risk: #c0392b;
+  font-family: "Pretendard", "Malgun Gothic", system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px 64px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 16px 0 8px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.matter {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.badge-risk {
+  color: #fff;
+  background: var(--risk);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 24px;
+  flex-wrap: wrap;
+}
+
+.nav-tab {
+  text-decoration: none;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.nav-tab.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
+  font-weight: 600;
+}
+
+.screen h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.screen h2 {
+  font-size: 17px;
+  margin: 24px 0 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 4px;
+}
+
+.goal {
+  color: var(--muted);
+  margin: 4px 0 16px;
+}
+
+/* chat */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.bubble {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border-radius: 8px;
+  max-width: 86%;
+}
+
+.bubble.bot {
+  background: #eef3fb;
+  align-self: flex-start;
+}
+
+.bubble.user {
+  background: #e8f5ec;
+  align-self: flex-end;
+}
+
+.who {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.early-stop {
+  color: var(--accent);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* status chips */
+.st {
+  font-size: 12px;
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.st-collected {
+  background: #d4efdc;
+  color: #1d7a3f;
+}
+
+.st-none {
+  background: #fde2e0;
+  color: #b23b2e;
+}
+
+.st-unknown {
+  background: #fff2cc;
+  color: #946c00;
+}
+
+.st-deficit {
+  background: #e4e8ee;
+  color: #5d6b7a;
+}
+
+/* tables */
+table.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+  margin: 8px 0;
+}
+
+table.grid th,
+table.grid td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+table.grid thead th {
+  background: #eef1f5;
+}
+
+table.strategy tbody th {
+  background: #f7f9fc;
+  white-space: nowrap;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* citations */
+.cite-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+  font-size: 13px;
+  margin-right: 6px;
+}
+
+.cites {
+  margin-left: 6px;
+}
+
+.cite-cell {
+  font-size: 13px;
+}
+
+.cite-list blockquote {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  border-left: 3px solid var(--line);
+  padding-left: 10px;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* docx preview */
+.toc {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 28px;
+  columns: 2;
+  font-size: 13px;
+}
+
+.paper {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px 28px;
+  margin-top: 16px;
+}
+
+.paper h3 {
+  margin: 12px 0 4px;
+}
+
+.memo {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  margin: 8px 0;
+}
+
+.esc {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.warn {
+  color: var(--risk);
+  font-weight: 700;
+}
+
+.callout,
+.limit-tag {
+  background: #fff7e6;
+  border: 1px solid #f0d9a8;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin: 14px 0;
+}
+
+.limit-tag {
+  background: #fdeceb;
+  border-color: #f3c0bb;
+  color: #8a2c22;
+}
+
+.closing {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 16px;
+}
+
+code {
+  background: #eef1f5;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}

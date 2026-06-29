@@ -40,9 +40,23 @@ node_modules/
 .next/
 .vite/
 dist-frontend/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/screenshots/
+frontend/.playwright/
+.playwright-cache/
+
+# --- generated demo docx (regenerable) ---
+*.docx
+!docs/**/*.docx
+!Codex/**/*.docx
 
 # --- OS / editor ---
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+
+# TS incremental build cache
+*.tsbuildinfo

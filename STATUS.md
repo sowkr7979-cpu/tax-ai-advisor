@@ -11,7 +11,7 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**slice ⑥·①·②·③·④·⑤ 완료 (6/6 PASS)** (autonomous 루프 진입 전 수동 검증 단계 — '통제된 시작'). 남은: 프론트 목업 3화면.
+**전체 완료** — 6/6 vertical slice PASS + **프론트 목업 3화면 Playwright 렌더 통과** + DOCX Draft(11목차, OUT-002). PROMPT.md 완료조건(6 slice ≥90 + 하드게이트 0 + 목업 3화면 렌더) **전부 충족**.
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
@@ -37,7 +37,7 @@
 - pytest: **70 passed**. `python -m tiw.eval`: slice⑥=PASS(100), slice①=PASS(90.5, judge 연결). 요약 2/2 완료게이트(구현된 슬라이스).
 - fail-closed 증명: throwing/empty store → `NOT_REPRODUCIBLE`(cap75) + total<90 실패 (`측정 못 함 = 만점` 불가).
 
-프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기): 미착수(백엔드 슬라이스 선행).
+프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기): **완료** — `frontend/`(Vite+React+TS), 백엔드 산출 fixture 렌더, Playwright 3 passed(스크린샷+텍스트/테이블/근거링크 assertion). DOCX Draft: `src/draft.py`(11목차, OUT-002/003/004/006 — 무인용 단정 금지·고객본 미승인 차단·필수섹션 강제), slice①Citation·④SynthesisOpinion·⑤review_items 연계. pytest 184 passed.
 
 ### slice ① judge 레이어 (이번 빌드 — 실연동 완료)
 - **LLM 어댑터 실연동**(`src/ai/llm_client.py`): Anthropic Messages API(claude-opus-4-8). **temperature 미전송**(Opus 4.6+ 는 sampling param 400) — 결정성은 fixture 재생으로. RECORD/REPLAY 트랜스포트(law_data_source 패턴 재사용) + ModelVersion·토큰·비용 로깅(docs/07). zero-retention/L3·L4 게이팅 주석(slice①은 L0 공개 법령만 송신).
@@ -102,6 +102,7 @@
 - **slice ⑤ HITL codex 리뷰** (P0 1건 반영): **P0** FinalMemo/ClientDeliverable 모델 생성자가 승인 미검증(워크플로 우회 직접생성 가능) → **contract 레이어에 `ReleaseAuthorization` proof 필수**(필요 게이트 승인+테넌트 정합 없으면 ValidationError) + **P1** 감사이벤트 기반 판정(side-effect release→`record_release` 로그 적발) = **이중 차단**. 견고 확인: 게이트로직(저위험 H5/고위험 H4+H5)·approver 권한(무권한·교차테넌트·timeout 거부)·fixture 재사용 정당(HITL 로직 실제 실행, graceful degrade req<100)·ReviewHistory 변조감지. **pytest 117 passed**(×3 일관). `UNAPPROVED_RELEASE:0` additive(기존 캡 frozen).
 - **slice ③ 공식소스 Web codex 리뷰** (P0 2건 반영): **P0-1** WEB-011 "법령 원문 대조"가 토큰 존재 검사에 그침(공식 도메인 안내 페이지도 승격) → **실질 원문 대조**로 강화: 후보 원문과 ① ProvisionVersion.text 의 **최장 공통 verbatim 부분문자열(difflib, ≥40자)** 을 요구(`content_corroborated`). 실측상 진짜 조문 본문 페이지는 500~924자 일치, 안내 페이지는 ≤28자 → 깨끗이 분리. **P0-2** web `SOURCE_SNAPSHOT` citation 의 quote 가 웹 콘텐츠가 아닌 `pv.text`에서 생성 → **실제 스냅샷 원문 발췌**(원문 대조 verbatim 공유 구간)로 변경: quote 가 공식 웹 콘텐츠 **AND** 법령 원문 양쪽의 verbatim 부분문자열 → 하버스가 `quote ⊂ official_content` 와 `quote ⊂ pv.text` **둘 다** 검증. **P1-1** `expect_promote=False`(정상 abstain) 케이스가 NOT_REPRODUCIBLE 처리 → `abstain_ok` 분리 집계로 정상 abstain 을 PASS 경로로 채점. **P1-2** replay `retrieved_at` 누락 시 wall-clock now() 폴백 → ReplayTavilyTransport 가 manifest `recorded_at` 부재/파싱불가 시 **fail-closed(`WebNotReproducible`)**. **P2** `.env` 없으면 키 스캔 skip → **무조건 secret marker 정적 스캔**(tvly-/Bearer/sk-ant-) 추가. 견고 확인: 가중치/캡/게이트 불변·hidden(제24조)≠public(제25조)·src/ hidden 미import·fixture/judge/citation/temporal fail-closed 경로 정상. 회귀테스트 `test_promotion_requires_real_provision_overlap`·`test_web_citation_quote_comes_from_official_content` 추가. **pytest 145 passed**(×3 일관, 순서 독립).
 - **slice ④ 충돌종합 codex 리뷰** (빌드 자체 CLEAN + **독립 재검증이 더 깊이 적발**): 독립 codex **P0 1 + P1 2 + P2 2 반영** — **P0** 권위위계 하드게이트가 `outcome` 필드 신뢰(변조 시 우회) → **채택 권위 rank 직접 비교**(하위가 상위 법령 override → conflict 0 + FABRICATED, outcome 라벨 무관). **P1-1** lineage가 id 존재만 검증 → **합성 claim↔채택 조문 내용 entailment**(`verify_entailment`) 추가, 미지지 → 무결성 위반(NOT_REPRODUCIBLE). **P1-2** gold `expected_excluded` 미채점 → 배제채널 일치율을 conflict 산식에 반영. **P2-1** 빈 citation `[0]` 예외 → fail-closed. **P2-2** no-positive(SILENT/LAW_ABSENT) `conflict_f1=1.0` 트리비얼 → `N/A` 분리. 견고 확인: 결정테이블 deterministic(LLM fallback 0)·평균/다수결 금지·신규인용 이중차단. **점수 무변(93.5)** — 정직성 강화는 적대 입력만 하락. **pytest 172 passed**(×3 일관, 순서 독립). 수용: fixture가 case_id로 키됨(결정테이블·채점은 fixture 무관 결정적).
+- **DOCX Draft codex 리뷰** (P0×2 + P1×2 + P2 반영): **P0-1**(OUT-003) validate가 issue_memos/risks만 검사 → **선택지·절세기회 포함 모든 법적주장 citation을 non-empty + SourceRegistry 정합검증**(무인용/날조→DraftValidationError), 선택지표에 근거 컬럼. **P0-2**(OUT-004) `build_review_package_docx(internal=False)`가 proof 없이 고객본 생성 → 공개 경로 제거, 고객본은 `build_client_deliverable_docx`(ReleaseAuthorization proof 필수)만. **P1-1**(OUT-006) 빈 문자열 통과 → strip non-empty 강제. **P1-2**(HALU-008/009) high_risk를 적극선택지/HIGH 리스크에서 재도출 → 경고누락 차단. **P2** DOCX core props timestamp 고정 → byte 결정성. **pytest 194 passed**(×3), 슬라이스 회귀 0, Playwright 3 passed.
 
 ## 빌드 환경 메모
 - 스택: Python 3.11+ (검증: 3.14.4). 핵심 deps = `pydantic>=2.7`+`pyyaml`(결정적 경로). 어댑터(fastapi/anthropic/chromadb/python-docx)는 `[adapters]`/`[api]` extra — slice⑥ 테스트는 실키·heavy wheel 없이 통과.

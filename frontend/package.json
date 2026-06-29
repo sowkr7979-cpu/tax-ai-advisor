@@ -1,0 +1,25 @@
+{
+  "name": "tiw-frontend-mockup",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "TIW 프론트 목업 3화면 — Intake 자료수집 챗 · 선택지 비교표 · DOCX 검토패키지 미리보기",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  }
+}
