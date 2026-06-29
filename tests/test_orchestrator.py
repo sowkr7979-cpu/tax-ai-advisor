@@ -354,5 +354,19 @@ def test_cli_unexpected_error_no_traceback(monkeypatch, tmp_path, capsys):
     assert not out.exists()
 
 
+def test_cli_bad_company_path_fails_closed(tmp_path, capsys):
+    """존재하지 않는 --company 경로도 raw traceback 없이 exit 1."""
+    from tiw.cli import main
+
+    out = tmp_path / "x.docx"
+    rc = main([
+        "run", "--replay", "--company", str(tmp_path / "does_not_exist.json"),
+        "--out", str(out),
+    ])
+    assert rc == 1
+    assert "예기치 못한 오류" in capsys.readouterr().out
+    assert not out.exists()
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

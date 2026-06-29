@@ -91,18 +91,18 @@ def _explain_unreproducible(exc: Exception, *, mode: str, primary_hint: str) -> 
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    company = CompanyProfile.from_fixture(args.company)
-    question = args.question or company.default_question
     out = Path(args.out) if args.out else None
 
-    print(f"▶ TIW run — {company.company_name} {company.fiscal_year} "
-          f"[{args.mode} · {args.audience}]")
-    print(f"  질문: {question}")
-    if args.mode == "live":
-        print("  (live) 실제 LLM/임베딩 호출 + fixture 녹화 — 네트워크/키 사용")
-
-    # 생성자도 try 안에서 — live 모드 키 부재 등은 Orchestrator() 구성 시점에 발생한다.
+    # 회사 fixture 로드·구성·실행 모두 try 안에서 — 어떤 내부 실패도 CLI 는 raw traceback
+    # 대신 깔끔히 중단한다(잘못된 --company 경로, live 키 부재, replay fixture 부재 포함).
     try:
+        company = CompanyProfile.from_fixture(args.company)
+        question = args.question or company.default_question
+        print(f"▶ TIW run — {company.company_name} {company.fiscal_year} "
+              f"[{args.mode} · {args.audience}]")
+        print(f"  질문: {question}")
+        if args.mode == "live":
+            print("  (live) 실제 LLM/임베딩 호출 + fixture 녹화 — 네트워크/키 사용")
         orch = Orchestrator(mode=args.mode)
         result = orch.run(
             company=company, question=question, out_path=out,
@@ -111,9 +111,9 @@ def _cmd_run(args: argparse.Namespace) -> int:
         )
     except _REPRO_ERRORS as exc:
         # 재현불가/서비스 미가용 — 잘못된/합성 답변을 내지 않고 명확히 안내(raw traceback 금지).
-        return _explain_unreproducible(exc, mode=args.mode, primary_hint=question)
+        return _explain_unreproducible(exc, mode=args.mode, primary_hint=args.question or "")
     except Exception as exc:  # noqa: BLE001
-        # 그 외 예기치 못한 오류도 CLI 는 raw traceback 대신 깔끔히 중단한다(fail-closed).
+        # 그 외 예기치 못한 오류(잘못된 fixture 경로/형식 등)도 깔끔히 중단(fail-closed).
         print()
         print("⚠ 예기치 못한 오류로 중단했습니다(fail-closed — 산출물 미생성).")
         print(f"  사유: {type(exc).__name__}: {str(exc)[:200]}")
