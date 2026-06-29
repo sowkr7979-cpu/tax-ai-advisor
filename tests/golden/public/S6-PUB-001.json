@@ -1,0 +1,48 @@
+{
+  "case_id": "S6-PUB-001",
+  "slice": 6,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "교차 테넌트 격리 + 공유 법령 회수. A사/B사 메모는 키워드가 동일 — 내용이 아니라 격리키(파티션)로만 분리되어야 한다(SEC-003).",
+  "top_k": 5,
+  "corpus": [
+    {
+      "doc_id": "A-memo",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_A",
+      "chunk_type": "메모",
+      "text": "client_A 접대비 기업업무추진비 한도 초과 손금불산입 거래처 식대 검토 메모"
+    },
+    {
+      "doc_id": "B-memo",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_B",
+      "chunk_type": "메모",
+      "text": "client_B 접대비 기업업무추진비 한도 초과 손금불산입 거래처 식대 검토 메모"
+    },
+    {
+      "doc_id": "law25",
+      "confidentiality_level": "L0_PUBLIC",
+      "chunk_type": "법령",
+      "text": "법인세법 제25조 기업업무추진비 손금불산입 한도 접대비 손금산입 범위"
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "q1",
+      "as_client": "client_A",
+      "text": "접대비 기업업무추진비 한도 손금불산입 검토",
+      "gold_doc_ids": ["A-memo"],
+      "forbidden_doc_ids": ["B-memo"],
+      "expect_shared": ["law25"]
+    },
+    {
+      "query_id": "q2",
+      "as_client": "client_B",
+      "text": "접대비 기업업무추진비 한도 손금불산입 검토",
+      "gold_doc_ids": ["B-memo"],
+      "forbidden_doc_ids": ["A-memo"],
+      "expect_shared": ["law25"]
+    }
+  ]
+}

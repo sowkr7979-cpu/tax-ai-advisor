@@ -1,0 +1,76 @@
+"""tiw/eval/runner.py — slice aggregation + registry (docs/09 §8 completion gate).
+
+Headline slice score = MIN over case totals (conservative: one leaking case fails
+the slice — averaging a failure away would be gaming). Mean is reported too for
+transparency. A slice PASSES iff score >= 90 AND no hard-gate hit (PROMPT.md §5).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from contract.cluster_i_eval import RubricResult, Visibility
+from rules.hard_gates import COMPLETION_THRESHOLD
+from tiw.eval.loader import load_hidden_cases, load_public_cases
+from tiw.eval.slices import slice6_isolation
+
+
+@dataclass
+class SliceReport:
+    slice_no: int
+    name: str
+    case_results: list[RubricResult] = field(default_factory=list)
+    score: float = 0.0          # headline = min(case totals)
+    mean_total: float = 0.0
+    hard_gate_hit: bool = False
+    threshold: int = COMPLETION_THRESHOLD
+
+    @property
+    def passed(self) -> bool:
+        return (not self.hard_gate_hit) and self.score >= self.threshold
+
+    @property
+    def public_count(self) -> int:
+        return sum(1 for r in self.case_results if r.visibility == Visibility.PUBLIC)
+
+    @property
+    def hidden_count(self) -> int:
+        return sum(1 for r in self.case_results if r.visibility == Visibility.HIDDEN)
+
+
+# slice_no -> (display name, callable(cases) -> list[RubricResult])
+_REGISTRY = {
+    6: ("테넌트 격리", slice6_isolation.run_cases),
+}
+
+
+def implemented_slices() -> list[int]:
+    return sorted(_REGISTRY)
+
+
+def run_slice(slice_no: int) -> SliceReport:
+    if slice_no not in _REGISTRY:
+        raise ValueError(
+            f"slice {slice_no} not implemented yet. Implemented: {implemented_slices()}"
+        )
+    name, runner = _REGISTRY[slice_no]
+    # hidden + public loaded via SEPARATE loaders (anti-gaming, docs/09 §6)
+    cases = load_public_cases(slice_no) + load_hidden_cases(slice_no)
+    results = runner(cases)
+
+    if not results:
+        return SliceReport(slice_no=slice_no, name=name, case_results=[], score=0.0)
+
+    totals = [r.total for r in results]
+    return SliceReport(
+        slice_no=slice_no,
+        name=name,
+        case_results=results,
+        score=round(min(totals), 2),
+        mean_total=round(sum(totals) / len(totals), 2),
+        hard_gate_hit=any(r.hard_gate_hit for r in results),
+    )
+
+
+def run_all() -> list[SliceReport]:
+    return [run_slice(n) for n in implemented_slices()]

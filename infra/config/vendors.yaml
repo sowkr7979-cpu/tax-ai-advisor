@@ -1,0 +1,46 @@
+# infra/config/vendors.yaml — vendor config (docs/README §2 boundary rule)
+#
+# Model names / endpoints / DB locations live HERE, never hardcoded in adapters
+# (src/ai/*). SECRETS live in .env (gitignored) — only env-var NAMES appear here.
+# Slice ⑥ does not read this file (it uses the deterministic fake embedder).
+
+llm:
+  provider: anthropic
+  model: claude-opus-4-8          # docs/07 default LLM
+  api_key_env: ANTHROPIC_API_KEY  # value lives in .env, NOT here
+  max_tokens: 4096
+  temperature: 0.0
+
+embedding:
+  provider: TODO                  # multilingual/Korean embedder (wire in slice ②)
+  model: TODO-multilingual-embedder
+  dimension: 1024
+  api_key_env: EMBEDDING_API_KEY
+
+reranker:
+  provider: TODO
+  model: TODO-reranker
+
+vector_db:
+  backend: chroma                 # local embedded; adapter: src/ai/chroma_backend.py
+  persist_dir: .chroma            # runtime data (gitignored), NOT source
+  # SEC-003: each TENANT client_id → own collection; SHARED → separate collection.
+  shared_collection: shared_reference
+  tenant_collection_prefix: tenant_
+
+web_search:
+  tavily:
+    api_key_env: TAVILY_API_KEY
+  brave:
+    api_key_env: BRAVE_API_KEY
+
+korean_law_mcp:
+  endpoint_env: KOREAN_LAW_MCP_ENDPOINT
+  fallback: LawDataSource          # API-004 fallback
+
+dart:
+  api_key_env: DART_API_KEY
+
+ocr:
+  provider: TODO
+  api_key_env: OCR_API_KEY

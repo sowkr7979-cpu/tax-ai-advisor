@@ -60,7 +60,8 @@
 - **HITL 불변식**: `ReviewerDecision`(승인) 없이 `FinalMemo`/고객 전달본 생성 금지(`ORCH-007`).
 - **재현성**: 모든 답변은 사용한 정확한 소스 버전을 사후 복원 가능해야(캡 75).
 - **비밀키**: env/`infra/config`에. 코드/커밋에 하드코딩 금지.
-- **anti-gaming**: rubric·gold-set·scorer·hidden freeze set을 자기 유리하게 만들거나 고치지 마라(최초 freeze 후 변경은 사람 승인 필요). 점수가 정체하면 **구현을 고쳐라, 채점을 고치지 마라.**
+- **anti-gaming**: rubric·gold-set·scorer·hidden freeze set을 자기 유리하게 만들거나 고치지 마라(최초 freeze 후 변경은 사람 승인 필요). 점수가 정체하면 **구현을 고쳐라, 채점을 고치지 마라.** **`tests/golden/hidden/`은 절대 열어보지 마라**(overfit 방지) — `public/` practice set만 참조한다.
+- **fail-closed 평가**: 측정 불가(예외·미실행·빈 결과)는 **만점이 아니라 실패**로 처리(retrieval 예외 → `NOT_REPRODUCIBLE` 또는 차원 0점). "측정 못 함 = 통과" 금지.
 
 ---
 

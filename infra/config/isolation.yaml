@@ -1,0 +1,23 @@
+# infra/config/isolation.yaml — tenant isolation policy (docs/01 §3-§4)
+#
+# Maps confidentiality levels to index scope. Read by src/ for SEC-003 routing.
+# (Slice ⑥ enforces this in code via src/isolation.classify_target_scope; this
+#  file documents the policy and is the seam for per-deployment overrides.)
+
+index_routing:
+  L0_PUBLIC: SHARED
+  L1_LICENSED: SHARED
+  L2_INTERNAL: SHARED
+  L3_CLIENT: TENANT
+  L4_RESTRICTED: TENANT
+
+retrieval:
+  tenant_filter: MANDATORY        # SEC-002: cannot be disabled
+  shared_readable_cross_client: true  # reference knowledge is shared, read-only
+
+external_transfer:               # docs/01 §3 last column
+  L0_PUBLIC: ALLOW
+  L1_LICENSED: ALLOW_WITHIN_LICENSE
+  L2_INTERNAL: MASK_THEN_SEND
+  L3_CLIENT: DENY_DEFAULT         # masking/private only
+  L4_RESTRICTED: ISOLATED_ENV_ONLY

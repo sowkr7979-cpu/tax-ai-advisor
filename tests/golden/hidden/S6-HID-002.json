@@ -1,0 +1,63 @@
+{
+  "case_id": "S6-HID-002",
+  "slice": 6,
+  "visibility": "HIDDEN",
+  "adversarial": true,
+  "description": "3개 클라이언트 동일내용 + 공유법령. 스코프 회전 시 각 사는 자기 자료 + 공유법령만 회수, 나머지 2사 자료는 0건(SEC-003).",
+  "top_k": 5,
+  "corpus": [
+    {
+      "doc_id": "D1",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_D",
+      "chunk_type": "메모",
+      "text": "client_D 부당행위계산부인 특수관계인 시가 거래 부인 검토"
+    },
+    {
+      "doc_id": "E1",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_E",
+      "chunk_type": "메모",
+      "text": "client_E 부당행위계산부인 특수관계인 시가 거래 부인 검토"
+    },
+    {
+      "doc_id": "F1",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_F",
+      "chunk_type": "메모",
+      "text": "client_F 부당행위계산부인 특수관계인 시가 거래 부인 검토"
+    },
+    {
+      "doc_id": "law52",
+      "confidentiality_level": "L0_PUBLIC",
+      "chunk_type": "법령",
+      "text": "법인세법 제52조 부당행위계산부인 특수관계인 시가 부인"
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "qD",
+      "as_client": "client_D",
+      "text": "부당행위계산부인 특수관계인 시가 거래",
+      "gold_doc_ids": ["D1"],
+      "forbidden_doc_ids": ["E1", "F1"],
+      "expect_shared": ["law52"]
+    },
+    {
+      "query_id": "qE",
+      "as_client": "client_E",
+      "text": "부당행위계산부인 특수관계인 시가 거래",
+      "gold_doc_ids": ["E1"],
+      "forbidden_doc_ids": ["D1", "F1"],
+      "expect_shared": ["law52"]
+    },
+    {
+      "query_id": "qF",
+      "as_client": "client_F",
+      "text": "부당행위계산부인 특수관계인 시가 거래",
+      "gold_doc_ids": ["F1"],
+      "forbidden_doc_ids": ["D1", "E1"],
+      "expect_shared": ["law52"]
+    }
+  ]
+}

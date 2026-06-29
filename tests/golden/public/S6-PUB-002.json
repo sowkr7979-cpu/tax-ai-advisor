@@ -1,0 +1,41 @@
+{
+  "case_id": "S6-PUB-002",
+  "slice": 6,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "NULL 격리키 적재 거부(SEC-001) + 정상 고객 회수. client_id 없는 L3 자료는 적재 거부되어야 하고, 정상 고객 자료는 회수되어야 한다.",
+  "top_k": 5,
+  "corpus": [
+    {
+      "doc_id": "bad-null",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": null,
+      "chunk_type": "재무",
+      "expect_reject": true,
+      "text": "client_X 원장 매출 누락 의심 거래 격리키 없는 고객자료"
+    },
+    {
+      "doc_id": "C-doc",
+      "confidentiality_level": "L3_CLIENT",
+      "client_id": "client_C",
+      "chunk_type": "재무",
+      "text": "client_C 감가상각 내용연수 정액법 기계장치 손금산입 한도"
+    },
+    {
+      "doc_id": "law23",
+      "confidentiality_level": "L0_PUBLIC",
+      "chunk_type": "법령",
+      "text": "법인세법 제23조 감가상각비 손금산입 내용연수 상각방법"
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "q1",
+      "as_client": "client_C",
+      "text": "감가상각 내용연수 손금산입 기계장치",
+      "gold_doc_ids": ["C-doc"],
+      "forbidden_doc_ids": [],
+      "expect_shared": ["law23"]
+    }
+  ]
+}
