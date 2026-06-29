@@ -1,0 +1,374 @@
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 해설</div>
+      <div style="height:18px"></div>
+      <h1>데이터 모델(ERD)<span class="dot"></span><br>쉽게 읽기</h1>
+      <div class="rule"></div>
+      <div class="sub">개발자가 그리는 그림이 아니라, <b>회계사의 "통제 설계도"</b>입니다</div>
+      <div class="file">docs / 04_ERD_데이터모델.md  →  비개발자(KICPA)용 도식 해설</div>
+      <div class="badgewrap">
+        <span class="badge">🗂 9개 도메인 클러스터 (A~I)</span>
+        <span class="badge">🔒 3대 불변식 (격리·인용·시점)</span>
+        <span class="badge">⚖️ 질의 → 3소스 독립답변 → 종합</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      작성 · 신현우 (KICPA, 2년차)<br>
+      목적 · 딜로이트 안진 Business Tax 지원 / 포트폴리오<br>
+      문서 · 법인세 자문 보조 AI 설계서 — ERD 章 해설본<br>
+      날짜 · 2026-06-28
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 요약 + 비유 ============ -->
+<div class="page">
+  <h2>30초 요약 — ERD가 대체 뭐죠?</h2>
+  <p class="lead"><b>한 문장:</b> ERD(데이터 관계도)는 이 AI가 다루는 <b>모든 데이터</b>(고객·문서·법령·질의·답변·검토)가
+  <b>어떻게 연결되고, 어떤 규칙을 절대 어기면 안 되는지</b>를 그린 설계도입니다.
+  <b>개발자만 보는 그림이 아니라, 회계사가 읽어야 할 '통제 설계도'</b>입니다.</p>
+
+  <div class="grid3" style="margin-top:6px">
+    <div class="card fill"><h3 style="margin-top:0">① 무엇을 담나</h3>
+      <small>고객·매터, 문서·청크, 법령 버전, 질의→답변, 인용, 검토·승인, 평가까지 <b>9개 묶음(A~I)</b>의 데이터와 관계.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 왜 중요한가</h3>
+      <small>데이터 구조가 곧 <b>통제</b>입니다. 구조가 "근거 없는 답"·"고객자료 혼입"을 <b>아예 불가능하게</b> 만듭니다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 핵심 한 가지</h3>
+      <small><b>3대 불변식</b>(절대 깨지면 안 되는 규칙): 격리키·인용=버전객체·시점유효성. 뒤에서 도식으로.</small></div>
+  </div>
+
+  <h3>회계사의 직관으로 번역하면 — 3가지 비유</h3>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 1 · 「계정과목·분개 관계도」</span>
+    <p style="margin:5px 0 0">재무제표 숫자 하나가 <b>어느 계정 → 어느 분개 → 어느 증빙</b>에서 왔는지 따라가듯,
+    이 모델은 <b>고객 → 사안(Matter) → 쟁점(TaxIssue) → 근거</b>로 결론의 출처를 끝까지 연결합니다.</p>
+  </div>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 2 · 「감사조서 인덱스 체계」</span>
+    <p style="margin:5px 0 0"><span class="mono">DocumentVersion → Chunk → Citation → ProvisionVersion</span> 은
+    조서의 <b>색인·참조번호</b>와 같습니다. "어느 파일을 봤다"가 아니라 <b>"어느 버전의 어느 조항, 어느 위치(locator)를 봤다"</b>까지 고정합니다.</p>
+  </div>
+
+  <div class="analogy">
+    <span class="lab">비유 3 · 「차변대변 무결성」</span>
+    <p style="margin:5px 0 0"><b>인용(Citation)은 정확히 하나의 '버전 박힌 근거 객체'를 가리켜야</b> 하고, 표시되는 모든 주장(claim)은 유효한 인용을 가져야 합니다.
+    차·대 불일치를 막는 통제처럼, <b>근거 없는 결론은 구조적으로 화면에 뜰 수가 없습니다.</b></p>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">⚠️ 겁먹지 마세요</span>
+    <p style="margin:4px 0 0">엔티티·카디널리티 같은 용어가 나오지만, 본질은 <b>"무엇을, 무엇과, 어떤 규칙으로 연결하나"</b> 한 가지입니다.
+    회계사가 매일 하는 <b>증빙↔결론 연결</b>을 데이터로 옮긴 것뿐입니다.</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 2 / 11</div>
+</div>
+
+<!-- ============ P3 — 도식① 질의→3소스→종합 ============ -->
+<div class="page">
+  <h2>도식 ① — 질의 1건이 흐르는 길 (이 모델의 심장)</h2>
+  <p class="lead">질문 하나가 들어오면 <b>한 번의 작업묶음(AnswerRun)</b>이 열리고, <b>세 소스가 각자 독립 답변(SourceAnswer)</b>을 낸 뒤
+  <b>종합의견(SynthesisOpinion)</b>으로 모입니다. 평균내지 않습니다.</p>
+
+  <div class="trace" style="margin:10px 0">
+    <div class="tnode"><div class="tl">질문</div><div class="tv">Question</div><small>매터에 묶임</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">작업묶음</div><div class="tv">AnswerRun</div><small>질의 1건 = 1개<br>policy/risk_tier 기록</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:#86BC25"><div class="tl">독립 답변 (최대 3)</div><div class="tv">SourceAnswer ×N</div><small>1 ≤ N ≤ 3<br>채널 중복 ✕</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--navy)"><div class="tl">종합 (정확히 1)</div><div class="tv">SynthesisOpinion</div><small>보류여도 1개</small></div>
+  </div>
+
+  <div class="srcwrap">
+    <div class="src law"><div class="sh">① LAW_MCP</div><div class="ss">법령 원문 채널</div>
+      <div class="sa">자기 채널만으로 완결<br><b>SourceAnswer</b> · status<br>ANSWERED/SILENT/ERROR</div></div>
+    <div class="src rag"><div class="sh">② INTERNAL_RAG</div><div class="ss">내부 실무서 채널</div>
+      <div class="sa">자기 채널만으로 완결<br><b>SourceAnswer</b> · Claim·Citation<br>각자 생성</div></div>
+    <div class="src web"><div class="sh">③ WEB</div><div class="ss">최신 웹 채널</div>
+      <div class="sa">자기 채널만으로 완결<br><b>SourceAnswer</b><br>(타 채널 누수 0)</div></div>
+  </div>
+  <div class="merge">▼  claim(원자 명제) 단위로 일치/충돌/침묵 대조  ▼</div>
+  <div class="synth">
+    <h3>SynthesisOpinion — 종합의견 (새 인용 ✕ · source 인용을 상속)</h3>
+    <div class="claim">✓ <b>AGREE</b> : 소스 claim들이 일치 → 신뢰도 ↑</div>
+    <div class="claim">⚠ <b>CONFLICT</b> : 충돌 → <b style="color:#A9E05F">ConflictResolution</b>(권위·시점·사실) 또는 보류/escalation 필수</div>
+    <div class="claim">◌ <b>SILENT</b> : 한 소스가 침묵 → 사실 기록, 나머지로 판단</div>
+    <div class="claim" style="background:rgba(214,69,80,.22); border-color:rgba(214,69,80,.5)">✕ <b>표시되는 모든 종합 claim은 source claim으로 추적</b> 안 되면 → 화면 표시 차단</div>
+  </div>
+  <div class="callout" style="margin-top:10px">
+    <span class="lab">💡 핵심 엔티티</span>
+    <p style="margin:4px 0 0"><span class="mono">AnswerRun</span>(작업묶음) · <span class="mono">SourceAnswer</span>(소스별 독립답·불변버전) ·
+    <span class="mono">Claim</span>(원자 명제) · <span class="mono">SynthesisOpinion</span>(종합) · <span class="mono">ClaimAlignment</span>(정합) · <span class="mono">ConflictResolution</span>(충돌해소).</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 3 / 11</div>
+</div>
+
+<!-- ============ P4 — 도식② 3대 불변식 ============ -->
+<div class="page">
+  <h2>도식 ② — 절대 깨지면 안 되는 「3대 불변식」</h2>
+  <p class="lead">ERD에서 가장 중요한 건 엔티티 개수가 아니라 <b>불변식(invariant)</b> — 어떤 경우에도 지켜지는 규칙입니다.
+  이 셋이 이 AI의 안전성을 데이터 차원에서 보장합니다.</p>
+
+  <div class="grid3" style="margin-top:10px">
+    <div class="card" style="border-top:4px solid #475569">
+      <h3 style="margin:2px 0 5px">🔒 ① 격리키 전파</h3>
+      <p style="margin:4px 0"><b>모든 고객 데이터</b>에 <span class="mono">client_id</span>가 붙는다(NULL 금지).
+      공유 참조지식(법령·실무서)만 예외(SHARED).</p>
+      <small style="color:var(--muted)">쿼리는 <span class="mono">client_id=? OR scope=SHARED</span>만 허용 → <b>A사 자료가 B사 검색에 혼입 불가</b></small>
+    </div>
+    <div class="card" style="border-top:4px solid var(--law)">
+      <h3 style="margin:2px 0 5px">📌 ② 인용 = 버전 객체</h3>
+      <p style="margin:4px 0"><span class="mono">Citation</span>은 <b>시행일이 박힌 근거 객체</b>를 가리킨다.
+      raw URL·자유문자열 ✕.</p>
+      <small style="color:var(--muted)">ProvisionVersion/Ruling/CasePrecedent/SourceSnapshot 중 <b>정확히 하나(XOR)</b> → 근거 없는 인용 구조적 불가</small>
+    </div>
+    <div class="card" style="border-top:4px solid var(--prov, #B45309)">
+      <h3 style="margin:2px 0 5px">📅 ③ 시점 유효성</h3>
+      <p style="margin:4px 0">법적 결론은 <span class="mono">applicable_basis</span>(거래일·귀속·신고일 등)에 묶이고,
+      법령은 <b>시행일 버전</b>으로 선택된다.</p>
+      <small style="color:var(--muted)"><span class="mono">effective_from/to</span> 복합 인덱스로 "그때 유효했던 조문" 조회</small>
+    </div>
+  </div>
+
+  <h3>여기에 더해 — 「완결 run 불변식」 (감사 추적의 핵심)</h3>
+  <table>
+    <tr><th width="40">#</th><th>규칙</th><th>왜 (회계사 관점)</th></tr>
+    <tr><td><b>①</b></td><td><span class="mono">1 ≤ SourceAnswer ≤ 3</span> · run 내 <span class="mono">source_type</span> 유일(같은 채널 중복 ✕)</td><td>어느 채널이 무슨 답을 했는지 1:1로 분리 보존</td></tr>
+    <tr><td><b>②</b></td><td>완결된 <span class="mono">AnswerRun</span>은 <span class="mono">SynthesisOpinion</span> <b>정확히 1개</b>(보류 <span class="mono">abstained=true</span>여도 1개)</td><td>"보류"도 결론의 한 형태 — 빈손으로 끝나지 않음</td></tr>
+    <tr><td><b>③</b></td><td><span class="mono">CONFLICT</span>면 <span class="mono">ConflictResolution</span>·보류·escalation 중 하나 <b>반드시</b></td><td>미해소 충돌을 그냥 둘 수 없음(=이견 표시 의무)</td></tr>
+    <tr><td><b>④</b></td><td>표시되는 모든 source claim은 <b>≥1 유효 Citation</b>(단 SILENT 제외)</td><td>무근거 단정 차단</td></tr>
+  </table>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 4 / 11</div>
+</div>
+
+<!-- ============ P5 — 도식③ 인용→버전객체 ============ -->
+<div class="page">
+  <h2>도식 ③ — 인용은 'URL'이 아니라 '버전 박힌 조문'을 가리킨다</h2>
+  <p class="lead">불변식 ②를 자세히. 답변의 주장 한 줄(claim)이 근거에 닿는 길입니다. 끝점은 항상 <b>버전이 고정된 객체</b>입니다.</p>
+
+  <div class="trace" style="margin:12px 0">
+    <div class="tnode"><div class="tl">주장</div><div class="tv">Claim</div><small>원자 명제</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">인용</div><div class="tv">Citation</div><small>pinpoint·quote<br>support_type</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--law)"><div class="tl">버전 객체 (정확히 1 · XOR)</div><div class="tv">source_object</div><small>아래 4종 중 하나</small></div>
+  </div>
+
+  <div class="grid2" style="margin-bottom:10px">
+    <div class="card"><b class="mono" style="color:var(--law)">ProvisionVersion</b> — 법령 조문의 <b>시행 중 버전</b>(effective_from/to, 공포일, 개정이력, hash)</div>
+    <div class="card"><b class="mono" style="color:var(--law)">Ruling</b> — 예규·질의회신(발행일·구속력·supersede 검토)</div>
+    <div class="card"><b class="mono" style="color:var(--law)">CasePrecedent</b> — 판례·심판례(사건번호·쟁점·판단)</div>
+    <div class="card"><b class="mono" style="color:var(--law)">SourceSnapshot</b> — 웹 원문 캡처(URL·발행처·조회시각·content_hash·official)</div>
+  </div>
+
+  <div class="danger">
+    <span class="lab">🚫 XOR 강제 — provenance escape 차단</span>
+    <p style="margin:4px 0 0"><span class="mono">Citation</span>은 <span class="mono">(source_kind, source_object_id)</span>로 위 4종 중 <b>정확히 하나</b>만 참조(NULL 금지·동시 다중 ✕).
+    인용의 <b>존재 자체를 검증</b>(<span class="mono">HALU-003</span>)하므로, "그럴듯한 가짜 인용"이 비집고 들어올 틈이 없습니다.</p>
+  </div>
+
+  <div class="callout" style="margin-top:10px">
+    <span class="lab">💡 Citation이 들고 다니는 것</span>
+    <p style="margin:4px 0 0">소속(<span class="mono">source_answer_id</span> — 종합이 아니라 <b>소스답변</b>) · pinpoint(조·항·호·목) · 인용문 ·
+    <b><span class="mono">applicable_basis</span></b>(어느 날짜 사실 기준인지) · <span class="mono">support_type</span>(직접/유추/반대) · <span class="mono">authority_rank</span>.</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 5 / 11</div>
+</div>
+
+<!-- ============ P6 — 도식④ 시점 유효성 타임라인 ============ -->
+<div class="page">
+  <h2>도식 ④ — 시점 유효성: "지금 법"이 아니라 "그때 법"</h2>
+  <p class="lead">불변식 ③을 자세히. 같은 조문도 <b>공포일·시행일·적용시점</b>에 따라 결론이 달라집니다.
+  모델은 <b>거래일/귀속연도/신고일</b> 같은 날짜 사실로 <b>그때 유효했던 버전</b>을 고릅니다.</p>
+
+  <div class="flow" style="margin:12px 0">
+    <div class="step"><span class="t">공포일</span><span class="d"><span class="mono">promulgated_date</span><br>법이 발표된 날</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--law)"><span class="t">시행일</span><span class="d"><span class="mono">effective_from</span><br>효력 시작(버전 기준)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="t">적용시점</span><span class="d"><span class="mono">applicable_basis</span><br>거래일·귀속·신고일</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="t">버전 선택</span><span class="d"><span class="mono">ProvisionVersion</span><br>그때 유효한 조문</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card fill">
+      <h3 style="margin-top:0">부칙·경과규정도 '객체'로</h3>
+      <p style="margin:4px 0"><span class="mono">TransitionRule</span> = 부칙·경과조치를 <b>기계가 판정할 조건식</b>(<span class="mono">applies_when</span>·<span class="mono">machine_condition</span>)으로.
+      단, <b>자동 확정 ✕ → 검토항목으로 승격</b>.</p>
+    </div>
+    <div class="card fill">
+      <h3 style="margin-top:0">시점 인덱스</h3>
+      <p style="margin:4px 0"><span class="mono">ProvisionVersion(provision_id, effective_from, effective_to)</span> 복합 인덱스로
+      <b>as-of(그 시점 기준) 조회</b>. 개정 전후를 정확히 가릅니다.</p>
+    </div>
+  </div>
+
+  <div class="analogy" style="margin-top:11px">
+    <span class="lab">회계사 포인트</span>
+    <p style="margin:4px 0 0">세무조정 때 <b>귀속시기</b>를 따지는 것과 똑같습니다. "현재 날짜"가 아니라
+    <b>거래가 귀속되는 사업연도의 법</b>으로 판단 — 그 직관을 데이터 키로 박았습니다.</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 6 / 11</div>
+</div>
+
+<!-- ============ P7 — 도식⑤ 격리키 전파 + 충돌처리 ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 격리키 전파 & 충돌 처리</h2>
+  <p class="lead">불변식 ①(격리)과 종합 단계의 충돌 처리 규칙을 한눈에.</p>
+
+  <h3>격리키 전파 — <span class="mono">client_id</span>가 모든 고객 레코드에 따라붙는다</h3>
+  <div class="trace" style="margin:8px 0 4px">
+    <div class="tnode" style="border-color:#475569"><div class="tl">최상위 격리 소유</div><div class="tv">Client</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">사안</div><div class="tv">Matter / TaxWorkspace</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">고객 자료</div><div class="tv">Document·Chunk·Embedding</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">질의·답변</div><div class="tv">AnswerRun·SourceAnswer</div></div>
+  </div>
+  <p style="margin:4px 0 10px"><small style="color:var(--muted)">→ 전부 <span class="mono">client_id</span> NOT NULL. 검색 인덱스도 <b>SHARED(공용 법령) ⟂ TENANT(고객) 물리 분리</b>(<span class="mono">VectorIndex.scope</span>).</small></p>
+
+  <h3>충돌 처리 — 단정 금지, 결정테이블로</h3>
+  <table>
+    <tr><th>상황 (ClaimAlignment.status)</th><th>처리</th><th>결과(outcome)</th></tr>
+    <tr><td><b>AGREE</b> 소스 일치</td><td>종합 채택, 신뢰도 상향</td><td>—</td></tr>
+    <tr><td><b>CONFLICT</b> · 권위 차이</td><td><span class="mono">ConflictResolution</span> 적용</td><td>권위 우선(법령&gt;예규&gt;…)</td></tr>
+    <tr><td><b>CONFLICT</b> · 시점 차이</td><td><span class="mono">ConflictResolution</span> 적용</td><td>시점 우선(적용시점 유효 버전)</td></tr>
+    <tr><td><b>CONFLICT</b> · 사실 불일치</td><td>전제 다름 → 배제</td><td>사실불일치 배제</td></tr>
+    <tr><td><b>CONFLICT</b> · 미해소</td><td>단정 ✕ → 보류/승격</td><td><span class="mono">abstain</span> + <span class="mono">ConflictFlag</span> → Review</td></tr>
+    <tr><td><b>SILENT</b> 한 소스 침묵</td><td>커버리지 갭 표시</td><td>나머지로 판단</td></tr>
+  </table>
+  <p style="margin:6px 0 0"><small style="color:var(--muted)"><span class="mono">ConflictResolution</span>은 <span class="mono">inputs</span>(authority_rank·temporal_validity·fact_match)와 <span class="mono">rule_applied</span>를 기록 → <b>재현·감사 가능</b>(08章 결정테이블).</small></p>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 7 / 11</div>
+</div>
+
+<!-- ============ P8 — 도식⑥ 도메인 클러스터 지도 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — 전체 지도: 9개 도메인 클러스터 (A~I)</h2>
+  <p class="lead">엔티티가 많아 보여도 <b>9개 묶음</b>으로 보면 한눈에 들어옵니다. 읽는 순서: 누구(A) → 무엇을(B·C·D) → 분석(E) → 질의·답변(F·G) → 검토(H) → 평가(I).</p>
+
+  <div class="dommap" style="margin-top:10px; grid-template-columns:repeat(3,1fr)">
+    <div class="dom"><span class="code" style="background:#475569">A</span><span class="nm">테넌시·신원</span><span class="ds"><b>누구의 데이터인가</b> · Client·Matter·User·RoleAssignment·AuditLog</span></div>
+    <div class="dom"><span class="code" style="background:#0EA5A5">B</span><span class="nm">세무 워크스페이스</span><span class="ds"><b>무엇을 검토하나</b> · TaxWorkspace·TaxYear·TrialBalance·PriorReturn</span></div>
+    <div class="dom"><span class="code" style="background:#16A34A">C</span><span class="nm">문서·RAG</span><span class="ds"><b>자료의 조각</b> · Document·Chunk·Embedding·VectorIndex</span></div>
+    <div class="dom"><span class="code" style="background:#B45309">D</span><span class="nm">법령 출처·provenance</span><span class="ds"><b>근거의 원천</b> · ProvisionVersion·TransitionRule·Ruling·Snapshot</span></div>
+    <div class="dom"><span class="code" style="background:#DB2777">E</span><span class="nm">세무 분석</span><span class="ds"><b>쟁점·리스크·선택지</b> · TaxIssue·RiskItem·StrategyOption·EvidenceLink</span></div>
+    <div class="dom"><span class="code" style="background:#7C3AED">F</span><span class="nm">질의·독립답변·종합 ★</span><span class="ds"><b>답을 만드는 곳</b> · AnswerRun·SourceAnswer·Claim·SynthesisOpinion</span></div>
+    <div class="dom"><span class="code" style="background:#0891B2">G</span><span class="nm">에이전트·실행</span><span class="ds"><b>어떻게 실행됐나</b> · AgentRun·PromptVersion·ModelVersion·ToolCall</span></div>
+    <div class="dom"><span class="code" style="background:#0284C7">H</span><span class="nm">검토·HITL·산출</span><span class="ds"><b>사람이 승인</b> · DraftPackage·Review·ReviewerDecision·FinalMemo</span></div>
+    <div class="dom"><span class="code" style="background:#D64550">I</span><span class="nm">평가</span><span class="ds"><b>채점 하버스</b> · EvaluationCase·GoldCitation·RubricResult</span></div>
+    <div class="dom" style="background:var(--bg); border-style:dashed; grid-column:span 3"><span style="font-weight:800; color:var(--green-d)">관통 · 3대 불변식</span><span class="ds" style="margin-top:3px">격리키 · 인용=버전 객체 · 시점 유효성 — 9개 묶음 전체를 가로지른다</span></div>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 어려운 부분은 F</span>
+    <p style="margin:4px 0 0">대부분의 신규 설계가 모이는 곳이 <b>F(질의·독립답변·종합)</b>입니다. 도식①에서 본 그 구조예요.
+    나머지 A~E·G~I는 F가 "어디서 와서, 어디로 검토되어, 어떻게 채점되나"를 받쳐줍니다.</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 8 / 11</div>
+</div>
+
+<!-- ============ P9 — 불변식 통제표 (CPA 관점) ============ -->
+<div class="page">
+  <h2>구체 예시 — 불변식을 'CPA 통제'로 읽기</h2>
+  <p class="lead">개발 규칙처럼 보이는 불변식들을, 회계사가 익숙한 <b>통제(control) 언어</b>로 옮기면 이렇게 읽힙니다.</p>
+
+  <table style="margin-top:8px">
+    <tr><th width="150">데이터 규칙(불변식)</th><th>대응하는 CPA 통제</th><th width="92">막는 사고</th></tr>
+    <tr><td><b>격리키 전파</b><br><span class="mono">client_id NOT NULL</span></td><td>고객별 파일 분리·접근 격리. 쿼리 <span class="mono">client_id=? OR SHARED</span>만 허용</td><td>고객자료 혼입</td></tr>
+    <tr><td><b>인용 무결성 XOR</b></td><td>모든 결론에 유효 증빙 첨부. 증빙 없는 조서 항목 불가</td><td>근거 날조·무근거 단정</td></tr>
+    <tr><td><b>시점 유효성</b></td><td>귀속시기·적용법령 검토. 개정 전후 버전 구분</td><td>구법 적용 오류</td></tr>
+    <tr><td><b>HITL 선행</b><br><span class="mono">FinalMemo ⟸ ReviewerDecision</span></td><td>파트너 승인 전 최종본 발행 금지(EQCR)</td><td>미승인 고객 전달</td></tr>
+    <tr><td><b>종합 인용 상속</b><br>(새 인용 생성 ✕)</td><td>요약·종합도 원천 증빙으로 환원. 종합 단계 창작 금지</td><td>종합 단계 환각</td></tr>
+    <tr><td><b>AuditLog append-only</b></td><td>변조방지 감사추적(WORM). 관리자도 사후삭제 불가</td><td>증거 인멸</td></tr>
+    <tr><td><b>재현성 키</b></td><td>조서 재수행 시 동일 결론. 검색·법령버전·모델·프롬프트 보존</td><td>재현 불가</td></tr>
+  </table>
+
+  <div class="analogy" style="margin-top:11px">
+    <span class="lab">한 줄 요약</span>
+    <p style="margin:4px 0 0"><b>"이 ERD는 데이터 그림이 아니라 통제 명세서다."</b>
+    각 관계선·키·불변식이 곧 하나의 통제이고, 통제가 깨질 길을 <b>구조적으로 봉쇄</b>합니다.</p>
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 9 / 11</div>
+</div>
+
+<!-- ============ P10 — 용어사전 + 흔한 오해 ============ -->
+<div class="page">
+  <h2>비개발자를 위한 용어사전</h2>
+  <div style="margin-top:6px">
+    <div class="gl"><div class="term">엔티티<span class="en">Entity</span></div><div class="def">데이터 모델의 <b>관리 대상 단위</b>. 거래처·계정·증빙처럼 독립적으로 관리하는 항목.</div></div>
+    <div class="gl"><div class="term">카디널리티<span class="en">Cardinality</span></div><div class="def">개수 관계(1:1, 1:N). 예: <span class="mono">AnswerRun</span> 1개가 <span class="mono">SourceAnswer</span> <b>1~3개</b>를 가짐.</div></div>
+    <div class="gl"><div class="term">불변식<span class="en">Invariant</span></div><div class="def">어떤 경우에도 <b>깨지면 안 되는 규칙</b>. <span class="mono">client_id</span> NULL 금지, 인용=버전객체 등.</div></div>
+    <div class="gl"><div class="term">provenance<span class="en">출처·생성경로</span></div><div class="def">결론이 <b>어디서·어떻게</b> 나왔는지의 내력. 금액의 원천증빙·조서 trail과 같은 개념.</div></div>
+    <div class="gl"><div class="term">AnswerRun<span class="en">작업묶음</span></div><div class="def">질의 <b>1건의 전체 실행</b> 묶음. 어떤 소스·정책·모델·도구로 답했는지 기록.</div></div>
+    <div class="gl"><div class="term">SourceAnswer<span class="en">소스별 독립답</span></div><div class="def">LAW_MCP·INTERNAL_RAG·WEB <b>중 하나</b>가 자기 채널로만 낸 완결 답변(불변 버전).</div></div>
+    <div class="gl"><div class="term">SynthesisOpinion<span class="en">종합의견</span></div><div class="def">여러 SourceAnswer를 claim 단위로 정합한 <b>종합</b>. <b>새 인용 안 만들고</b> 상속.</div></div>
+    <div class="gl"><div class="term">격리키<span class="en">client_id</span></div><div class="def">고객·사안 데이터가 섞이지 않게 붙는 키. 감사 <b>고객별 파일 분리</b> 통제와 동일.</div></div>
+    <div class="gl"><div class="term">멱등<span class="en">Idempotent</span></div><div class="def">같은 입력으로 재실행해도 결과 불변. <b>조서 재수행 시 결론이 안 바뀌어야</b> 하는 것과 같음.</div></div>
+    <div class="gl"><div class="term">외래키<span class="en">Foreign Key</span></div><div class="def">다른 엔티티를 가리키는 참조키. 조서에서 <b>"WP-3 참조"</b>처럼 원천을 연결.</div></div>
+  </div>
+
+  <h2 style="margin-top:16px">흔한 오해 — "이렇게 보면 틀립니다"</h2>
+  <table>
+    <tr><th width="40%">❌ 이렇게 보면 틀림</th><th>✅ 정확히는</th><th width="92">근거</th></tr>
+    <tr><td>"ERD는 <b>개발자만</b> 보는 그림"</td><td><b>CPA 통제 설계도</b> — 격리·인용·HITL·감사로그를 불변식으로</td><td class="mono">§6</td></tr>
+    <tr><td>"인용은 <b>URL 링크</b>면 충분"</td><td>시행일 박힌 <b>버전 객체</b>(raw URL 배제)</td><td class="mono">불변식②</td></tr>
+    <tr><td>"격리키는 <b>보안 기능일 뿐</b>"</td><td>논리적 데이터구분·<b>재현성의 기본 키</b></td><td class="mono">§6</td></tr>
+    <tr><td>"종합이 <b>새 인용 생성</b> 가능"</td><td>직접 인용 ✕ → source <b>Citation 상속</b></td><td class="mono">§4-1</td></tr>
+    <tr><td>"충돌은 <b>답변 전체 단위</b>로만"</td><td><b>claim 단위</b> 저장·해소(ClaimAlignment)</td><td class="mono">ORCH-011</td></tr>
+    <tr><td>"법령은 <b>최신 버전</b>만 보면 됨"</td><td><b>적용시점</b> 기준 버전(effective_from/to)</td><td class="mono">불변식③</td></tr>
+    <tr><td>"미승인 보고서도 <b>FinalMemo</b> 가능"</td><td><b>ReviewerDecision 승인 선행</b> 필수(H5)</td><td class="mono">§6</td></tr>
+  </table>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 10 / 11</div>
+</div>
+
+<!-- ============ P11 — 핵심 메시지 ============ -->
+<div class="page">
+  <h2>이 데이터 모델을 왜 이렇게 짰나 — 핵심 메시지 3</h2>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">01</span> &nbsp;핵심은 "답변"이 아니라 "답변의 내력"이다</h3>
+    <p style="margin:4px 0">출처·시점·고객격리·검토 trail을 <b>데이터 구조로 강제</b>했습니다.
+    그래서 "이 답이 <b>어느 고객의 어느 사안에, 어느 시행일의 어느 근거로</b> 나왔는지"가 항상 재현됩니다.</p>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">02</span> &nbsp;환각을 '사후 점검'이 아니라 '사전 구조'로 막는다</h3>
+    <p style="margin:4px 0"><span class="mono">SourceAnswer → Claim → Citation → ProvisionVersion</span> 사슬과 인용 XOR 덕분에,
+    <b>근거 없는 결론은 애초에 화면에 표시될 수 없습니다.</b></p>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:14px">
+    <h3 style="margin-top:0"><span class="num">03</span> &nbsp;3소스를 평균내지 않고 독립 검증 후 정합한다</h3>
+    <p style="margin:4px 0"><span class="mono">AnswerRun</span>·<span class="mono">SynthesisOpinion</span>은 법령·내부RAG·웹을 <b>섞지 않고</b>
+    각자 답하게 한 뒤 <b>claim 단위로 대조</b>합니다 — 감사 가능한 삼각검증.</p>
+  </div>
+
+  <div class="synth" style="background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄</div>
+    <p style="font-size:12pt; margin:6px 0 0; line-height:1.65">"이 데이터 모델의 핵심은 둘입니다. <b>인용이 URL이 아니라 '시행일이 박힌 조문 객체'를 가리킨다</b>는 것,
+    그리고 <b>모든 고객 레코드가 격리키를 달고 다닌다</b>는 것. 그래서 '이 답이 어느 시점 어느 조문으로 나왔는지' 재현되고,
+    A사 자료가 B사 검색에 절대 섞이지 않습니다."</p>
+  </div>
+
+  <h3 style="margin-top:18px">읽는 순서 안에서 ERD의 자리</h3>
+  <div class="flow">
+    <div class="step"><span class="t">01·02</span><span class="d">보안·출처<br>(전제)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="t">✓ 04 ERD</span><span class="d">데이터 구조<br>(이 문서)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="t">05~08</span><span class="d">RAG·웹·API<br>·환각방지</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="t">09 채점표</span><span class="d">평가 기준</span></div>
+  </div>
+
+  <div style="margin-top:20px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 법인세 자문 보조 AI 설계서<br>
+    본 해설본은 <span class="mono">docs/04_ERD_데이터모델.md</span>의 비개발자용 도식 요약입니다 · 정본은 원문을 따릅니다 · 2026-06-28
+  </div>
+  <div class="pgnote">데이터 모델(ERD) · 쉬운 설명 — 11 / 11</div>
+</div>

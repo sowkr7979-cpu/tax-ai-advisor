@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>타겟 정의서 — 법인세 절세 전략 AI</title>
+<style>
+  :root{--ink:#1a1f29;--muted:#5b6577;--line:#e4e8ef;--bg:#f6f8fb;--brand:#0b6b5e;--brand2:#0f7c8a;--accent:#c9a227;--soft:#eef4f3;--warnbg:#fff7f3;--warn:#b4541f;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);line-height:1.7;letter-spacing:-.01em;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:860px;margin:0 auto;padding:46px 24px 72px;}
+  header.cover{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:18px;padding:38px 34px;margin-bottom:22px;box-shadow:0 12px 30px rgba(11,107,94,.18);}
+  header.cover .kicker{font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.85;margin:0 0 9px;}
+  header.cover h1{font-size:26px;margin:0 0 14px;font-weight:800;}
+  header.cover .meta .row{background:rgba(255,255,255,.10);padding:8px 13px;border-radius:9px;font-size:14px;margin-top:7px;}
+  header.cover b{color:var(--accent);}
+  section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px 30px;margin:0 0 18px;box-shadow:0 2px 10px rgba(20,30,50,.04);}
+  h2{font-size:19px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid var(--soft);font-weight:800;display:flex;gap:10px;align-items:baseline;}
+  h2 .num{color:var(--brand);font-size:13px;font-weight:800;background:var(--soft);padding:3px 9px;border-radius:8px;}
+  p{margin:8px 0;}ul{margin:8px 0;padding-left:20px;}li{margin:5px 0;}
+  strong{color:#0a2540;}em{color:var(--muted);}
+  .oneliner{background:linear-gradient(0deg,var(--soft),#fff);border:1px solid #cfe3df;border-radius:12px;padding:20px 22px;font-size:19px;font-weight:800;color:var(--brand);text-align:center;line-height:1.5;}
+  .hook{background:#0a2540;color:#fff;border-radius:12px;padding:18px 22px;font-size:17px;font-weight:700;text-align:center;}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;}
+  th,td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;}
+  th{background:var(--brand);color:#fff;font-weight:700;white-space:nowrap;}
+  td.k{background:#f3f7f6;font-weight:700;white-space:nowrap;}
+  tbody tr:nth-child(even) td{background:#fafcfc;}
+  .flow{background:var(--codebg,#0f1722);color:#d6e4ee;border-radius:10px;padding:14px 16px;font-family:"D2Coding","Consolas",monospace;font-size:13px;overflow-x:auto;}
+  .win{background:#eef7f0;border-left:4px solid #1b7a3d;border-radius:0 10px 10px 0;padding:8px 16px;margin:8px 0;}
+  .honest{background:var(--warnbg);border-left:4px solid var(--warn);border-radius:0 10px 10px 0;padding:12px 18px;}
+  .honest b{color:var(--warn);}
+  .todo li{margin:6px 0;}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="cover">
+    <p class="kicker">Target Definition · 1-Page</p>
+    <h1>타겟 정의서 — 법인세 절세 전략 AI</h1>
+    <div class="meta">
+      <div class="row"><b>1차 목표</b> · 딜로이트 안진 Tax/세무본부 합격 (작년 감사 탈락 → 세무 전환 지원). AI = 나를 뽑게 만드는 증명.</div>
+      <div class="row"><b>정체성</b> · "AI를 직접 만드는 회계사" — 도메인이 본체, AI가 무기.</div>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">한 줄 타겟</span></h2>
+    <div class="oneliner">"감사로 <em style="color:var(--accent);font-style:normal;">검증</em>을 체화한 회계사가,<br>검증 가능한 법인세 절세 전략 AI를 만든다."</div>
+  </section>
+
+  <section>
+    <h2><span class="num">01</span> 킬러 데모 — 절세 전략 시나리오 생성기 (구조 중심)</h2>
+    <table>
+      <tbody>
+        <tr><td class="k">입력</td><td>가결산 재무데이터 + 상황 설명 텍스트 (둘 다)</td></tr>
+        <tr><td class="k">처리</td><td>절세 시나리오 생성 → 각 방안별 <strong>과세논리 vs 방어논리 양면</strong> 제시</td></tr>
+        <tr><td class="k">근거</td><td><strong>실제 법령·예규·판례 인용 + 출처표기</strong> (grounding)</td></tr>
+        <tr><td class="k">검증 (감사 DNA)</td><td>① 절세효과 <strong>계산</strong> 검증(Ground Truth) + ② 방어논리 <strong>근거</strong> 검증 — 둘 다</td></tr>
+        <tr><td class="k">판단</td><td>AI는 선택지·수치·근거만, <strong>최종 판단은 회계사(HITL)</strong></td></tr>
+        <tr><td class="k">소재</td><td>가볍게(예: 세액공제·감면 유불리). <strong>"작동 구조/아키텍처"</strong>를 보여주는 데 집중</td></tr>
+        <tr><td class="k">산출 범위</td><td>면접 전까지 <strong>설계도 + 화면 목업</strong>, 2~3개 흐름 (작동 데모는 다음 단계)</td></tr>
+      </tbody>
+    </table>
+    <div class="flow">재무데이터·상황 입력 → 절세 시나리오 생성 → [방안별] 과세논리 / 방어논리 + 근거 인용 → 계산·근거 검증 → 회계사 판단</div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span> 왜 이게 이기는가 (8개사 대비)</h2>
+    <div class="win"><strong>더존 위층 + 누구도 없는 계산층 검증</strong> → "더존 위층, 안진 영역." (더존은 공제 <em>적용 확인</em>까지; 나는 유불리 시뮬레이션 + 과세·방어 + 검증까지)</div>
+    <div class="win"><strong>과세·방어 양면 제시</strong> = 리스크까지 스스로 까는 구조 → 깊이 후벼파기 방어 + 감사적 회의(skepticism) 증명</div>
+    <div class="win"><strong>"구조"를 보여줌</strong> = "AI 만드는 회계사" 정체성의 진짜 flex (특정 절세 깊이 경쟁 회피)</div>
+    <p style="margin-top:12px;"><em>업계 8개사 공통 메시지 = "AI는 반복, 사람은 전략" → 전략·판단 영역은 모두가 비워둔 자리 = 내 기회.</em></p>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span> 서사 · 정직성 · 훅</h2>
+    <p><strong>서사 아크</strong>: 작년 감사 탈락 → 1년간 직접 AI 개발(세무조정·리서치 PoC) → 법무·세무 AI <strong>8개사 벤치마킹</strong> → 감사 검증력을 'AI 신뢰성'으로 옮긴 절세 전략 AI 설계.</p>
+    <div class="honest"><b>정직성 전략</b> (세무 깊이 이슈): "세무 전문성은 쌓는 중입니다. 대신 <strong>감사로 단련한 검증력 + AI</strong>로 빠르게 메우고, <strong>과세·방어 양면 + 회계사 최종판단(HITL)</strong> 구조로 과신을 방지합니다."</div>
+    <p style="margin:16px 0 8px;"><strong>면접 훅 (정체성 선언)</strong></p>
+    <div class="hook">"감사로 검증을 배운 회계사가,<br>신뢰할 수 있는 세무 전략 AI를 만듭니다."</div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span> 내일 토의에서 정할 것</h2>
+    <ul class="todo">
+      <li>절세 소재 1개 최종 확정 (가볍게 — 세액공제 유불리 유력)</li>
+      <li>목업 화면 수 · 어떤 흐름 2~3개</li>
+      <li>기존 PoC(세무조정·리서치) 재활용 범위</li>
+      <li>정량 ROI(시간 절감 등) 수치 — Copilot式 KPI 틀 차용</li>
+      <li>"더존이 이미 하잖아?" 답변 스크립트 다듬기</li>
+    </ul>
+  </section>
+
+  <footer>문서 v1 · 8개사 벤치마크 분석에 근거 · 포지셔닝(전략층 상향) 확정</footer>
+</div>
+</body>
+</html>

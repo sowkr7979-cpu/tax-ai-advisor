@@ -1,0 +1,384 @@
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 해설</div>
+      <div style="height:18px"></div>
+      <h1>출처 · 인용 ·<br>시점 법적유효성<span class="dot"></span></h1>
+      <div class="rule"></div>
+      <div class="sub">"언제 기준이냐"가 정답을 바꾼다 — 모든 결론을 <b>버전 박힌 근거</b>에 묶는 법</div>
+      <div class="file">docs / 02_출처_시점유효성.md  →  비개발자(KICPA)용 도식 해설</div>
+      <div class="badgewrap">
+        <span class="badge">📌 인용 = URL이 아니라 버전 객체</span>
+        <span class="badge">🗓 공포일 ≠ 시행일 ≠ 적용시점</span>
+        <span class="badge">⚖️ 권위 위계 + 충돌 표면화</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      작성 · 신현우 (KICPA, 2년차)<br>
+      목적 · 딜로이트 안진 Business Tax 지원 / 포트폴리오<br>
+      문서 · 법인세 자문 보조 AI 설계서 — 출처·시점 章 해설본<br>
+      날짜 · 2026-06-28
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 30초 요약 + 비유 ============ -->
+<div class="page">
+  <h2>30초 요약 — 이 문서(02)가 뭐죠?</h2>
+  <p class="lead"><b>한 문장:</b> 세무 결론은 <b>"어느 시점에 유효한 어느 법령 버전"</b>에 묶입니다.
+  그래서 AI의 인용은 그럴듯한 <b>URL이 아니라 버전이 박힌 근거 객체</b>를 가리켜야 하고,
+  적용 시점을 모르면 <b>답하지 않고 되물어야</b> 합니다.</p>
+
+  <div class="grid3" style="margin-top:6px">
+    <div class="card fill"><h3 style="margin-top:0">① 무엇을 담나</h3>
+      <small>버전 박힌 소스객체(법령·예규·판례·웹), 공포일/시행일 분리, 적용시점(귀속/거래/신고), 권위위계·충돌처리.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 왜 중요한가</h3>
+      <small>이 모델이 없으면 인용은 <b>사후 재현·검증 불가</b>한 문자열일 뿐. 세무에서 가장 위험한 건 "그럴듯한 최신 답".</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 어디에 쓰이나</h3>
+      <small>ERD의 근거 엔티티, RAG·웹의 메타데이터, 환각방지의 인용 게이트, 보안의 재현성 — 전부 이 위에 선다.</small></div>
+  </div>
+
+  <h3>회계사의 직관으로 번역하면 — 3가지 비유</h3>
+  <div class="analogy" style="margin-bottom:8px">
+    <span class="lab">비유 1 · 세법 개정 전후 「적용시기 검토」</span>
+    <p style="margin:5px 0 0">같은 조문이라도 <b>공포일·시행일·적용 사업연도</b>에 따라 결론이 갈립니다. 실무에서 늘 하는 "이건 어느 개정 기준이지?"를
+    객체로 만든 것이 <span class="mono">ProvisionVersion · effective_from/to · TransitionRule · applicable_basis</span>입니다.</p>
+  </div>
+  <div class="analogy" style="margin-bottom:8px">
+    <span class="lab">비유 2 · 세무조정의 「귀속시기 판단」</span>
+    <p style="margin:5px 0 0">비용 인정 여부는 <b>오늘 날짜가 아니라 거래일·귀속연도·신고일</b>에 달려 있습니다.
+    기준일이 불명확하면 단정하지 않고 추가정보를 요청하는 것 — 그 원칙이 <span class="mono">abstain(되물음)</span>입니다.</p>
+  </div>
+  <div class="analogy">
+    <span class="lab">비유 3 · 감사증거의 「원천·신뢰도 평가」</span>
+    <p style="margin:5px 0 0">구두답변보다 계약서·외부조회·공식문서가 강한 증거이듯,
+    <b>법률 &gt; 시행령 &gt; 예규·판례 &gt; 실무서 &gt; 웹</b>의 권위 순위와 충돌 처리가 필요합니다.</p>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🚫 이 문서를 관통하는 가드</span>
+    <p style="margin:4px 0 0"><b>적용시점이 불명확하면 결론 금지 → 되물음(abstain).</b>
+    "어느 사업연도 기준인가요?"를 먼저 묻습니다. 시점을 묻지 않는 답은 틀린 답입니다. <span class="mono">PROV-006 · PROV-013</span></p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 2 / 12</div>
+</div>
+
+<!-- ============ P3 — 도식1 왜 어려운가 ============ -->
+<div class="page">
+  <h2>도식 ① — 한국 세무의 시점 문제 (왜 어려운가)</h2>
+  <p class="lead">"이 비용 손금 되나?"의 답은 <b>"어느 사업연도냐"</b>에 따라 달라집니다. 시점이 만드는 6가지 함정입니다.</p>
+
+  <table style="margin-top:10px">
+    <tr><th width="130">개념</th><th>무엇이 문제인가</th><th width="180">모델링 포인트</th></tr>
+    <tr><td><b>시행일(施行日)</b></td><td>법령은 <b>공포일 ≠ 시행일</b>. 개정마다 시행일이 다름</td><td class="mono">ProvisionVersion.<br>effective_from/to</td></tr>
+    <tr><td><b>부칙·경과규정</b></td><td>"이 법 시행 전 개시한 사업연도분은 종전 규정" 같은 경과조항</td><td class="mono">TransitionRule<br>(기계 판정 객체)</td></tr>
+    <tr><td><b>귀속 vs 신고</b></td><td>2025 귀속분을 2026.3 신고 — 법인세는 <b>귀속(사업연도)</b> 원칙이나 <b>쟁점마다 기준일이 갈림</b></td><td class="mono">applicable_basis<br>열거 선택·기록</td></tr>
+    <tr><td><b>소급·불이익</b></td><td>"유리하면 소급"은 <b>일반 원칙 아님</b> — 부칙·조세법률주의·신뢰보호가 함께 작동</td><td class="mono">명시 규정 있을 때만<br>자동적용 금지</td></tr>
+    <tr><td><b>예규·해석 변경</b></td><td>같은 조문 해석이 예규/판례로 바뀜</td><td class="mono">Ruling.issued_date<br>· supersedes</td></tr>
+    <tr><td><b>개정 추적</b></td><td>외부 소스가 특정 시점 버전을 주는지 불확실</td><td class="mono">SourceSnapshot<br>+ 해시 + 모니터</td></tr>
+  </table>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 회계사 포인트</span>
+    <p style="margin:4px 0 0">법률 AI들은 <b>"인용을 보여준다"</b>에서 멈춥니다. 세무는 <b>"언제 기준이냐"</b>가 정답을 바꿉니다.
+    그래서 이 문서가 ERD·RAG·웹·환각방지보다 <b>먼저</b> 와야 스키마가 흔들리지 않습니다.</p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 3 / 12</div>
+</div>
+
+<!-- ============ P4 — 도식2 타임라인 ============ -->
+<div class="page">
+  <h2>도식 ② — 공포일 · 시행일 · 적용시점 타임라인</h2>
+  <p class="lead">가장 헷갈리는 핵심. <b>세 날짜가 다르고</b>, 버전 선택의 기준은 <b>공포일이 아니라 시행일</b>, 그리고 내 사건의 <b>적용시점</b>입니다.</p>
+
+  <!-- 타임라인 -->
+  <div style="margin:16px 0 6px; padding:0 4px">
+    <div style="display:flex; align-items:flex-end; gap:0">
+      <div style="flex:1; text-align:center"><span class="mono" style="color:#B45309">공포일<br>2024.12.31</span></div>
+      <div style="flex:2; text-align:center"><span class="mono" style="color:#2563EB">시행일 (effective_from)<br>2025.01.01</span></div>
+      <div style="flex:2"></div>
+    </div>
+    <div style="display:flex; height:26px; border-radius:7px; overflow:hidden; border:1px solid var(--line); margin:5px 0">
+      <div style="flex:1; background:#E7EDF3; display:flex; align-items:center; justify-content:center; font-size:8.5pt; color:#5C6B7A">개정 준비(아직 효력 ✕)</div>
+      <div style="flex:4; background:linear-gradient(90deg,#DBEAFE,#BFDBFE); display:flex; align-items:center; justify-content:center; font-size:9pt; color:#1E40AF; font-weight:700; -webkit-print-color-adjust:exact; print-color-adjust:exact">신(新) ProvisionVersion 유효기간 (effective_from ≤ 적용시점 &lt; effective_to)</div>
+    </div>
+    <div style="display:flex; gap:0; font-size:8.4pt">
+      <div style="flex:1; text-align:center; color:#5C6B7A">← 구(舊) 버전 적용 구간</div>
+      <div style="flex:4; text-align:center; color:#1E40AF">→ 신(新) 버전 적용 구간</div>
+    </div>
+  </div>
+
+  <div class="grid3" style="margin-top:14px">
+    <div class="card" style="border-top:4px solid #7C8B99">
+      <h3 style="margin:0 0 3px">2024 사업연도 손금 판단</h3>
+      <small><b>구 버전</b> 적용 (시행일 전 귀속). 공포가 2024년이어도 효력은 2025부터.</small></div>
+    <div class="card" style="border-top:4px solid var(--law)">
+      <h3 style="margin:0 0 3px">2025 사업연도 손금 판단</h3>
+      <small><b>신 버전</b> 적용. 같은 질문, 다른 답 — <span class="mono">PROV-003</span></small></div>
+    <div class="card" style="border-top:4px solid var(--amber)">
+      <h3 style="margin:0 0 3px">경계 규약</h3>
+      <small>effective_from = <b>inclusive</b>, effective_to = <b>exclusive</b>. 개정 전일·폐지일 경계 테스트 <span class="mono">PROV-012</span></small></div>
+  </div>
+
+  <div class="callout" style="margin-top:12px">
+    <span class="lab">⚠️ 가장 흔한 실수</span>
+    <p style="margin:4px 0 0"><b>"최신 법으로 답하기."</b> 최신이 아니라 <b>그 사건의 적용시점에 유효했던 버전</b>이 정답입니다.
+    부칙·경과규정이 있으면 <span class="mono">TransitionRule</span> 조건식으로 기계 판정(자동 단정 ✕).</p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 4 / 12</div>
+</div>
+
+<!-- ============ P5 — 도식3 인용→객체 ============ -->
+<div class="page">
+  <h2>도식 ③ — 인용은 URL이 아니라 "버전 객체"를 가리킨다</h2>
+  <p class="lead">AI 답변의 <b>각 주장 문장</b>은 <span class="mono">Citation</span>으로 근거에 연결됩니다. 그 근거는 링크가 아니라 <b>버전·시점이 박힌 객체</b>여야 합니다.</p>
+
+  <div class="trace" style="margin-top:12px">
+    <div class="tnode"><div class="tl">주장 문장</div><div class="tv">claim_span</div><small>답변 속<br>특정 주장</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">인용 기록</div><div class="tv">Citation</div><small>pinpoint·quote·<br>applicable_basis</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--law)"><div class="tl">버전 객체</div><div class="tv" style="color:var(--law)">ProvisionVersion</div><small>조문·시행일·<br>hash·snapshot</small></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="danger">
+      <span class="lab">❌ 이렇게 하면 안 됨</span>
+      <p style="margin:4px 0 6px">"법인세법에 따라 손금 인정됨" <span class="mono">(blog.naver.com/... 링크)</span></p>
+      <small>· 어느 조문인지 ✕ · 어느 시행일 버전인지 ✕ · 어느 연도 기준인지 ✕ · 사후 재현 ✕</small>
+    </div>
+    <div class="card" style="border-left:6px solid var(--rag); background:#F3FBF4">
+      <span style="color:var(--rag); font-weight:800; font-size:9.5pt">✅ 이렇게</span>
+      <p style="margin:4px 0 6px"><span class="mono">법인세법 제19조의2 ①</span> · ProvisionVersion(eff 2025-01-01) · 2025 귀속 기준 · quote 발췌 · hash</p>
+      <small>· pinpoint 조/항/호/목 · 시행일 버전 · applicable_basis · 원문 발췌가 주장을 실제 지지</small>
+    </div>
+  </div>
+
+  <h3>인용이 갖춰야 할 3대 의무</h3>
+  <table>
+    <tr><th width="150">의무</th><th>내용</th><th width="90">근거</th></tr>
+    <tr><td><b>pinpoint 인용</b></td><td>조/항/호/목·문단 위치까지. "법인세법에 따라" 수준은 미달</td><td class="mono">PROV-004</td></tr>
+    <tr><td><b>entailment</b></td><td>인용 원문이 그 주장을 <b>실제로 지지</b>해야 함 (개수가 아니라 지지 여부)</td><td class="mono">PROV-010</td></tr>
+    <tr><td><b>시점 표기</b></td><td>각 인용에 <span class="mono">applicable_basis</span>를 달아 "2025 귀속 유효 조문"임을 명시</td><td class="mono">PROV-005</td></tr>
+  </table>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 5 / 12</div>
+</div>
+
+<!-- ============ P6 — 도식4 소스객체 4종 ============ -->
+<div class="page">
+  <h2>도식 ④ — 네 가지 "버전 박힌 소스객체"</h2>
+  <p class="lead">모든 권위 출처는 <b>버전과 시점을 가진 객체</b>로 표준화합니다. 종류마다 보존하는 핵심 필드가 다릅니다.</p>
+
+  <div class="dommap" style="grid-template-columns:1fr 1fr; margin-top:10px">
+    <div class="dom" style="border-left:5px solid var(--law)">
+      <span class="code" style="background:var(--law)">법령</span><span class="nm">ProvisionVersion (+ TransitionRule)</span>
+      <span class="ds" style="margin-top:4px">text · <b>공포일·시행일</b> 분리 · effective_from/to · 개정문서번호(amended_by) · 개정이유 · snapshot · hash<br>+ 부칙은 <b>기계 판정 TransitionRule</b>로 분리</span></div>
+    <div class="dom" style="border-left:5px solid var(--rag)">
+      <span class="code" style="background:var(--rag)">예규·질의회신</span><span class="nm">Ruling</span>
+      <span class="ds" style="margin-top:4px">문서번호 · issued_date · 발행처(기재부/국세청) · 쟁점·사실·회신요지 · supersedes<br>+ <b>구속력 한계</b> · 해석변경일 · <b>사실관계 동일성</b> 요건</span></div>
+    <div class="dom" style="border-left:5px solid #7C3AED">
+      <span class="code" style="background:#7C3AED">판례·심판례</span><span class="nm">CasePrecedent</span>
+      <span class="ds" style="margin-top:4px">사건번호 · 법원(대법원/조세심판원) · 선고일 · 쟁점·판단·결론 · 인용조문 · <b>status(확정/계류)</b></span></div>
+    <div class="dom" style="border-left:5px solid var(--web)">
+      <span class="code" style="background:var(--web)">웹·외부 캡처</span><span class="nm">SourceSnapshot</span>
+      <span class="ds" style="margin-top:4px">URL · 정식제목 · 발행처 · 발행일 · 조회시각 · 추출방법(HTML/PDF/HWP/OCR) · content_hash · <b>공식 여부</b></span></div>
+  </div>
+
+  <div class="callout" style="margin-top:12px">
+    <span class="lab">💡 웹은 "발견"용, 승격돼야 "근거"</span>
+    <p style="margin:4px 0 0">웹(SourceSnapshot)은 단서를 <b>찾는</b> 도구입니다. 법령·예규·판례 같은 권위 출처로 <b>승격(promote)</b>될 때만
+    결론 근거로 인정됩니다(→ 06 웹리서치). 블로그·카페·요약글은 결론 근거에서 배제.</p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 6 / 12</div>
+</div>
+
+<!-- ============ P7 — 도식5 권위 피라미드 ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 권위 위계 피라미드 (단, 서열이 전부가 아니다)</h2>
+  <p class="lead">출처는 권위 순위가 다릅니다. <b>하지만 "상위가 하위를 덮어쓴다"는 오해는 금물</b> — 위임·해석 관계로 봐야 합니다.</p>
+
+  <div style="margin:14px auto 6px; max-width:560px">
+    <div style="margin:0 auto; width:38%; background:#1E3A8A; color:#fff; text-align:center; padding:7px; border-radius:6px 6px 0 0; font-weight:800; font-size:9.5pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">법률</div>
+    <div style="margin:0 auto; width:52%; background:#2563EB; color:#fff; text-align:center; padding:7px; font-weight:700; font-size:9.3pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">시행령 <span style="font-weight:400; font-size:8pt">(법률의 위임 범위 내 보충)</span></div>
+    <div style="margin:0 auto; width:66%; background:#3B82F6; color:#fff; text-align:center; padding:7px; font-size:9pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">시행규칙 · 고시</div>
+    <div style="margin:0 auto; width:80%; background:#60A5FA; color:#fff; text-align:center; padding:7px; font-size:9pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">예규 · 질의회신 · 판례 · 심판례 <span style="font-size:8pt">(해석·구체화)</span></div>
+    <div style="margin:0 auto; width:92%; background:#93C5FD; color:#13405A; text-align:center; padding:7px; font-size:9pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">라이선스 실무서</div>
+    <div style="margin:0 auto; width:100%; background:#DBEAFE; color:#5C6B7A; text-align:center; padding:7px; border-radius:0 0 6px 6px; font-size:9pt; -webkit-print-color-adjust:exact; print-color-adjust:exact">웹 (발견용)</div>
+  </div>
+
+  <div class="danger" style="margin-top:12px">
+    <span class="lab">🚫 override 오해 금지 (Codex 교정)</span>
+    <ul class="tight" style="margin:4px 0 0">
+      <li><b>시행령은 법률을 override 하지 않는다</b> — 위임 범위 내에서 <b>보충</b>할 뿐.</li>
+      <li><b>예규·판례는 법령 본문을 무효화하지 않는다</b> — <b>해석·구체화</b>(예규=구속력 한계, 판례=확정 여부 변수).</li>
+      <li>종합 시 <b>위임·해석 관계 + 시점 + 사실관계 동일성</b>을 함께 본다.</li>
+    </ul>
+  </div>
+
+  <div class="callout" style="margin-top:9px">
+    <span class="lab">이 위계가 쓰이는 곳</span>
+    <p style="margin:4px 0 0"><b>(a) 종합 단계</b>의 claim 정합·tie-break(산술가중 ✕, 다수결 ✕), <b>(b) 각 소스 내부</b> 검색·재랭킹의 신뢰도 신호.
+    소스 간 결합은 오직 종합으로.</p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 7 / 12</div>
+</div>
+
+<!-- ============ P8 — 도식6 충돌+처리흐름 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — 충돌 처리 & 시점 유효성 처리 흐름</h2>
+  <p class="lead">소스 간 결론이 다르면 <b>평균내지 않고 표면화</b>합니다. 그리고 모든 결론은 적용시점을 거쳐 버전에 묶입니다.</p>
+
+  <h3>시점 유효성 처리 흐름</h3>
+  <div class="flow" style="margin-top:6px">
+    <div class="step"><span class="n">1</span><span class="t">적용시점 결정</span><span class="d">거래일/귀속/신고일<br>없으면 abstain·되물음</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">버전 선택</span><span class="d">effective_from ≤ 시점<br>&lt; effective_to</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">3</span><span class="t">부칙 판정</span><span class="d">TransitionRule<br>조건식(자동단정 ✕)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">4</span><span class="t">해석 선별</span><span class="d">예규·판례 issued/<br>supersede로</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="n" style="background:var(--navy)">5</span><span class="t">시점 고지</span><span class="d">applicable_basis 명시<br>+ "다른 연도면 달라짐"</span></div>
+  </div>
+
+  <h3>충돌 해결 의사결정표 (ConflictFlag)</h3>
+  <table>
+    <tr><th width="160">상황</th><th>판단 기준</th><th width="150">처리</th></tr>
+    <tr><td>법률 vs 시행령 외관 충돌</td><td>위임 범위 내 보충인지 확인</td><td>위임관계로 해소</td></tr>
+    <tr><td>예규 vs 판례</td><td>구속력 한계·확정 여부·시점</td><td>해석 한계 표시</td></tr>
+    <tr><td>구 예규 vs 신 예규</td><td>issued_date · supersedes</td><td>유효 해석만 채택</td></tr>
+    <tr><td>사실관계 불일치 예규</td><td>fact_match 충족 여부</td><td><b>원용 차단</b></td></tr>
+    <tr><td>해소 불가</td><td>—</td><td><b>단정 금지 → 회계사 검토항목</b></td></tr>
+  </table>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 8 / 12</div>
+</div>
+
+<!-- ============ P9 — 도식7 부칙 TransitionRule ============ -->
+<div class="page">
+  <h2>도식 ⑦ — 부칙·경과규정을 "기계 판정 객체"로 (TransitionRule)</h2>
+  <p class="lead">부칙은 텍스트 메모로 두면 무용지물. <b>조건을 판정할 수 있는 객체</b>로 만들어야 "이 사건엔 구법/신법 중 무엇" 을 자동으로 가립니다.</p>
+
+  <div class="grid2" style="margin-top:10px">
+    <div class="card fill">
+      <h3 style="margin-top:0">원문 부칙 (예시)</h3>
+      <p style="margin:5px 0; font-style:italic; color:#2C3A48">"이 법은 2025년 1월 1일부터 시행한다. 다만, <b>이 법 시행 전에 개시한 사업연도분</b>에 대해서는 <b>종전의 규정</b>에 따른다."</p>
+    </div>
+    <div class="card" style="border-left:6px solid var(--law)">
+      <h3 style="margin-top:0">TransitionRule 객체</h3>
+      <table style="margin:2px 0">
+        <tr><td class="mono">applies_when</td><td>사업연도 개시일 &lt; 2025-01-01</td></tr>
+        <tr><td class="mono">then</td><td>종전 ProvisionVersion 적용</td></tr>
+        <tr><td class="mono">else</td><td>신 ProvisionVersion 적용</td></tr>
+        <tr><td class="mono">guard</td><td>자동확정 ✕ → 검토항목</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="danger">
+      <span class="lab">🚫 소급 자동적용 금지</span>
+      <p style="margin:4px 0 0">"납세자에게 유리하면 소급"은 <b>일반 원칙이 아닙니다.</b> 부칙·명시적 소급규정이 있을 때만,
+      신뢰보호·불이익 소급과세 금지를 함께 검토해 <b>표시</b>합니다(자동 적용 0건). <span class="mono">PROV-014</span></p>
+    </div>
+    <div class="callout">
+      <span class="lab">개정 추적 메타가 없으면?</span>
+      <p style="margin:4px 0 0">공포일·시행일·적용례·개정문서번호가 누락되면 <b>결론을 제한(abstain)</b>합니다.
+      "그럴듯하게" 채우지 않습니다. <span class="mono">PROV-016</span></p>
+    </div>
+  </div>
+
+  <div class="analogy" style="margin-top:11px">
+    <span class="lab">회계사 포인트</span>
+    <p style="margin:4px 0 0">세무조정 때 "이 거래는 개정 전 사업연도라 종전 규정"이라고 따지는 그 판단을,
+    <b>조건식으로 박아 재현 가능</b>하게 만든 것입니다. 사람이 매번 부칙을 다시 읽지 않아도 되게.</p>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 9 / 12</div>
+</div>
+
+<!-- ============ P10 — 용어사전 ============ -->
+<div class="page">
+  <h2>비개발자를 위한 전문용어 사전</h2>
+  <p class="lead">이 문서의 핵심 용어를 <b>회계사 눈높이</b>로 한 줄씩 풀었습니다.</p>
+  <div style="margin-top:8px">
+    <div class="gl"><div class="term">ProvisionVersion<span class="en">시행일 버전</span></div><div class="def">특정 조문이 <b>특정 기간에 유효했던 "시행 중 버전"</b> 객체. 같은 조문도 개정마다 버전이 다름.</div></div>
+    <div class="gl"><div class="term">공포일<span class="en">promulgated_date</span></div><div class="def">개정 법령이 <b>공식 발표된 날</b>. 실제 효력 시작일(시행일)과 다를 수 있음.</div></div>
+    <div class="gl"><div class="term">시행일<span class="en">effective date</span></div><div class="def">법령 <b>효력이 시작되는 날</b>. <b>버전 선택의 핵심 기준</b>(공포일이 아님).</div></div>
+    <div class="gl"><div class="term">effective_from / to<span class="en">유효구간</span></div><div class="def">조문 버전이 유효한 <b>시작일·종료일</b>. from=inclusive, to=exclusive(경계 테스트 대상).</div></div>
+    <div class="gl"><div class="term">TransitionRule<span class="en">부칙·경과조치</span></div><div class="def">부칙·경과규정을 <b>기계가 판정할 수 있게</b> 만든 조건 객체("시행 전 개시 사업연도분은 종전").</div></div>
+    <div class="gl"><div class="term">applicable_basis<span class="en">적용 기준시점</span></div><div class="def"><b>거래일·귀속연도·신고일·처분일·경정청구일</b> 중 어느 시점 기준으로 판단했는지 기록.</div></div>
+    <div class="gl"><div class="term">Citation<span class="en">인용 기록</span></div><div class="def">답변의 특정 주장과 <b>근거 출처 객체를 연결</b>하는 인용. URL이 아니라 버전 객체를 가리킴.</div></div>
+    <div class="gl"><div class="term">Pinpoint 인용<span class="en">정밀 인용</span></div><div class="def">법령명만이 아니라 <b>조·항·호·목·문단</b>까지 특정하는 인용.</div></div>
+    <div class="gl"><div class="term">entailment<span class="en">지지 관계</span></div><div class="def">인용 원문이 <b>그 주장을 실제로 뒷받침</b>하는지. 인용 개수가 많다는 뜻이 아님.</div></div>
+    <div class="gl"><div class="term">Ruling<span class="en">예규·질의회신</span></div><div class="def">과세관청 <b>해석 자료</b>. 발행일·대체관계·<b>구속력 한계</b>·사실관계 동일성 검토 필요.</div></div>
+    <div class="gl"><div class="term">SourceSnapshot<span class="en">원문 캡처</span></div><div class="def">웹/외부 원문을 <b>언제 어떤 상태로</b> 확인했는지 해시와 함께 남긴 기록(재현·감사용).</div></div>
+    <div class="gl"><div class="term">ConflictFlag<span class="en">충돌 표시</span></div><div class="def">출처 간 결론이 다를 때 <b>숨기지 않고 검토 대상으로 표시</b>하는 장치.</div></div>
+    <div class="gl"><div class="term">abstain<span class="en">보류·되물음</span></div><div class="def">근거 부족·시점 불명 시 <b>단정하지 않고 추가 질문</b>으로 전환하는 것.</div></div>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 10 / 12</div>
+</div>
+
+<!-- ============ P11 — 흔한 오해 ============ -->
+<div class="page">
+  <h2>흔한 오해 8 — "이렇게 설명하면 틀립니다"</h2>
+  <p class="lead">출처·시점은 특히 오해가 많은 주제입니다. 왼쪽처럼 말하면 설계 의도를 정반대로 전달하게 됩니다.</p>
+  <table style="margin-top:9px">
+    <tr><th width="32">#</th><th width="40%">❌ 이렇게 말하면 틀림</th><th>✅ 정확히는</th><th width="98">근거</th></tr>
+    <tr><td>1</td><td>"<b>URL만 있으면</b> 출처는 충분"</td><td>Citation은 <b>버전 박힌 소스객체</b>를 참조해야 한다</td><td class="mono">PROV-002</td></tr>
+    <tr><td>2</td><td>"<b>최신 법령만</b> 보면 된다"</td><td>거래일·귀속·신고일 <b>적용시점에 유효한 버전</b>을 본다</td><td class="mono">PROV-003/005/013</td></tr>
+    <tr><td>3</td><td>"시점 애매해도 <b>대략 답</b>할 수 있다"</td><td>불명확하면 <b>결론 금지·되물음(abstain)</b></td><td class="mono">PROV-006</td></tr>
+    <tr><td>4</td><td>"<b>부칙은 참고</b>라 텍스트로만 저장"</td><td><b>TransitionRule 객체</b>로 조건 판단 가능하게</td><td class="mono">PROV-008/011</td></tr>
+    <tr><td>5</td><td>"<b>유리하면 소급</b> 적용하면 된다"</td><td>자동소급 ✕ — 부칙·신뢰보호 확인 후 <b>표시</b></td><td class="mono">PROV-014</td></tr>
+    <tr><td>6</td><td>"<b>예규 하나면</b> 결론 확정"</td><td>구속력 한계·발행일·supersede·<b>사실 동일성</b> 함께</td><td class="mono">PROV-007/015</td></tr>
+    <tr><td>7</td><td>"<b>법령명만</b> 인용해도 된다"</td><td>조·항·호·목 <b>pinpoint</b> 없으면 미달</td><td class="mono">PROV-004</td></tr>
+    <tr><td>8</td><td>"여러 출처 <b>평균내면</b> 된다"</td><td>권위·시점·충돌 표시, 필요 시 <b>ConflictFlag</b></td><td class="mono">PROV-015</td></tr>
+  </table>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="analogy">
+      <span class="lab">한 문장으로 안전하게</span>
+      <p style="margin:4px 0 0">"<b>모든 결론을 버전 법령과 적용시점에 묶고</b>, 시점을 모르면 답하지 않고 되묻습니다.
+      인용은 링크가 아니라 사후 재현 가능한 근거 객체입니다."</p>
+    </div>
+    <div class="callout">
+      <span class="lab">왜 이게 강점인가</span>
+      <p style="margin:4px 0 0">파트너가 가장 싫어하는 건 <b>"그럴듯한 최신 답"</b>입니다.
+      시점과 버전을 따지는 태도는 <b>감사 배경 회계사의 신뢰성</b>으로 읽힙니다.</p>
+    </div>
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 11 / 12</div>
+</div>
+
+<!-- ============ P12 — 핵심 메시지 ============ -->
+<div class="page">
+  <h2>이 문서를 왜 이렇게 썼나 — 핵심 메시지 3</h2>
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">01</span> &nbsp;출처는 URL이 아니라 "버전 고정 객체"다</h3>
+    <p style="margin:4px 0">법령·예규·판례를 <b>시행일·발행일·해시가 박힌 객체</b>로 표준화했습니다.
+    그래야 "이 답이 어느 법 버전에 근거했나"를 <b>사후 재현·검증</b>할 수 있습니다.</p>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">02</span> &nbsp;결론은 "현재 법"이 아니라 "적용시점"에 묶인다</h3>
+    <p style="margin:4px 0">거래일·귀속연도·신고일에 따라 같은 질문의 답이 달라집니다.
+    그래서 모든 인용에 <span class="mono">applicable_basis</span>를 달고, 부칙은 <span class="mono">TransitionRule</span>로 기계 판정합니다.</p>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:14px">
+    <h3 style="margin-top:0"><span class="num">03</span> &nbsp;모르면 꾸며내지 않고 멈춘다 (abstain)</h3>
+    <p style="margin:4px 0">적용시점·근거·사실관계가 불명확하면 <b>단정하지 않고 되묻습니다.</b>
+    충돌은 평균내지 않고 <span class="mono">ConflictFlag</span>로 회계사 검토에 올립니다.</p>
+  </div>
+
+  <div class="synth" style="background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄</div>
+    <p style="font-size:12.5pt; margin:6px 0 0; line-height:1.65">"법률 AI들은 '인용을 보여준다'에서 멈춥니다. 세무는 <b>'언제 기준이냐'</b>가 정답을 바꿉니다.
+    그래서 인용을 <b>버전 박힌 조문</b>에 묶고, 적용 시점을 모르면 <b>답하지 않고 되묻게</b> 했습니다 —
+    감사에서 배운 '근거 없으면 결론 없다'를 시스템으로 옮긴 겁니다."</p>
+  </div>
+
+  <div style="margin-top:18px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 법인세 자문 보조 AI 설계서<br>
+    본 해설본은 <span class="mono">docs/02_출처_시점유효성.md</span>의 비개발자용 도식 요약입니다 · 정본은 원문을 따릅니다 · 2026-06-28
+  </div>
+  <div class="pgnote">출처·시점유효성 · 쉬운 설명 — 12 / 12</div>
+</div>

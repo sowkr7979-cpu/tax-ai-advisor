@@ -1,0 +1,448 @@
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 해설</div>
+      <div style="height:18px"></div>
+      <h1>웹 리서치<span class="dot"></span><br>최신 공식근거<br>수집기</h1>
+      <div class="rule"></div>
+      <div class="sub">"답을 만드는 검색"이 아니라, 국세청·기재부·법제처 공식 원문을 찾아오는 ③번 독립 채널</div>
+      <div class="file">docs / 06_웹리서치.md  →  비개발자(KICPA)용 도식 해설</div>
+      <div class="badgewrap">
+        <span class="badge">🧭 발견(Discovery) vs 권위(Authority) 2계층</span>
+        <span class="badge">🛡 Source Policy 이중 필터 (검색 전·후)</span>
+        <span class="badge">⚖️ 충돌 시 결론 보류 (ConflictFlag)</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      작성 · 신현우 (KICPA, 2년차)<br>
+      목적 · 딜로이트 안진 Business Tax 지원 / 포트폴리오<br>
+      문서 · 법인세 자문 보조 AI 설계서 — 웹 리서치 章 해설본<br>
+      날짜 · 2026-06-28
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 요약 + 비유 ============ -->
+<div class="page">
+  <h2>30초 요약 — 웹 리서치가 뭐죠?</h2>
+  <p class="lead"><b>한 문장:</b> 인터넷 검색으로 답을 만드는 장치가 <b>아니라</b>, 개정 동향·신규 예규·보도자료 같은 <b>최신 근거</b>를
+  국세청·기재부·법제처 <b>공식 원문</b>에서 찾아와 <b>③번 독립 답변(SourceAnswer)</b>을 만드는 <b>수집·검증 채널</b>입니다.
+  검색엔진은 <b>단서를 찾는 발견 도구</b>일 뿐, 결론 근거는 <b>공식 원문으로 승격(promote)된 것만</b> 씁니다.</p>
+
+  <div class="grid3" style="margin-top:6px">
+    <div class="card fill"><h3 style="margin-top:0">① 무엇을 하나</h3>
+      <small>쟁점을 받아 <b>공식 출처에서 최신 근거 후보</b>를 찾고, 원문을 추출·검증해 <b>③번 독립 답변</b>을 만듭니다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 무엇이 아닌가</h3>
+      <small>답을 <b>'생성'하는 곳이 아닙니다.</b> 결론은 종합 단계에서. <b>웹 단독 세무 단정은 금지</b>.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 핵심 원칙</h3>
+      <small>검색=<b>발견</b>, 근거=<b>공식 원문 승격분만</b>. 법령(①)·내부RAG(②)와 <b>충돌 시 보류</b>.</small></div>
+  </div>
+
+  <h3>회계사의 직관으로 번역하면 — 3가지 비유</h3>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 1 · 「공식출처 우선 조사절차」</span>
+    <p style="margin:5px 0 0">어떤 쟁점을 조사할 때 <b>블로그 검색 결과를 그대로 답으로 쓰지 않습니다.</b>
+    국세청·기재부·법제처·법원 <b>원문을 직접 찾아 '증거능력'을 확인</b>하죠. 웹 리서치가 바로 그 절차입니다 —
+    검색은 <b>어디를 볼지 알려주는 길잡이</b>, 인용은 <b>공식 원문에서</b>.</p>
+  </div>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 2 · 「단서(제보) vs 감사증거」의 구분 = Discovery vs Authority</span>
+    <p style="margin:5px 0 0">감사에서 <b>제보·소문(단서)</b>과 <b>감사증거</b>는 다릅니다. 단서로 <b>어디를 볼지</b>는 정하되,
+    결론은 <b>입수한 증거로만</b> 냅니다. Tavily·Brave는 <b>단서</b>, 결론 근거는 <b>공식 원문으로 승격된 것만</b>.</p>
+  </div>
+
+  <div class="analogy">
+    <span class="lab">비유 3 · 「증거 채택 기준표」 = Source Policy</span>
+    <p style="margin:5px 0 0">감사조서에 아무 자료나 첨부하지 않듯, <b>블로그·카페·요약글은 채택 기준에서 배제</b>합니다.
+    어떤 출처를 근거로 인정할지 <b>미리 정한 기준표</b>가 Source Policy입니다.</p>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 핵심 한 줄</span>
+    <p style="margin:4px 0 0">웹 리서치의 산출물은 <b>'답'이 아니라 '검증된 최신 공식근거 후보'</b>입니다.
+    답을 만드는 건 <b>종합(Synthesis)</b>이고, 최종 판단과 서명은 <b>회계사</b>입니다.</p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 2 / 12</div>
+</div>
+
+<!-- ============ P3 — 도식1 Discovery vs Authority ============ -->
+<div class="page">
+  <h2>도식 ① — 두 계층: 발견(Discovery) vs 권위(Authority)</h2>
+  <p class="lead">웹 리서치에서 <b>가장 중요한 구분</b>. 검색엔진은 <b>단서를 찾는 발견 도구</b>일 뿐, 그 자체로 근거가 아닙니다.
+  결론 근거가 되려면 <b>공식 원문으로 승격(promote)</b>돼야 합니다.</p>
+
+  <div class="card fill" style="border-top:4px solid var(--web); margin-top:10px">
+    <h3 style="margin-top:0; color:#B5470B">① 발견 계층 (Discovery) — "어디를 볼지 찾는 곳"</h3>
+    <div class="grid3" style="margin-top:4px">
+      <div class="card" style="border-top:3px solid var(--web)"><b>Tavily</b> <span class="pill" style="background:var(--web)">1순위</span><br><small>에이전트 검색 — 후보 URL 발견</small></div>
+      <div class="card" style="border-top:3px solid var(--amber)"><b>Brave</b> <span class="pill" style="background:var(--amber)">보조</span><br><small>자체 인덱스·freshness</small></div>
+      <div class="card" style="background:#FCEEF0; border-color:#F2C2C8"><b>※ 검색 1위 ≠ 정답</b><br><small>존재·위치만 발견. 권위·진정성은 여기서 판단 ✕</small></div>
+    </div>
+  </div>
+
+  <div class="merge">▼  승격(Promote) — Source Policy · 공식성 · 시점 · ①②와 일치 검증 통과분만  ▼</div>
+
+  <div class="synth">
+    <h3>② 권위 계층 (Authority) — "결론 근거가 되는 곳"</h3>
+    <p style="margin:2px 0 6px; font-size:9.5pt">국세청 · 기획재정부 · 법제처(국가법령정보) · 조세심판원 · 대법원/법원 <b>공식 원문</b></p>
+    <div class="claim">✓ 공식 원문 <b>URL·발행기관·retrieved_at·content_hash</b> 확보</div>
+    <div class="claim">✓ 법령(①)·내부RAG(②)와 <b>대조해 진정성·일치 확인</b> <span class="mono">WEB-011</span></div>
+    <div class="claim" style="background:rgba(214,69,80,.22); border-color:rgba(214,69,80,.5)">⚠ 미승격 웹 자료는 <b>결론 근거 불가</b> — "참고·동향"으로만 표기</div>
+  </div>
+
+  <div class="danger" style="margin-top:12px">
+    <span class="lab">🚫 가장 중요한 규칙</span>
+    <p style="margin:4px 0 0">검색 API가 상위로 올린 결과라도, <b>공식 원문으로 승격되지 않으면 결론 근거 0건</b>입니다.
+    "검색 1위 = 정답"은 이 설계에서 <b>금지</b>합니다. <span class="mono">WEB-002 · WEB-011</span></p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 3 / 12</div>
+</div>
+
+<!-- ============ P4 — 도식2 Source Policy 이중 필터 ============ -->
+<div class="page">
+  <h2>도식 ② — Source Policy 이중 필터 (검색 전 + 검색 후)</h2>
+  <p class="lead">출처 정책을 <b>질의 단계뿐 아니라 검색 후에도</b> 적용합니다. 검색 API는 질의와 무관하게
+  <b>mirror·블로그·구버전을 끼워</b> 반환할 수 있기 때문입니다.</p>
+
+  <div class="trace" style="margin-top:12px">
+    <div class="tnode"><div class="tl">질의 구성</div><div class="tv">Query</div><small>쟁점·세목·시점</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--green)"><div class="tl">사전 필터</div><div class="tv">허용 도메인 우선</div><small>공식출처로 좁힘</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">검색·추출</div><div class="tv">Search → 원문</div><small>HTML/PDF/HWP</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--red)"><div class="tl">사후 필터</div><div class="tv">mirror·블로그·구버전 탈락</div><small>도메인·공식성·시점 재검증</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--green)"><div class="tl">통과 후보</div><div class="tv">승격 대상</div><small>다음 단계로</small></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="card" style="border:1.5px solid #16A34A; border-top:5px solid #16A34A">
+      <h3 style="margin-top:0; color:#0F7A38">✅ 허용 (우선·가중)</h3>
+      <ul class="tight">
+        <li><b>국세청 · 기획재정부 · 조세심판원</b></li>
+        <li><b>법제처</b>(국가법령정보) · <b>대법원/법원</b></li>
+        <li>각 기관 <b>공식 보도자료</b></li>
+      </ul>
+    </div>
+    <div class="danger">
+      <span class="lab">✗ 배제 / 저신뢰</span>
+      <ul class="tight" style="margin-top:4px">
+        <li><b>블로그 · 카페</b> · 광고성 세무 콘텐츠</li>
+        <li><b>출처불명</b> · 작성자 불명</li>
+        <li><b>미러 · 요약 재가공</b> · 구버전 캐시</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="danger" style="margin-top:12px">
+    <span class="lab">🚫 Codex 핵심 — 검색 전 제한만으론 부족</span>
+    <p style="margin:4px 0 0">검색 API가 허용 도메인 <b>밖의 mirror·요약·구버전</b>을 끼워 반환할 수 있으므로,
+    <b>원문 추출 後 도메인·공식성·시점을 재검증</b>해 탈락시킵니다. 미통과 결과는 <b>결론에서 배제</b>됩니다.
+    <span class="mono">WEB-002 · WEB-004 · WEB-007</span></p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 4 / 12</div>
+</div>
+
+<!-- ============ P5 — 도식3 파이프라인 8단계 ============ -->
+<div class="page">
+  <h2>도식 ③ — 웹 리서치 파이프라인 8단계</h2>
+  <p class="lead">쟁점이 들어와 <b>'결론 근거 후보'</b>가 되기까지 <b>8단계</b>. 검색은 <b>중간의 한 단계</b>일 뿐,
+  앞뒤로 <b>정책(②⑤)과 검증(⑥⑦⑧)</b>이 감쌉니다.</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step"><span class="n">1</span><span class="t">Query Planner</span><span class="d">세목·귀속연도·쟁점<br>+ 한국어 확장</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="n">2</span><span class="t">Source Policy 사전</span><span class="d">허용 도메인<br>우선 질의</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--web)"><span class="n" style="background:var(--web)">3</span><span class="t">Search API</span><span class="d">Tavily·Brave<br>+공식 커넥터</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">4</span><span class="t">원문 추출</span><span class="d">snippet 아님<br>HTML/PDF/HWP/OCR</span></div>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:15pt; margin:3px 0">⌄</div>
+  <div class="flow">
+    <div class="step" style="border-top-color:var(--red)"><span class="n" style="background:var(--red)">5</span><span class="t">Source Policy 사후</span><span class="d">mirror·블로그<br>·구버전 탈락</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">6</span><span class="t">Source Scoring</span><span class="d">공식성·최신성<br>·권위·일치</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">7</span><span class="t">Conflict Check</span><span class="d">①②와 충돌<br>표시(평균 금지)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="n">8</span><span class="t">Promote</span><span class="d">공식·검증분만<br>권위 소스로 승격</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="card">
+      <h3 style="margin-top:0">코드 위치 (Workpaper 2120)</h3>
+      <ul class="tight">
+        <li><span class="mono">src/</span> — 정책·스코어·충돌·승격 (결정적 로직)</li>
+        <li><span class="mono">src·ai/</span> — Tavily/Brave 클라이언트·추출·OCR (어댑터)</li>
+        <li><span class="mono">contract/</span> — SourceSnapshot·Score 스키마</li>
+        <li>격리 — 웹은 <b>공유 L0</b>(<span class="mono">01_보안</span>)</li>
+      </ul>
+    </div>
+    <div class="callout">
+      <span class="lab">💡 왜 8단계로 감싸나</span>
+      <p style="margin:4px 0 0">검색(③)을 <b>발견 전후로 정책·검증이 둘러싸야</b> "검색=답"을 막을 수 있습니다.
+      External API(<span class="mono">07_API</span>)가 <b>인프라</b>라면, 이 파이프라인은 <b>제품 의미론</b>입니다.</p>
+    </div>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 5 / 12</div>
+</div>
+
+<!-- ============ P6 — 도식4 벤더 ADR ============ -->
+<div class="page">
+  <h2>도식 ④ — 검색 벤더 선택 (ADR)</h2>
+  <p class="lead">어떤 검색 도구를 <b>왜 쓰고</b>, 무엇을 <b>왜 뺐는지</b> 의사결정을 기록(ADR)했습니다.
+  <b>발견 도구는 여럿</b>, <b>권위는 공식 커넥터</b>로 확보합니다.</p>
+
+  <table style="margin-top:10px">
+    <tr><th width="135">소스</th><th width="120">역할</th><th>비고 (선택·제외 사유)</th></tr>
+    <tr>
+      <td><b>Tavily</b> <span class="pill" style="background:var(--web)">1순위</span></td>
+      <td>에이전트 검색<br><small>(Discovery)</small></td>
+      <td><span class="mono">include_domains</span>로 공식출처 제한 · <span class="mono">time_range</span>/<span class="mono">topic</span> 활용 · advanced=2 credits(관련성↑·비용↑), basic=1</td>
+    </tr>
+    <tr>
+      <td><b>Brave Search</b> <span class="pill" style="background:var(--amber)">보조</span></td>
+      <td>보조 검색<br><small>(Discovery)</small></td>
+      <td>자체 인덱스·freshness · <span class="mono">site/filetype</span> 연산자 · LLM context endpoint</td>
+    </tr>
+    <tr>
+      <td><b>공식소스 커넥터</b> <span class="pill" style="background:#16A34A">권위</span></td>
+      <td>권위 확보<br><small>(Authority)</small></td>
+      <td>국세청·법제처·조세심판원 <b>직접 연계/스크래핑</b>(법·기술·라이선스 허용 범위). 검색API 공백(동적페이지·PDF·구 예규·기본통칙) 보완</td>
+    </tr>
+    <tr>
+      <td><s>Google Custom Search</s> <span class="pill" style="background:#7C8B99">제외</span></td>
+      <td>제외</td>
+      <td>신규고객 차단·2027 전환 → <b>ADR로 제외 사유 문서화</b> + recall 마일스톤에서 재검토 <span class="mono">WEB-010</span></td>
+    </tr>
+  </table>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="callout">
+      <span class="lab">⚠️ Codex 보강</span>
+      <p style="margin:4px 0 0">Tavily/Brave는 <b>discovery</b>, 권위는 <b>공식 커넥터</b>입니다.
+      검색API가 <b>stale·비공식·재가공</b> 결과를 상위로 줄 수 있으니 <b>"검색 1위 = 정답" 금지</b>.</p>
+    </div>
+    <div class="card fill">
+      <h3 style="margin-top:0">💡 왜 ADR로 남기나</h3>
+      <p style="margin:4px 0 0">감사조서에 <b>"왜 이 절차를 택했나"</b>를 남기는 것과 같습니다.
+      파트너가 <b>"Google은 왜 안 썼나?"</b>라고 물으면 <b>문서로 답</b>할 수 있어야 합니다.</p>
+    </div>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 6 / 12</div>
+</div>
+
+<!-- ============ P7 — 도식5 Query Expansion ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 한국어 세법 Query Expansion (검색어 확장)</h2>
+  <p class="lead">일반 검색은 <b>한국 공식자료를 잘 못 찾습니다.</b> 법령명·조문번호 형식·약칭·기간 표현을
+  <b>여러 형태로 확장</b>해야 공식 원문에 적중합니다.</p>
+
+  <div class="card fill" style="margin-top:9px">
+    <b>📥 입력 (예시 · 가상 시나리오)</b> &nbsp;
+    <span class="mono">쟁점 = "2024 귀속 접대비 한도초과 손금불산입" · 세목 = 법인세 · 귀속연도 = 2024</span>
+  </div>
+
+  <table style="margin-top:9px">
+    <tr><th width="120">확장 축</th><th width="38%">한 표현으로는 놓치는 것</th><th>확장 예시</th></tr>
+    <tr><td><b>명칭 변형 ★</b></td><td>"접대비"만 검색 → <b>2024 개정 후 공식문서('기업업무추진비')를 놓침</b></td><td>접대비 ↔ <b>기업업무추진비</b>(현 명칭) <u>동시</u> 질의</td></tr>
+    <tr><td><b>조문번호 형식</b></td><td>"제25조"만</td><td>법인세법 제25조 / 법인세법 25조 / 법25① / 시행령 제○○조</td></tr>
+    <tr><td><b>정식명칭·약어</b></td><td>"법인세법 시행령"만</td><td>법인세법 / 법인령 / 법령 약칭</td></tr>
+    <tr><td><b>기관·서식</b></td><td>본문만</td><td>국세청 보도자료 · 기재부 보도참고자료 · 서식명</td></tr>
+    <tr><td><b>기간/연도</b></td><td>"한도"만</td><td>2024 귀속 · 2024 사업연도 · 개정 시행일</td></tr>
+  </table>
+
+  <div class="callout" style="margin-top:12px">
+    <span class="lab">💡 왜 핵심인가 — 실제 사례</span>
+    <p style="margin:4px 0 0"><b>접대비는 2024년부터 '기업업무추진비'로 명칭이 바뀌었습니다.</b>
+    검색어 <b>한 표현만</b> 쓰면 정작 공식 원문을 놓쳐 <b>"자료가 없다"는 잘못된 결론</b>에 이를 수 있습니다.
+    query expansion이 이 함정을 막습니다. <span class="mono">WEB-008</span></p>
+  </div>
+
+  <div class="analogy" style="margin-top:11px">
+    <span class="lab">회계사 포인트</span>
+    <p style="margin:4px 0 0">실무에서 예규를 찾을 때 <b>옛 명칭·새 명칭·조문번호·서식명을 두루 넣어보는</b> 그 습관을 전산화한 것입니다.
+    <b>명칭 개정·약칭</b>을 모르면 공식 자료를 놓친다 — 이게 한국 세법 검색의 핵심 난점입니다.</p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 7 / 12</div>
+</div>
+
+<!-- ============ P8 — 도식6 SourceSnapshot + Scoring ============ -->
+<div class="page">
+  <h2>도식 ⑥ — SourceSnapshot: 찾은 근거를 '시점·해시'로 박제</h2>
+  <p class="lead">snippet만 쓰지 않고 <b>원문 페이지를 추출</b>해, <b>언제·어디서·무엇을 봤는지</b> 메타와 함께 저장합니다.
+  PDF·HWP·스캔본은 <b>OCR</b>로 본문을 확보합니다.</p>
+
+  <table style="margin-top:9px">
+    <tr><th width="160">필드</th><th>의미</th><th width="30%">회계사 비유</th></tr>
+    <tr><td><span class="mono">url</span></td><td>원문 주소</td><td>조서 출처</td></tr>
+    <tr><td><span class="mono">canonical_title</span></td><td>정규 제목</td><td>문서 표제</td></tr>
+    <tr><td><span class="mono">publisher</span></td><td>발행기관 (국세청·기재부 등)</td><td>발행처</td></tr>
+    <tr><td><span class="mono">published_date</span></td><td>발행일</td><td>문서 일자</td></tr>
+    <tr><td><span class="mono">effective_date</span></td><td>적용시점 (가능 시)</td><td>시행일</td></tr>
+    <tr><td><span class="mono">retrieved_at</span></td><td>조회 시각</td><td>입수일</td></tr>
+    <tr><td><span class="mono">extraction_method</span></td><td>추출방식 (HTML/PDF/HWP/OCR)</td><td>입수 경로</td></tr>
+    <tr><td><span class="mono">content_hash</span></td><td>본문 해시</td><td>원본 무결성 봉인</td></tr>
+    <tr><td><span class="mono">official</span></td><td>공식 여부 플래그</td><td>증거능력 표시</td></tr>
+  </table>
+
+  <h3 style="margin-top:14px">⑥ Source Scoring — 웹 소스 <u>내부</u> 점수</h3>
+  <div class="grid2" style="margin-top:6px">
+    <div class="card fill">
+      <p style="margin:0 0 4px"><small>후보별 점수 신호 (소스 <b>간</b> 가중혼합이 아니라 ③채널 <b>내부</b> 정렬)</small></p>
+      <ul class="tight" style="margin:2px 0">
+        <li><b>공식성</b> · <b>최신성</b> · <b>쟁점 관련성</b></li>
+        <li><b>법적 권위</b> · <b>①②(법령MCP·내부RAG)와의 일치</b></li>
+      </ul>
+    </div>
+    <div class="callout">
+      <span class="lab">⚠️ 최신성 ≠ 적용시점 유효성</span>
+      <p style="margin:4px 0 0">두 점수를 <b>분리 저장</b>합니다. <b>"가장 최근 게시물"</b>이 곧 <b>"그 사업연도에 유효한 근거"는 아닙니다.</b>
+      <span class="mono">WEB-012</span></p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 왜 URL이 아니라 스냅샷 객체인가</span>
+    <p style="margin:4px 0 0">링크는 <b>나중에 바뀌거나 사라집니다.</b> 발행일·조회시각·해시까지 박아두면
+    <b>"언제·무엇을 보고 판단했는지"</b>가 재현됩니다. = <span class="mono">02_출처</span>의 소스객체·시점 원칙.</p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 8 / 12</div>
+</div>
+
+<!-- ============ P9 — 도식7 Conflict + Promotion ============ -->
+<div class="page">
+  <h2>도식 ⑦ — 충돌 탐지 &amp; 승격 (Conflict → Promote)</h2>
+  <p class="lead">웹 결과가 법령MCP(①)·내부RAG(②)와 다르면 <b>평균내지 않고 ConflictFlag로 표시</b>,
+  결론을 <b>보류</b>합니다. 검증을 통과한 것만 <b>권위 소스로 승격</b>합니다.</p>
+
+  <div class="trace" style="margin-top:12px">
+    <div class="tnode" style="border-color:var(--web)"><div class="tl">웹 후보</div><div class="tv">SourceSnapshot</div><small>발견·추출분</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">대조</div><div class="tv">① 법령 · ② RAG</div><small>진정성·일치 점검</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--green)"><div class="tl">일치 시</div><div class="tv">Promote</div><small>결론 근거 후보</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--red)"><div class="tl">충돌 시</div><div class="tv">ConflictFlag</div><small>단정 보류</small></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="danger">
+      <span class="lab">⚠ 충돌 시 — 단정 금지</span>
+      <p style="margin:4px 0 0"><b>평균·혼합 금지.</b> 웹이 최신이라도 법령 원문과 다르면 <b>따라가지 않고</b>
+      <b>회계사 검토항목</b>으로 넘깁니다(<span class="mono">08_환각방지</span>). 미해소 충돌은 <b>사람(HITL)</b>에게.
+      <span class="mono">WEB-006</span></p>
+    </div>
+    <div class="card fill">
+      <h3 style="margin-top:0">✅ 승격 검증 조건 <span class="mono">WEB-011</span></h3>
+      <ul class="tight">
+        <li>공식 원문 <b>URL·발행기관·retrieved_at·content_hash</b></li>
+        <li>①법령 / ②RAG와 <b>대조해 일치·진정성 확인</b></li>
+        <li>스니펫·재가공본만으론 <b>승격 ✕</b></li>
+        <li>미승격은 <b>"참고·동향"</b>으로만 표기</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:12px">
+    <span class="lab">💡 왜 '보류'가 안전인가</span>
+    <p style="margin:4px 0 0">웹이 최신이라고 법령 원문과 충돌하는데 따라가면 <b>위험</b>합니다.
+    <b>"최신 = 옳음"이 아니라 시점 유효성·권위로 따져야</b> 합니다. 단정 대신 <b>보류·검토</b>가 자문 리스크를 줄입니다.</p>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 9 / 12</div>
+</div>
+
+<!-- ============ P10 — 용어사전 ============ -->
+<div class="page">
+  <h2>비개발자를 위한 전문용어 사전</h2>
+  <p class="lead">웹 리서치에 자주 나오는 기술 용어를 <b>회계사 눈높이</b>로 한 줄씩 풀었습니다.</p>
+
+  <div style="margin-top:8px">
+    <div class="gl"><div class="term">Query Planner<span class="en">검색 설계</span></div><div class="def">쟁점·세목·귀속연도·법령 키워드로 <b>검색어를 설계</b>하는 단계. 검색의 시작점.</div></div>
+    <div class="gl"><div class="term">Query Expansion<span class="en">검색어 확장</span></div><div class="def">같은 뜻을 <b>조문번호 형식·약칭·정식명칭·기간 표현</b>으로 여러 형태 확장. 한국 공식자료 적중률을 높임.</div></div>
+    <div class="gl"><div class="term">Source Policy<span class="en">출처 정책</span></div><div class="def">어떤 출처를 근거로 <b>인정/배제</b>할지 정한 기준표. <b>검색 전·후 이중</b> 적용.</div></div>
+    <div class="gl"><div class="term">Discovery<span class="en">발견</span></div><div class="def">검색으로 <b>'어디를 볼지'를 찾는</b> 발견 단계. 결과는 <b>단서</b>일 뿐 근거가 아님.</div></div>
+    <div class="gl"><div class="term">Authority Source<span class="en">권위 소스</span></div><div class="def">결론 근거가 될 수 있는 <b>공식 원문</b>(국세청·법제처·조세심판원·법원 등).</div></div>
+    <div class="gl"><div class="term">SourceSnapshot<span class="en">소스 스냅샷</span></div><div class="def">찾은 원문을 <b>URL·발행일·조회시각·해시</b>와 함께 박제한 저장 객체. 재현성의 토대.</div></div>
+    <div class="gl"><div class="term">Source Scoring<span class="en">소스 점수</span></div><div class="def">웹 소스 <b>내부</b>에서 공식성·최신성·관련성·권위·일치로 매기는 점수. 소스 간 가중혼합 아님.</div></div>
+    <div class="gl"><div class="term">Promotion<span class="en">승격</span></div><div class="def">검증을 통과한 웹 후보를 <b>권위 소스객체로 올려</b> 결론 근거로 인정하는 절차.</div></div>
+    <div class="gl"><div class="term">ConflictFlag<span class="en">충돌 표시</span></div><div class="def">웹이 법령·내부RAG와 <b>충돌함을 표시</b>해 결론을 <b>보류</b>하는 플래그. 평균·혼합 금지.</div></div>
+    <div class="gl"><div class="term">retrieved_at<span class="en">조회 시각</span></div><div class="def">그 자료를 <b>'언제 조회했는지'</b>. 시점·재현성의 핵심 (발행일과 다름).</div></div>
+    <div class="gl"><div class="term">SourceAnswer<span class="en">소스별 독립 답변</span></div><div class="def">①②③ 각 채널이 <b>따로 낸 완결 답변</b>. 웹 리서치는 <b>③번</b>을 책임.</div></div>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 10 / 12</div>
+</div>
+
+<!-- ============ P11 — 흔한 오해 ============ -->
+<div class="page">
+  <h2>흔한 오해 8 — "이렇게 말하면 틀립니다"</h2>
+  <p class="lead">웹 리서치를 소개할 때(면접·포트폴리오) <b>자주 빠지는 함정</b>입니다. 오른쪽이 정확한 설명입니다.</p>
+
+  <table style="margin-top:9px">
+    <tr><th width="32">#</th><th width="38%">❌ 이렇게 말하면 틀림</th><th>✅ 정확히는</th><th width="78">근거</th></tr>
+    <tr><td>1</td><td>"<b>검색 1위가 정답</b>이다"</td><td>단서일 뿐. <b>공식 원문으로 승격</b>돼야 근거.</td><td class="mono">WEB-011</td></tr>
+    <tr><td>2</td><td>"웹 리서치 = <b>답변 생성기</b>"</td><td>최신 <b>공식근거 수집기</b>. 답은 <b>종합 단계</b>.</td><td class="mono">§11</td></tr>
+    <tr><td>3</td><td>"블로그도 <b>설명 좋으면 근거</b>"</td><td>배제·저신뢰. <b>비공식 결론 근거 0건</b>.</td><td class="mono">WEB-004</td></tr>
+    <tr><td>4</td><td>"검색 전 <b>도메인 제한이면 충분</b>"</td><td>검색 후 <b>mirror·구버전·요약도 재필터</b>.</td><td class="mono">WEB-007</td></tr>
+    <tr><td>5</td><td>"<b>최신 게시물이 더 좋음</b>"</td><td>최신성과 <b>적용시점 유효성은 별도</b>.</td><td class="mono">WEB-012</td></tr>
+    <tr><td>6</td><td>"<b>검색 API가 공식성 보장</b>"</td><td>discovery 도구일 뿐. <b>Source Policy가 검증</b>.</td><td class="mono">WEB-002</td></tr>
+    <tr><td>7</td><td>"<b>검색어 한 표현이면 충분</b>"</td><td>한국어 <b>query expansion</b> 필요.</td><td class="mono">WEB-008</td></tr>
+    <tr><td>8</td><td>"Law MCP와 <b>충돌해도 웹이 최신이면 따름</b>"</td><td>단정 금지. <b>검토항목으로 보류</b>.</td><td class="mono">WEB-006</td></tr>
+  </table>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="analogy">
+      <span class="lab">한 문장으로 안전하게 소개하려면</span>
+      <p style="margin:4px 0 0">"웹 리서치는 <b>Tavily·Brave로 단서를 찾되</b>, 국세청·기재부·법제처
+      <b>공식 원문 승격분만 근거</b>로 쓰고, 법령과 <b>충돌하면 단정하지 않고 보류</b>하는 <b>최신근거 수집 장치</b>입니다."</p>
+    </div>
+    <div class="callout">
+      <span class="lab">왜 이 페이지가 중요한가</span>
+      <p style="margin:4px 0 0">파트너·면접관은 <b>"AI가 검색해서 다 알려준다"</b>는 과장을 가장 경계합니다.
+      오히려 <b>발견과 권위를 구분하고 한계를 통제하는 것</b>이 감사 배경 회계사의 강점으로 읽힙니다.</p>
+    </div>
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 11 / 12</div>
+</div>
+
+<!-- ============ P12 — 핵심 메시지 ============ -->
+<div class="page">
+  <h2>이 章을 왜 이렇게 썼나 — 핵심 메시지 3</h2>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">01</span> &nbsp;인터넷 '답변기'가 아니라 "최신 공식근거 수집·검증 채널"이다</h3>
+    <p style="margin:4px 0">웹은 <b>개정 동향·신규 예규·보도자료</b> 같은 최신성을 보완하는 ③번 채널입니다.
+    답을 만드는 게 아니라 <b>공식 원문을 찾아 검증</b>해 독립 답변(SourceAnswer)을 만들 뿐, <b>결론은 종합·회계사 몫</b>입니다.</p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">02</span> &nbsp;검색 API는 '발견용', 결론 근거는 '승격된 공식 원문만'</h3>
+    <p style="margin:4px 0">Tavily·Brave는 <b>discovery</b>일 뿐. 결론 근거가 되려면 <b>공식 원문 URL·발행기관·조회시점(retrieved_at)·content_hash</b>를
+    갖추고 <b>법령·내부RAG와 대조</b>돼야 합니다. <b>"검색 1위 = 정답"은 금지</b>.</p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:14px">
+    <h3 style="margin-top:0"><span class="num">03</span> &nbsp;충돌 시 단정하지 않고 ConflictFlag로 보류한다</h3>
+    <p style="margin:4px 0">웹이 법령(①)·내부RAG(②)와 다르면 <b>평균내지 않고</b> 충돌을 표시해 <b>결론을 보류</b>,
+    <b>회계사 검토(HITL)</b>로 넘깁니다. "최신=옳음"이 아니라 <b>시점 유효성·권위</b>로 판단합니다.</p>
+  </div>
+
+  <div class="synth" style="background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄</div>
+    <p style="font-size:12pt; margin:6px 0 0; line-height:1.65">"TIW 웹 리서치는 <b>Tavily·Brave로 단서를 찾되</b>
+    국세청·기재부·법제처 <b>공식 원문 승격분만 SourceAnswer 근거</b>로 쓰고,
+    <b>충돌 시 결론을 보류</b>하는 <b>최신근거 수집 장치</b>입니다."</p>
+  </div>
+
+  <div style="margin-top:20px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 법인세 자문 보조 AI 설계서<br>
+    본 해설본은 <span class="mono">docs/06_웹리서치.md</span>의 비개발자용 도식 요약입니다 · 정본은 원문을 따릅니다 · 2026-06-28
+  </div>
+  <div class="pgnote">웹 리서치 · 쉬운 설명 — 12 / 12</div>
+</div>

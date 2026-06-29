@@ -1,0 +1,398 @@
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 해설</div>
+      <div style="height:18px"></div>
+      <h1>내부 RAG<span class="dot"></span><br>세무 근거<br>검색 파이프라인</h1>
+      <div class="rule"></div>
+      <div class="sub">실무서를 통째로 외우게 하는 게 아니라, 인용 가능한 근거만 찾아 쓰는 ②번 채널</div>
+      <div class="file">docs / 05_내부RAG.md  →  비개발자(KICPA)용 도식 해설</div>
+      <div class="badgewrap">
+        <span class="badge">📚 10단계 파이프라인 · 문서유형별 청킹</span>
+        <span class="badge">🔍 하이브리드 검색(의미+키워드) + 재랭킹</span>
+        <span class="badge">🔒 공유 vs 고객 인덱스 격리</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      작성 · 신현우 (KICPA, 2년차)<br>
+      목적 · 딜로이트 안진 Business Tax 지원 / 포트폴리오<br>
+      문서 · 법인세 자문 보조 AI 설계서 — 내부 RAG 章 해설본<br>
+      날짜 · 2026-06-28
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 요약 + 비유 ============ -->
+<div class="page">
+  <h2>30초 요약 — 내부 RAG가 뭐죠?</h2>
+  <p class="lead"><b>한 문장:</b> AI에게 우리 <b>실무서·예규·내부 검토메모를 전부 외우게 하는 게 아니라</b>,
+  질문이 들어올 때 <b>관련된 근거 조각만 찾아와 인용</b>하게 만드는 장치입니다.
+  세 근거(①법령MCP ②내부RAG ③웹) 중 <b>②번 채널</b>로, 자기 몫의 독립 답변을 만듭니다.</p>
+
+  <div class="grid3" style="margin-top:6px">
+    <div class="card fill"><h3 style="margin-top:0">① 무엇을 하나</h3>
+      <small>자료를 <b>문서유형에 맞게 잘라</b> 색인하고, 질문에 맞는 chunk만 검색·재정렬해 <b>인용 달린 답</b>을 만듭니다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 왜 어려운가</h3>
+      <small>법령·예규·메모는 <b>구조가 제각각</b>이라 한 가지 방법으로 자르면 인용이 깨집니다. 게다가 <b>토큰 비용·고객 격리</b>까지 통제해야 합니다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 무엇이 아닌가</h3>
+      <small>최종 결론을 내는 채널이 <b>아닙니다.</b> ②번 독립 답변(SourceAnswer)을 만들고, 종합은 별도 단계에서 합니다.</small></div>
+  </div>
+
+  <h3>회계사의 직관으로 번역하면 — 3가지 비유</h3>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 1 · AI 전용 「조서실 + 색인카드」</span>
+    <p style="margin:5px 0 0">방대한 자료를 AI에게 전부 외우라고 하지 않습니다. 질문이 오면 <b>관련 조서철과 근거 위치를 빠르게 찾아주는 색인 체계</b>를 둡니다.
+    핵심은 "다 집어넣기"가 아니라 <b>"필요한 근거만 정확히 꺼내기"</b>.</p>
+  </div>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 2 · 「조서 유형별 파일링 기준」</span>
+    <p style="margin:5px 0 0">감사조서도 유형마다 정리법이 다르죠. 여기서도 <b>법령은 조문 단위, 예규는 사실관계·회신요지 단위, 내부 검토메모는 쟁점·의견·근거 단위</b>로
+    <b>다르게 잘라야</b> 나중에 그 조각을 정확히 인용할 수 있습니다.</p>
+  </div>
+
+  <div class="analogy">
+    <span class="lab">비유 3 · 「고객별 독립 보관함」</span>
+    <p style="margin:5px 0 0">공용 법령 자료와 고객 비밀자료는 <b>같은 검색창에서 찾더라도 저장소와 접근권한은 분리</b>돼야 합니다.
+    A사 자료가 B사 답변에 새면 안 됩니다(교차 회수 0건).</p>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 사용자 핵심 질문에 대한 답</span>
+    <p style="margin:4px 0 0">"text split·임베딩·벡터DB도 내가 직접?" → <b>그렇습니다. 단 '직접 통제'와 '직접 구현'은 다릅니다.</b>
+    분할 전략·임베딩 모델 선택·검색 설계·품질기준은 <b>직접 설계(통제)</b>하고, 벡터DB <b>엔진 자체는 기성품</b>을 씁니다.</p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 2 / 11</div>
+</div>
+
+<!-- ============ P3 — 도식1 10단계 파이프라인 ============ -->
+<div class="page">
+  <h2>도식 ① — 내부 RAG 10단계 파이프라인</h2>
+  <p class="lead">자료가 들어와 답변 근거가 되기까지 <b>10단계</b>. 앞 6단계는 미리 쌓아두는 <b>적재(오프라인)</b>,
+  뒤 4단계는 질문이 올 때 도는 <b>질의(온라인)</b>입니다.</p>
+
+  <div style="margin-top:8px; font-weight:700; color:var(--green-d); font-size:9pt">■ 적재 (오프라인) — 미리 쌓아둠</div>
+  <div class="flow" style="margin-top:5px">
+    <div class="step"><span class="n">1</span><span class="t">수집</span><span class="d">법령·예규·실무서<br>·고객자료 적재</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">분류</span><span class="d">문서유형 판별<br>(라우팅)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="n">3</span><span class="t">구조인식 분할 ★</span><span class="d">유형별로<br>다르게 자름</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">4</span><span class="t">메타데이터</span><span class="d">조문번호·시행일<br>·세목·격리키</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">5</span><span class="t">임베딩</span><span class="d">의미를 숫자<br>좌표로</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">6</span><span class="t">벡터DB 색인</span><span class="d">공유/고객<br>분리 적재</span></div>
+  </div>
+
+  <div style="margin-top:12px; font-weight:700; color:var(--navy2); font-size:9pt">■ 질의 (온라인) — 질문이 올 때</div>
+  <div class="flow" style="margin-top:5px">
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">7</span><span class="t">하이브리드 검색</span><span class="d">의미+키워드<br>+필터</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">8</span><span class="t">재랭킹</span><span class="d">정밀 재정렬<br>(권위·시점)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">9</span><span class="t">인용근거 답변</span><span class="d">회수 근거 안에서만<br>②SourceAnswer</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="n" style="background:var(--navy2)">10</span><span class="t">검색·감사 로깅</span><span class="d">RetrievalRun<br>(재현성)</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="card">
+      <h3 style="margin-top:0">코드 위치 (Workpaper 2120)</h3>
+      <ul class="tight">
+        <li><span class="mono">src/</span> — 분할·검색조립·로깅 (결정적 로직)</li>
+        <li><span class="mono">src·ai/</span> — 임베딩·LLM·reranker 호출 (어댑터)</li>
+        <li><span class="mono">contract/</span> — Chunk·RetrievalRun 스키마</li>
+        <li>벡터 데이터·로그 — 런타임(<span class="mono">runs/</span>)</li>
+      </ul>
+    </div>
+    <div class="callout">
+      <span class="lab">💡 왜 ③번(구조분할)이 핵심인가</span>
+      <p style="margin:4px 0 0">법령을 문단 길이로 자르면 <b>조문 경계가 깨져</b> 인용이 무너집니다.
+      세무 RAG의 성패는 <b>"무엇을 어떻게 자르느냐"</b>에 달려 있습니다(다음 페이지).</p>
+    </div>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 3 / 11</div>
+</div>
+
+<!-- ============ P4 — 도식2 문서유형별 청킹 ============ -->
+<div class="page">
+  <h2>도식 ② — 문서유형별 청킹: 똑같이 자르면 망한다 <span class="tag">핵심</span></h2>
+  <p class="lead">이 章의 <b>가장 중요한 결정.</b> 문서유형마다 <b>잘리는 기준이 다르고</b>, 각 조각에 <b>인용 메타(조문번호·시행일 등)를 박습니다.</b></p>
+
+  <table style="margin-top:9px">
+    <tr><th width="130">문서유형</th><th>분할 기준 (어떻게 자르나)</th><th width="34%">조각에 박는 인용 메타</th></tr>
+    <tr><td><span class="pill" style="background:#2563EB">법령</span></td><td><b>조 &gt; 항 &gt; 호 &gt; 목</b> 단위 + <b>부칙·경과조치·별표·서식은 별도 위치</b>로</td><td>법령명·조문번호·<b>공포일·시행일</b>·부칙 적용근거</td></tr>
+    <tr><td><span class="pill" style="background:#1E40AF">시행령/규칙</span></td><td>조문 + <b>위임관계</b>(상위 법 조문)</td><td>위임 법조문·시행일</td></tr>
+    <tr><td><span class="pill" style="background:#16A34A">예규/질의회신</span></td><td><b>사실관계·질의·회신요지·관련법령·판단근거</b> 섹션<br><small>(실제 자료는 섹션명 불규칙·복수질의 → 정규화+분할)</small></td><td>문서번호·issued_date·issuer·질의별 분리</td></tr>
+    <tr><td><span class="pill" style="background:#0F7A38">판례/심판례</span></td><td><b>사건번호·쟁점·판단·결론</b></td><td>법원·선고일·인용 조문</td></tr>
+    <tr><td><span class="pill" style="background:#7C3AED">내부 검토메모</span></td><td><b>쟁점·검토의견·근거·결론</b></td><td>검토자·검토일·관련쟁점</td></tr>
+    <tr><td><span class="pill" style="background:#B45309">실무서</span></td><td>장/절 + 의미 경계(semantic)</td><td>출처·페이지·판수(edition)</td></tr>
+    <tr><td><span class="pill" style="background:#0891B2">회사 재무자료</span></td><td><b>행/열 구조 추출</b>(청킹 아님 — TB·원장)</td><td>계정과목·거래처·금액·기간·증빙유형</td></tr>
+    <tr><td><span class="pill" style="background:#475569">계약서</span></td><td><b>조항(article)</b> 단위</td><td>조항번호·당사자·일자</td></tr>
+  </table>
+
+  <div class="grid2" style="margin-top:11px">
+    <div class="card fill">
+      <h3 style="margin-top:0">자르기 규칙</h3>
+      <ul class="tight">
+        <li><b>구조 경계 &gt; 토큰 길이</b>: 길이보다 조문·조항 경계를 우선.</li>
+        <li>작은 조문은 병합, 긴 조문은 항 단위 분할 + <b>부모 조문 참조</b>.</li>
+        <li>실무서만 토큰 기준(512~1,024) + 10~15% overlap.</li>
+      </ul>
+    </div>
+    <div class="callout">
+      <span class="lab">💡 회계사 포인트</span>
+      <p style="margin:4px 0 0">감사조서를 <b>유형별로 다르게 편철</b>하는 것과 같습니다. "회신요지만 따로 꺼내기", "부칙만 따로 찾기"가
+      가능하려면 <b>처음 자를 때부터</b> 구조를 살려야 합니다. <span class="mono">RAG-001~003·015~017</span></p>
+    </div>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 4 / 11</div>
+</div>
+
+<!-- ============ P5 — 도식3 하이브리드 검색 + 재랭킹 ============ -->
+<div class="page">
+  <h2>도식 ③ — 하이브리드 검색 + 재랭킹: 두 방식을 합친다</h2>
+  <p class="lead">의미검색 하나로는 부족합니다. <b>의미(벡터)검색 + 키워드(BM25)검색을 합치고</b>, 필터로 좁힌 뒤 <b>정밀 재정렬</b>합니다.</p>
+
+  <div class="flow" style="margin-top:9px">
+    <div class="step" style="border-top-color:#16A34A"><span class="t" style="color:#16A34A">의미 검색</span><span class="d">뜻이 비슷한<br>chunk (dense)</span></div>
+    <div class="arrowcol" style="color:var(--navy)">+</div>
+    <div class="step" style="border-top-color:#B45309"><span class="t" style="color:#B45309">키워드 검색</span><span class="d">조문번호·세목<br>정확매칭 (BM25)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="t">병합 (RRF)</span><span class="d">두 결과<br>합치기</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--red)"><span class="t" style="color:var(--red)">검색공간 제한</span><span class="d">격리·시점은<br>아예 후보 제외</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy2)"><span class="t" style="color:var(--navy2)">재랭킹</span><span class="d">권위·시점<br>정밀 재정렬</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card">
+      <h3 style="margin-top:0">재랭킹 점수 신호 (소스 <u>내부</u> 스코어링)</h3>
+      <ul class="tight">
+        <li>본문 유사도 + <b>출처 신뢰도(authority_rank)</b></li>
+        <li>문서유형 + 세목·귀속연도 일치</li>
+        <li><b>적용시점 유효성</b> (그 사업연도에 유효한 버전)</li>
+      </ul>
+      <p style="margin:6px 0 0"><small>※ 소스 <b>간</b> 가중혼합이 아니라, ②번 채널 <b>내부</b>의 후보 정렬 기준입니다.</small></p>
+    </div>
+    <div class="callout">
+      <span class="lab">⚠️ "최신" ≠ "정답"</span>
+      <p style="margin:4px 0 0">세무는 <b>가장 최신 법령</b>이 아니라 <b>그 사업연도에 유효했던 버전</b>이 정답입니다.
+      그래서 최신성 점수와 <b>적용시점 유효성 점수를 분리</b>하고, 시점 위배 버전은 강등·배제합니다. <span class="mono">RAG-005</span></p>
+    </div>
+  </div>
+
+  <div class="card fill" style="margin-top:11px">
+    <h3 style="margin-top:0">🪙 토큰 비용 통제 (실무서를 통째로 안 넣는 법)</h3>
+    <div class="grid3" style="margin-top:4px">
+      <div><small><b>① top-k만</b><br>관련 chunk 몇 개만 회수</small></div>
+      <div><small><b>② 압축</b><br>질의 관련 문장만 추출</small></div>
+      <div><small><b>③ 질의 분해</b><br>하위질의별 소량 회수</small></div>
+    </div>
+    <p style="margin:6px 0 0"><small>+ 부모 확장은 <b>필요 시에만</b>, 동일 쟁점·시점 재질의는 캐시. <span class="mono">RAG-009·010 · NFR-001</span></small></p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 5 / 11</div>
+</div>
+
+<!-- ============ P6 — 도식4 인덱스 분리 ============ -->
+<div class="page">
+  <h2>도식 ④ — 공유 인덱스 vs 고객 인덱스 분리 ("split embedding DB"의 실체)</h2>
+  <p class="lead">검색 저장소를 <b>두 종류로 물리·논리 분리</b>합니다. 공용 법령지식과 고객 비밀자료가 <b>절대 섞이지 않게</b>.</p>
+
+  <div class="grid2" style="margin-top:10px">
+    <div class="card" style="border:1.5px solid #16A34A; border-top:5px solid #16A34A">
+      <h3 style="margin-top:0; color:#0F7A38">📗 공유 참조 인덱스 <small>(읽기 전용)</small></h3>
+      <ul class="tight">
+        <li>법령 · 예규 · 판례 · 라이선스 실무서</li>
+        <li>등급 <span class="mono">L0~L2</span> (공개·라이선스·합성)</li>
+        <li>모든 매터가 공통으로 참조</li>
+      </ul>
+    </div>
+    <div class="card" style="border:1.5px solid var(--red); border-top:5px solid var(--red)">
+      <h3 style="margin-top:0; color:#B3303C">📕 테넌트 인덱스 <small>(client별 파티션)</small></h3>
+      <ul class="tight">
+        <li>고객 자료 (원장·계약·검토메모 등)</li>
+        <li>등급 <span class="mono">L3·L4</span> (수임범위 내 기밀)</li>
+        <li><b>client_id로 칸막이</b> — 끌 수 없는 격리필터</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="trace" style="margin-top:13px">
+    <div class="tnode"><div class="tl">질의</div><div class="tv">tenant_scope</div><small>고객 범위 고정</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:#16A34A"><div class="tl">공유 인덱스</div><div class="tv">L0~L2</div><small>법령·예규 참조</small></div>
+    <div class="tarr">+</div>
+    <div class="tnode" style="border-color:var(--red)"><div class="tl">그 고객 인덱스만</div><div class="tv">L3·L4 (해당 client)</div><small>타 고객 ✕</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">결과</div><div class="tv">교차 회수 0</div><small>누수 차단</small></div>
+  </div>
+
+  <div class="danger" style="margin-top:13px">
+    <span class="lab">🚫 격리는 옵션이 아니라 기본 통제</span>
+    <p style="margin:4px 0 0"><b>테넌트 필터는 검색 단계에서 끌 수 없습니다.</b> "필터를 빠뜨릴 수 있는 구조" 자체를 금지하고,
+    공유 인덱스와 고객 인덱스를 <b>물리/논리로 분리</b>합니다. 교차 회수 <b>0건</b>이 합격선입니다. <span class="mono">RAG-007 · SEC-002/003</span></p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 6 / 11</div>
+</div>
+
+<!-- ============ P7 — 도식5 Citation Tracing ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 인용 추적: 답변 문장에서 원문까지 거꾸로 간다</h2>
+  <p class="lead">답변의 어떤 문장이든 <b>그 근거가 된 원문 조문/문단까지 역추적</b>할 수 있어야 합니다. = 감사조서의 cross-reference.</p>
+
+  <div class="trace" style="margin-top:12px">
+    <div class="tnode"><div class="tl">① 답변 문장</div><div class="tv">Answer</div><small>주장이 담긴 문장</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">② 원자 주장</div><div class="tv">Claim</div><small>더 못 쪼개는 단위</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">③ 인용</div><div class="tv">Citation</div><small>소스객체·pinpoint·시점</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">④ 근거 조각</div><div class="tv">Chunk</div><small>source_locator</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">⑤ 원문</div><div class="tv">조/항/호·문단</div><small>법령·예규 본문</small></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="card fill">
+      <h3 style="margin-top:0">각 조각(Chunk)에 박는 인용 필드</h3>
+      <p style="margin:4px 0"><span class="mono">doc_type · authority_rank · 법령명/문서번호 · source_locator(조/항/호 구조필드) · 공포일·시행일 · amended_by(개정이력) · tax_type · 귀속연도 · client_id · content_hash</span></p>
+      <p style="margin:6px 0 0"><small>→ 인용 검증(<span class="mono">08 G2</span>)이 <b>pinpoint·시점까지 기계로 대조</b> 가능. <span class="mono">RAG-006·017</span></small></p>
+    </div>
+    <div class="callout">
+      <span class="lab">💡 왜 URL이 아니라 객체인가</span>
+      <p style="margin:4px 0 0">"법 OO조" 링크만으론 부족합니다. <b>조·항·호·목 + 시행일 + 개정이력</b>까지 박힌 <b>버전 객체</b>를 가리켜야
+      "어느 시점의 어느 조문으로 판단했는지"가 재현됩니다(자세히는 <span class="mono">02_출처</span>).</p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">📝 RetrievalRun 로깅 (재현성)</span>
+    <p style="margin:4px 0 0">질의·하위질의·필터·후보 chunk_id·재랭킹 점수·최종 채택을 <b>전부 기록</b>합니다.
+    나중에 "이 답이 어떤 근거에서 나왔나"를 100% 복원. <span class="mono">RAG-013 · SEC-007</span></p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 7 / 11</div>
+</div>
+
+<!-- ============ P8 — 도식6 Parent-Child + 시점 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — 두 가지 정밀장치: 부모-자식 회수 · 적용시점 필터</h2>
+
+  <h3>(1) Parent-Child Retrieval — 작게 찾고, 크게 답한다</h3>
+  <p class="lead" style="margin-top:2px">작은 조각으로 <b>정확히 검색</b>하되, 답변에는 <b>부모(조문 전체·예규 전체)를 함께</b> 줘서 맥락 손실을 막습니다.</p>
+  <div class="trace" style="margin-top:8px">
+    <div class="tnode"><div class="tl">검색은</div><div class="tv">작은 자식 chunk</div><small>예: 특정 항·호</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">적중하면</div><div class="tv">부모 회수</div><small>조문/예규 전체</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:var(--green)"><div class="tl">답변엔</div><div class="tv">맥락까지 동반</div><small>오해 방지</small></div>
+  </div>
+
+  <h3 style="margin-top:16px">(2) 적용시점 유효성 필터 — "그 사업연도에 유효한 버전"</h3>
+  <p class="lead" style="margin-top:2px">같은 조문도 개정 전후로 내용이 다릅니다. <b>적용시점에 유효한 버전만</b> 검색 후보에 넣습니다.</p>
+  <div class="flow" style="margin-top:8px">
+    <div class="step"><span class="t">적용시점 확인</span><span class="d">거래일·귀속연도</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--red)"><span class="t" style="color:var(--red)">시점 위배 버전</span><span class="d">검색공간에서<br>제외</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="t" style="color:var(--green-d)">유효 버전만</span><span class="d">effective_from ≤<br>시점 &lt; effective_to</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="t">근거로 사용</span><span class="d">올바른 시점<br>인용</span></div>
+  </div>
+
+  <div class="callout" style="margin-top:13px">
+    <span class="lab">💡 두 장치의 공통점</span>
+    <p style="margin:4px 0 0">둘 다 <b>"정확히 찾되, 틀린 맥락·틀린 시점으로 답하지 않게"</b> 하는 안전장치입니다.
+    회계사가 <b>해당 연도 세법으로, 조문 전체 맥락에서</b> 판단하는 습관을 전산화한 것입니다.</p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 8 / 11</div>
+</div>
+
+<!-- ============ P9 — 용어사전 ============ -->
+<div class="page">
+  <h2>비개발자를 위한 전문용어 사전</h2>
+  <p class="lead">내부 RAG에 자주 나오는 기술 용어를 <b>회계사 눈높이</b>로 한 줄씩 풀었습니다.</p>
+
+  <div style="margin-top:8px">
+    <div class="gl"><div class="term">RAG<span class="en">Retrieval-Augmented Gen.</span></div><div class="def">AI가 <b>우리 자료를 검색해 근거로 답</b>하게 하는 기법. 기억만으로 답하지 않게 자료실을 붙여줌.</div></div>
+    <div class="gl"><div class="term">청킹<span class="en">Chunking</span></div><div class="def">긴 문서를 AI가 찾기 쉬운 <b>작은 근거 단위로 나누는</b> 작업.</div></div>
+    <div class="gl"><div class="term">구조인식 분할<span class="en">Structure-aware Split</span></div><div class="def">문단 길이가 아니라 <b>조문·질의·회신·쟁점 같은 문서 구조</b>에 맞춰 나누는 방식.</div></div>
+    <div class="gl"><div class="term">임베딩<span class="en">Embedding</span></div><div class="def">문서 내용을 <b>숫자 좌표로 변환</b>해 의미가 비슷한 자료를 찾게 하는 처리.</div></div>
+    <div class="gl"><div class="term">벡터 DB<span class="en">Vector DB</span></div><div class="def">임베딩 값을 저장하고 <b>의미 기반 검색</b>을 수행하는 데이터베이스. 엔진은 기성품 사용.</div></div>
+    <div class="gl"><div class="term">하이브리드 검색<span class="en">Hybrid Search</span></div><div class="def">의미검색 + 키워드검색을 <b>함께</b> 써서 누락을 줄이는 검색.</div></div>
+    <div class="gl"><div class="term">BM25<span class="en">키워드 검색</span></div><div class="def">조문번호·세목·고유명사처럼 <b>정확한 단어 매칭</b>에 강한 전통 검색 방식.</div></div>
+    <div class="gl"><div class="term">재랭킹<span class="en">Rerank</span></div><div class="def">1차 검색 결과를 <b>적합도·권위·시점</b> 기준으로 다시 정렬하는 단계.</div></div>
+    <div class="gl"><div class="term">부모-자식 회수<span class="en">Parent-Child</span></div><div class="def">작은 단위로 찾은 뒤 <b>상위 문맥(조문 전체)을 함께</b> 가져와 오해를 줄이는 방식.</div></div>
+    <div class="gl"><div class="term">테넌트 인덱스<span class="en">Tenant Index</span></div><div class="def">고객별 자료가 섞이지 않도록 <b>분리한 전용 검색 저장소</b>.</div></div>
+    <div class="gl"><div class="term">RetrievalRun<span class="en">검색 로그</span></div><div class="def">어떤 질문에서 <b>어떤 근거가 검색·선택됐는지</b> 남기는 감사 로그(재현성).</div></div>
+    <div class="gl"><div class="term">SourceAnswer<span class="en">소스별 독립 답변</span></div><div class="def">①②③ 각 채널이 <b>따로 낸 완결 답변</b>. 내부 RAG는 ②번을 책임.</div></div>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 9 / 11</div>
+</div>
+
+<!-- ============ P10 — 흔한 오해 ============ -->
+<div class="page">
+  <h2>흔한 오해 8 — "이렇게 말하면 틀립니다"</h2>
+  <p class="lead">내부 RAG를 소개할 때 자주 빠지는 함정입니다. 오른쪽이 정확한 설명입니다.</p>
+
+  <table style="margin-top:9px">
+    <tr><th width="32">#</th><th width="40%">❌ 이렇게 말하면 틀림</th><th>✅ 정확히는</th><th width="98">근거</th></tr>
+    <tr><td>1</td><td>"<b>RAG를 붙이면 환각이 끝</b>난다"</td><td>RAG는 근거 <b>후보를 찾는</b> 장치. 근거 부족 시 <b>abstain·검증</b>이 따로 필요.</td><td class="mono">RAG-014</td></tr>
+    <tr><td>2</td><td>"청킹은 <b>적당한 길이로 자르면</b> 된다"</td><td>세무 자료는 유형별 구조가 달라 <b>문서유형별 분할</b>이 필수.</td><td class="mono">RAG-001~003</td></tr>
+    <tr><td>3</td><td>"<b>Vector DB만 있으면</b> 검색은 충분"</td><td>조문번호·세목은 <b>BM25 키워드검색</b>이 필수(하이브리드).</td><td class="mono">RAG-008</td></tr>
+    <tr><td>4</td><td>"<b>최신 자료가 항상 정답</b>이다"</td><td>세무는 <b>해당 사업연도에 유효한 버전</b>이 우선.</td><td class="mono">RAG-005</td></tr>
+    <tr><td>5</td><td>"고객자료도 <b>공용 인덱스에 넣으면</b> 편하다"</td><td>고객 자료는 <b>테넌트 인덱스로 격리</b>. 교차 회수 0.</td><td class="mono">RAG-007</td></tr>
+    <tr><td>6</td><td>"인용은 <b>원문 링크만</b> 있으면 된다"</td><td>조문·문단·<b>시행일·개정이력</b>까지 추적 가능해야.</td><td class="mono">RAG-006/017</td></tr>
+    <tr><td>7</td><td>"임베딩 모델은 <b>한 번 고르면 끝</b>"</td><td>버전 변경 시 <b>재임베딩·인덱스 버전관리</b> 필요.</td><td class="mono">RAG-011</td></tr>
+    <tr><td>8</td><td>"<b>내부 RAG가 최종 답</b>을 만든다"</td><td>독립 <b>SourceAnswer(②)</b>를 생산. 결론은 통합 단계.</td><td class="mono">RAG 11절</td></tr>
+  </table>
+
+  <div class="analogy" style="margin-top:12px">
+    <span class="lab">한 문장으로 안전하게</span>
+    <p style="margin:4px 0 0">"내부 RAG는 <b>법령·예규·내부자료를 문서유형별로 구조화</b>해 두고, 질문에 맞는 <b>인용 가능한 근거만 찾아</b>
+    ②번 독립 답변을 만드는 <b>세무 근거 검색 파이프라인</b>입니다. 최종 결론은 종합·회계사 몫입니다."</p>
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 10 / 11</div>
+</div>
+
+<!-- ============ P11 — 핵심 메시지 ============ -->
+<div class="page">
+  <h2>이 章을 왜 이렇게 썼나 — 핵심 메시지 3</h2>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">01</span> &nbsp;핵심은 "문서를 넣기"가 아니라 "근거를 감사 가능한 단위로 쪼개 추적"</h3>
+    <p style="margin:4px 0">법령은 조문, 예규는 회신요지 단위로 <b>다르게 잘라</b> 조각마다 <b>조문번호·시행일</b>을 박습니다.
+    그래야 답변의 모든 문장을 <b>원문까지 역추적</b>할 수 있습니다.</p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">02</span> &nbsp;의미검색만으로는 부족 — 조문번호·시점·권위·고객격리를 함께 통제</h3>
+    <p style="margin:4px 0"><b>의미+키워드 하이브리드</b>로 찾고, <b>적용시점 유효성</b>으로 거르고, <b>테넌트 격리</b>로 칸막이.
+    "직접 통제(전략·검색설계)"하되 "벡터DB 엔진은 기성품"을 씁니다.</p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:14px">
+    <h3 style="margin-top:0"><span class="num">03</span> &nbsp;내부 RAG는 최종 결론자가 아니라 "독립 ② SourceAnswer 채널"</h3>
+    <p style="margin:4px 0">회수된 근거 <b>안에서만</b> 답하고, 근거 부족·충돌·시점 불명이면 <b>단정 대신 검토항목</b>으로.
+    종합과 최종 판단은 별도 단계·회계사 몫입니다.</p>
+  </div>
+
+  <div class="synth" style="background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄</div>
+    <p style="font-size:12pt; margin:6px 0 0; line-height:1.65">"RAG를 '문서 잘라 벡터DB에 넣기'로 보면 세무에선 실패합니다.
+    법령은 조문 단위, 예규는 회신요지 단위로 <b>다르게 잘라야</b> 하고, chunk마다 <b>조문번호·시행일</b>을 박아야 인용이 삽니다.
+    <b>split 전략·임베딩 선택·검색 설계는 직접 통제</b>하고 벡터DB 엔진만 기성품을 쓰며, 실무서를 통째로 안 넣고 <b>관련 chunk만</b> 회수해 토큰 비용을 잡습니다."</p>
+  </div>
+
+  <div style="margin-top:20px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 법인세 자문 보조 AI 설계서<br>
+    본 해설본은 <span class="mono">docs/05_내부RAG.md</span>의 비개발자용 도식 요약입니다 · 정본은 원문을 따릅니다 · 2026-06-28
+  </div>
+  <div class="pgnote">내부 RAG · 쉬운 설명 — 11 / 11</div>
+</div>

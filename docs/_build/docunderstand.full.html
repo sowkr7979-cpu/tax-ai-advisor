@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>법인세 세무 AI (TIW) — 설계 완전 이해 + 면접 질답</title>
+<style>
+  :root{
+    --green:#86BC25; --green-d:#5E8A18; --navy:#0B2A3C; --navy2:#13405A;
+    --ink:#1A2230; --muted:#5C6B7A; --line:#D8E0E8; --bg:#F4F7FA;
+    --law:#2563EB; --rag:#16A34A; --web:#EA580C;
+    --amber:#E0A100; --red:#D64550;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Malgun Gothic','맑은 고딕','Segoe UI',sans-serif;
+    color:var(--ink); font-size:10.5pt; line-height:1.6;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:14mm 13mm; }
+  .page{ page-break-after:always; }
+  .page:last-child{ page-break-after:auto; }
+  h1,h2,h3{ color:var(--navy); margin:0 0 6px; line-height:1.25; }
+  h2{ font-size:17pt; border-left:6px solid var(--green); padding-left:11px; margin-top:2px; }
+  h3{ font-size:12.5pt; color:var(--navy2); margin-top:14px; }
+  p{ margin:7px 0; }
+  small{ color:var(--muted); }
+  .lead{ font-size:11pt; color:#2C3A48; }
+  .tag{ display:inline-block; background:var(--green); color:#fff; font-size:8.5pt;
+    font-weight:700; padding:2px 9px; border-radius:11px; letter-spacing:.3px; vertical-align:middle; }
+  .tag.alt{ background:var(--navy); }
+  .kicker{ color:var(--green-d); font-weight:800; letter-spacing:2px; font-size:9pt; text-transform:uppercase; }
+
+  /* ---------- COVER ---------- */
+  .cover{ height:262mm; display:flex; flex-direction:column; justify-content:space-between;
+    background:linear-gradient(150deg,#0B2A3C 0%,#13405A 55%,#1C5470 100%); color:#fff;
+    margin:-14mm -13mm; padding:24mm 20mm; }
+  .cover .dot{ width:15px; height:15px; background:var(--green); border-radius:50%; display:inline-block; margin-left:5px; }
+  .cover h1{ color:#fff; font-size:33pt; line-height:1.2; margin:0; }
+  .cover .sub{ font-size:14pt; color:#CBE6F2; margin-top:14px; font-weight:600; }
+  .cover .file{ font-family:Consolas,monospace; font-size:10.5pt; color:#86BC25; margin-top:6px; }
+  .cover .meta{ font-size:10.5pt; color:#AFC8D6; line-height:1.9; }
+  .cover .rule{ height:4px; width:80px; background:var(--green); margin:18px 0; border-radius:2px; }
+  .cover .badgewrap{ margin-top:16px; }
+  .cover .badge{ display:inline-block; border:1.4px solid #4E7488; color:#DCEAF2; border-radius:7px;
+    padding:7px 13px; font-size:9.5pt; margin:4px 7px 4px 0; }
+
+  /* ---------- generic blocks ---------- */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; }
+  .card{ background:#fff; border:1.3px solid var(--line); border-radius:10px; padding:13px 15px; }
+  .card.fill{ background:var(--bg); }
+  .card h3{ margin-top:0; }
+  .analogy{ background:#F0F7E6; border:1.3px solid #CFE3A8; border-left:6px solid var(--green);
+    border-radius:9px; padding:13px 16px; }
+  .analogy .lab{ color:var(--green-d); font-weight:800; font-size:9.5pt; }
+  .callout{ background:#FFF8E6; border:1.3px solid #F0D98A; border-left:6px solid var(--amber);
+    border-radius:9px; padding:12px 15px; }
+  .callout .lab{ color:#A87B00; font-weight:800; font-size:9.5pt; }
+  .danger{ background:#FCEEF0; border:1.3px solid #F2C2C8; border-left:6px solid var(--red);
+    border-radius:9px; padding:12px 15px; }
+  .danger .lab{ color:#B3303C; font-weight:800; font-size:9.5pt; }
+  ul.tight{ margin:6px 0; padding-left:19px; }
+  ul.tight li{ margin:3px 0; }
+  .pill{ display:inline-block; font-size:8pt; font-weight:700; padding:1px 7px; border-radius:9px; color:#fff; }
+  .p0{ background:var(--red); } .p1{ background:var(--amber); } .p2{ background:#7C8B99; }
+
+  table{ width:100%; border-collapse:collapse; font-size:9.3pt; margin:8px 0; }
+  th{ background:var(--navy); color:#fff; text-align:left; padding:6px 9px; font-weight:700; }
+  td{ border-bottom:1px solid var(--line); padding:5px 9px; vertical-align:top; }
+  tr:nth-child(even) td{ background:#F7FAFC; }
+  .mono{ font-family:Consolas,monospace; font-size:8.6pt; color:var(--navy2); font-weight:700; }
+
+  /* ---------- flow diagram (UC) ---------- */
+  .flow{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+  .step{ flex:1; min-width:0; background:#fff; border:1.3px solid var(--line); border-top:4px solid var(--green);
+    border-radius:8px; padding:9px 8px; text-align:center; position:relative; }
+  .step .n{ display:inline-block; background:var(--green); color:#fff; width:21px; height:21px; line-height:21px;
+    border-radius:50%; font-weight:800; font-size:9pt; margin-bottom:4px; }
+  .step .t{ font-weight:700; font-size:9.3pt; color:var(--navy); display:block; }
+  .step .d{ font-size:8.2pt; color:var(--muted); display:block; margin-top:2px; }
+  .arrowcol{ display:flex; align-items:center; justify-content:center; width:16px; color:var(--green);
+    font-weight:900; font-size:13pt; }
+
+  /* ---------- HITL gates ---------- */
+  .gateline{ display:flex; flex-direction:column; gap:8px; }
+  .gate{ display:grid; grid-template-columns:54px 1fr 130px; align-items:center; gap:11px;
+    background:#fff; border:1.3px solid var(--line); border-radius:9px; padding:9px 12px; }
+  .gate .gid{ background:var(--navy); color:#fff; font-weight:800; text-align:center; border-radius:7px;
+    padding:8px 4px; font-size:11pt; }
+  .gate.hi .gid{ background:var(--red); }
+  .gate .gwho{ font-size:8.6pt; }
+  .gate .gwho b{ color:var(--navy2); }
+  .chip{ display:inline-block; background:#EAF1F6; color:var(--navy2); border-radius:7px; padding:1px 7px;
+    font-size:8pt; font-weight:700; margin:1px 2px; }
+  .chip.esc{ background:#FBE7C8; color:#8A6400; }
+
+  /* ---------- 3-source synthesis ---------- */
+  .srcwrap{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .src{ border-radius:10px; padding:11px 12px; color:#fff; }
+  .src.law{ background:linear-gradient(160deg,#2563EB,#1E40AF); }
+  .src.rag{ background:linear-gradient(160deg,#16A34A,#0F7A38); }
+  .src.web{ background:linear-gradient(160deg,#EA580C,#B5470B); }
+  .src .sh{ font-weight:800; font-size:10.5pt; }
+  .src .ss{ font-size:8.4pt; opacity:.92; }
+  .src .sa{ background:rgba(255,255,255,.16); border-radius:6px; padding:5px 8px; margin-top:7px; font-size:8.3pt; }
+  .merge{ text-align:center; font-weight:900; color:var(--green-d); font-size:15pt; margin:4px 0; }
+  .synth{ background:var(--navy); color:#fff; border-radius:10px; padding:13px 16px; }
+  .synth h3{ color:#fff; margin:0 0 4px; }
+  .synth .claim{ background:rgba(134,188,37,.18); border:1px solid rgba(134,188,37,.5); border-radius:6px;
+    padding:4px 9px; font-size:8.6pt; margin:4px 0; }
+
+  /* ---------- domain map ---------- */
+  .dommap{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  .dom{ background:#fff; border:1.3px solid var(--line); border-radius:9px; padding:9px 10px; }
+  .dom .code{ font-family:Consolas,monospace; font-weight:800; color:#fff; font-size:9pt;
+    padding:1px 8px; border-radius:6px; }
+  .dom .cnt{ float:right; font-size:8pt; color:var(--muted); font-weight:700; }
+  .dom .nm{ font-weight:700; font-size:9.2pt; color:var(--navy); display:block; margin-top:6px; }
+  .dom .ds{ font-size:8.2pt; color:var(--muted); display:block; }
+  .c-intk{background:#0EA5A5}.c-orch{background:#7C3AED}.c-agt{background:#DB2777}.c-out{background:#0284C7}
+  .c-sec{background:#475569}.c-prov{background:#B45309}.c-rag{background:#16A34A}.c-web{background:#EA580C}
+  .c-api{background:#0891B2}.c-halu{background:#D64550}.c-nfr{background:#1F2937}
+
+  /* ---------- traceability ---------- */
+  .trace{ display:flex; align-items:stretch; gap:0; }
+  .tnode{ flex:1; background:#fff; border:1.3px solid var(--line); border-radius:8px; padding:10px; text-align:center; }
+  .tnode .tl{ font-size:8pt; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .tnode .tv{ font-family:Consolas,monospace; font-weight:800; color:var(--navy); font-size:9pt; margin-top:3px; }
+  .tarr{ display:flex; align-items:center; color:var(--green); font-weight:900; font-size:14pt; padding:0 5px; }
+
+  .agtgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .agt{ background:#fff; border:1.3px solid var(--line); border-left:5px solid var(--navy2); border-radius:8px; padding:8px 11px; }
+  .agt .an{ font-weight:800; color:var(--navy); }
+  .agt.star{ border-left-color:var(--green); background:#F6FBEF; }
+  .agt .ad{ font-size:8.7pt; color:var(--muted); }
+
+  .gl{ display:grid; grid-template-columns:128px 1fr; gap:0; border-bottom:1px solid var(--line); padding:6px 0; }
+  .gl .term{ font-weight:800; color:var(--navy2); font-size:9.6pt; }
+  .gl .term .en{ display:block; font-size:7.8pt; color:var(--muted); font-family:Consolas,monospace; font-weight:600; }
+  .gl .def{ font-size:9.3pt; }
+  .footer{ position:running(footer); }
+  .pgnote{ text-align:right; font-size:8pt; color:var(--muted); margin-top:10px; border-top:1px solid var(--line); padding-top:5px; }
+  .num{ color:var(--green-d); font-weight:800; }
+  .twocol{ column-count:2; column-gap:16px; }
+</style></head>
+<body>
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 완전 이해</div>
+      <div style="height:18px"></div>
+      <h1>법인세 세무 AI<span class="dot"></span><br>이 프로그램은<br>어떻게 동작하는가</h1>
+      <div class="rule"></div>
+      <div class="sub">"무엇을 · 어떻게 만들었나" — 아키텍처·동작 원리를 도식으로 풀고,<br>개발용어를 회계사 눈높이로 해부 + 면접 질답(Q&amp;A)</div>
+      <div class="file">md 파일 / 법인세_세무AI_설계서_통합.md  →  설계 이해 + 면접 대비</div>
+      <div class="badgewrap">
+        <span class="badge">🧭 전체 파이프라인 한눈에</span>
+        <span class="badge">🤖 6 Agent · 오케스트레이션</span>
+        <span class="badge">🔬 3소스 종합 + 검증 게이트</span>
+        <span class="badge">💬 면접 질답 20+</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      대상 · Big 4 이직 준비 KICPA (감사 배경, 비개발 출신)<br>
+      목적 · 프로그램 설계를 기술까지 완전히 이해 + 면접에서 설명·방어<br>
+      문서 · TIW 통합 설계서(v1.2)의 <b>구조·동작·기술</b> 해설본<br>
+      근거 · 통합 설계서 + docs(01~09) 명세 · 날짜 · 2026-06-29
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 큰 그림 ============ -->
+<div class="page">
+  <h2>큰 그림 — 이 프로그램이 결국 하는 일</h2>
+  <p class="lead"><b>한 문장:</b> 회사의 회계·세무 자료를 받아 → 세무 <b>리스크와 절세 기회</b>를 찾고 → 처리 <b>선택지(보수/중립/적극)</b>를
+  세부담·리스크·방어가능성으로 비교한 뒤 → 법령 근거와 계산검산을 붙여 → <b>회계사가 검토할 DOCX 초안</b>을 만드는 자문 보조 AI.</p>
+
+  <div class="analogy" style="margin-top:8px">
+    <span class="lab">가장 쉬운 비유 · 「똑똑한 세무 주니어 + 검산기」</span>
+    <p style="margin:5px 0 0">필요한 자료를 알아서 챙겨 묻고(Intake), 쟁점을 찾아(Risk), 법을 뒤져 근거를 모으고(Research),
+    선택지를 표로 비교(Strategy)한 뒤 보고서 초안을 쓰는(Draft) <b>주니어 팀</b>입니다. 단, 모든 숫자는
+    <b>코드 검산기</b>로 검증하고, <b>최종 판단·서명은 회계사(당신)</b>가 합니다. AI는 "판단 전 단계"만 빠르게 처리합니다.</p>
+  </div>
+
+  <h3>왜 이런 구조인가 — 설계의 3대 기둥</h3>
+  <div class="grid3" style="margin-top:4px">
+    <div class="card fill"><h3 style="margin-top:0">① 역할 분담 (Agent)</h3><small>하나의 거대 챗봇 ✕. <b>업무 단계별 전문 AI 6개</b>가 각자 산출물을 만들고 이력을 남김.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 근거 결속 (Grounding)</h3><small>AI 기억으로 추측 ✕. <b>법령 원문·실무서·웹</b> 실제 근거에 묶고 출처를 인용.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 검증 + 사람 (HITL)</h3><small>계산은 <b>코드로 검산</b>, 충돌은 <b>회계사 검토</b>로. AI는 결론을 단정하지 않음.</small></div>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">💡 회계사 직관으로</span>
+    <p style="margin:4px 0 0">감사 조서가 "근거 → 절차 → 검토자 사인"으로 신뢰를 쌓듯, 이 AI도 <b>근거·계산·검토 이력을 패키징</b>합니다.
+    "AI가 답을 내는 시스템"이 아니라 <b>"회계사가 검토할 수 있게 정리하는 시스템"</b>이 핵심입니다.</p>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 2 / 16</div>
+</div>
+
+<!-- ============ P3 — 전체 파이프라인 ============ -->
+<div class="page">
+  <h2>도식 ① — 전체 파이프라인 (자료 → 검토패키지)</h2>
+  <p class="lead">데이터가 들어와 검토패키지로 나오기까지 <b>10단계</b>. 단계마다 책임지는 Agent가 다릅니다(괄호).</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step"><span class="n">0</span><span class="t">자료수집 인터뷰</span><span class="d">Intake — 대화로 필요자료 수집·결손 고지</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">1</span><span class="t">Workspace 생성</span><span class="d">회사별 작업공간·격리</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">자료 적재</span><span class="d">Tax Vault에 저장</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">3</span><span class="t">이상항목 탐지</span><span class="d">Risk — 계정변동·이상</span></div>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:3px 0">⌄</div>
+  <div class="flow">
+    <div class="step"><span class="n">4</span><span class="t">리스크·절세 후보</span><span class="d">Risk — 쟁점 후보 생성</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">5</span><span class="t">법령 리서치</span><span class="d">Research — 3소스 근거</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="n" style="background:var(--green)">6</span><span class="t" style="color:var(--green-d)">★ 선택지 비교</span><span class="d">Strategy — 세부담·방어</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">7</span><span class="t">결론·보류 정리</span><span class="d">검토항목 도출</span></div>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:3px 0">⌄</div>
+  <div class="flow">
+    <div class="step"><span class="n">8</span><span class="t">DOCX 초안 생성</span><span class="d">Draft — 11목차 패키지</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="n" style="background:var(--navy)">9</span><span class="t">회계사 판단·이력</span><span class="d">HITL — 수정·최종판단 저장</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">10</span><span class="t">다음해 재활용</span><span class="d">Tax Memory 축적</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h3 style="margin-top:0">🔁 같은 파이프라인, 모든 항목</h3><small>접대비·업무용승용차·가지급금·기부금 한도·감가상각·세액공제… <b>어떤 세무항목이든</b> 위 10단계를 똑같이 통과합니다(= Tax Skill Library). 항목 하나를 깊게가 아니라 <b>"구조"로 처리</b>.</small></div>
+    <div class="analogy"><span class="lab">증빙 연결은 곁에서 (Evidence)</span><p style="margin:4px 0 0; font-size:9pt">원장·계약서·통장·세금계산서를 각 쟁점에 <b>연결(인덱스)</b>해, "이 주장은 이 증빙이 뒷받침"을 항상 추적 가능하게 둡니다.</p></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 3 / 16</div>
+</div>
+
+<!-- ============ P4 — Intake 인터뷰 루프 ============ -->
+<div class="page">
+  <h2>도식 ② — 0단계: 자료수집 인터뷰 (Intake Agent)</h2>
+  <p class="lead">분석 <b>전</b> 단계. 회계사도 "어떤 자료가 필요한지" 다 모를 수 있으니, AI가 <b>주니어처럼 하나씩 물어 챙깁니다.</b></p>
+
+  <div class="trace" style="margin-top:10px">
+    <div class="tnode"><div class="tl">시작</div><div class="tv">검토 목적·대상</div><small style="font-size:7.6pt">"A제조 2026 절세"</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:#CFE3A8; background:#F6FBEF"><div class="tl">인터뷰 루프</div><div class="tv">질문→답변→적재</div><small style="font-size:7.6pt">충분할 때까지 반복</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">마감 정리</div><div class="tv">범위·결손·한계</div><small style="font-size:7.6pt">"한계 꼬리표" 부착</small></div>
+  </div>
+
+  <div class="card fill" style="margin-top:12px">
+    <h3 style="margin-top:0">인터뷰 루프 내부 (4스텝 반복)</h3>
+    <div class="flow">
+      <div class="step"><span class="n">①</span><span class="t">AI 질문</span><span class="d">"전기 신고서 있나요? 계정별 원장은요?"</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">②</span><span class="t">사용자 답변</span><span class="d">업로드 / "없음" / "모름"</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">③</span><span class="t">수집·적재</span><span class="d">Tax Vault 저장·체크</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">④</span><span class="t">충분성 점검</span><span class="d">부족 → ①로 / 충분 → 종료</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card" style="border-top:4px solid var(--green)"><h3 style="margin-top:0">루프 종료 2가지</h3><small>(a) AI가 <b>"자료 충분"</b> 판단 / (b) 사용자가 <b>"여기까지만 입력"</b> 선언 시 <b>즉시 탈출</b>(조기 종료).</small></div>
+    <div class="callout"><span class="lab">💡 왜 마감 정리가 필수인가</span><p style="margin:4px 0 0; font-size:9pt"><b>어떤 자료로 어디까지 검토 가능한지 + 부족분·전제·한계</b>를 명시 → 이후 모든 결론에 <b>"자료 한계" 꼬리표</b>가 붙어 <b>과신을 방지</b>합니다. (네플라 '상담준비자료'·LexisNexis intake 차용)</p></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 4 / 16</div>
+</div>
+
+<!-- ============ P5 — 6 Agent + 오케스트레이션 ============ -->
+<div class="page">
+  <h2>도식 ③ — 6 Agent와 "오케스트레이션"이란?</h2>
+  <p class="lead"><b>오케스트레이션 = 지휘.</b> 큰 일을 <b>잘게 쪼개(작업 분해)</b> 여러 Agent에게 <b>나눠 맡기고(병렬)</b>, 결과를 <b>하나로 합치는(통합)</b> 관리자입니다. = 자문팀의 시니어 매니저.</p>
+
+  <div class="card fill" style="margin-top:10px; text-align:center; border:1.3px solid var(--navy2)">
+    <span class="mono" style="color:var(--navy)">오케스트레이터 (Claude Code)</span> &nbsp;—&nbsp; <small>작업 분해 · 에이전트 병렬 실행 · 결과 통합 (LexisNexis "Work" / 슈퍼로이어 "계획→결과물"과 같은 개념)</small>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:2px 0">⌄</div>
+
+  <div class="agtgrid" style="margin-top:4px">
+    <div class="agt"><span class="an">🗂 Intake</span> <span class="ad">— 자료수집 인터뷰. 필요자료 안내·결손/한계 고지.</span></div>
+    <div class="agt"><span class="an">🚩 Risk</span> <span class="ad">— 리스크 식별. 계정변동·특수관계자·손금·조사 리스크.</span></div>
+    <div class="agt"><span class="an">📚 Research</span> <span class="ad">— 세법 근거 검색. <b>3소스</b>로 법령·예규·판례 정리.</span></div>
+    <div class="agt star"><span class="an">⭐ Strategy</span> <span class="ad">— 선택지 비교. 절세효과·리스크·방어·실행가능성. <b>킬러</b>.</span></div>
+    <div class="agt"><span class="an">🔗 Evidence</span> <span class="ad">— 증빙 연결. 원장·계약·통장·세금계산서 ↔ 쟁점.</span></div>
+    <div class="agt"><span class="an">📝 Draft</span> <span class="ad">— 보고서 작성. 검토메모·소명논리·DOCX 초안.</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="analogy"><span class="lab">"Agent"가 그냥 챗봇과 다른 점</span><p style="margin:4px 0 0; font-size:9pt">챗봇은 <b>한 번 묻고 한 번 답</b>. Agent는 <b>목표를 받아 스스로 단계를 계획하고 도구를 써서 수행</b>한 뒤 산출물을 냅니다. 그래서 "절차를 이해하는" 자문 보조가 가능합니다.</p></div>
+    <div class="callout"><span class="lab">💡 왜 6개로 쪼갰나</span><p style="margin:4px 0 0; font-size:9pt">한 AI에 전부 시키면 책임 추적이 안 됩니다. 단계별로 나누면 <b>"어느 단계의 무엇이 틀렸나"가 추적·검토 가능</b>(감사 조서의 분개처럼). docs <span class="mono">03_RFP</span>의 INTK·AGT 도메인과 정합.</p></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 5 / 16</div>
+</div>
+
+<!-- ============ P6 — 근거 엔진 3소스 → 종합 ============ -->
+<div class="page">
+  <h2>도식 ④ — 신뢰성의 심장: 3소스 "독립답변 → 종합"</h2>
+  <p class="lead">세무에서 AI 환각은 치명적. 그래서 <b>한 AI가 한 번에 답하지 않습니다.</b> 서로 다른 근거 3개가 <b>각각 따로 완결된 답</b>을 만든 뒤, 종합 에이전트가 <b>비교·조정</b>합니다.</p>
+
+  <div class="srcwrap" style="margin-top:10px">
+    <div class="src law"><div class="sh">① 법령 원문</div><div class="ss">Korean-law-MCP (Ground Truth)</div><div class="sa">①만으로 완결 답변 A</div></div>
+    <div class="src rag"><div class="sh">② 내부 실무서</div><div class="ss">RAG (사내·라이선스 DB)</div><div class="sa">②만으로 완결 답변 B</div></div>
+    <div class="src web"><div class="sh">③ 최신 웹</div><div class="ss">국세청·기재부·법원 등 공식만</div><div class="sa">③만으로 완결 답변 C</div></div>
+  </div>
+  <div class="merge">▼  종합 에이전트  ▼</div>
+  <div class="synth">
+    <h3>종합의견 = (a) 일치 확정 · (b) 충돌 표면화(평균 ✕) · (c) 권위·시점으로 조정</h3>
+    <div class="claim">a · 세 답이 일치 → 그대로 확정</div>
+    <div class="claim">b · 갈리면 <b>평균내지 않고</b> "여기서 충돌" 그대로 드러냄 → 회계사 검토항목으로</div>
+    <div class="claim">c · 법적 권위 위계 + 시점 유효성으로 tie-break (채널 ①&gt;②&gt;③)</div>
+    <small style="color:#CBE6F2; display:block; margin-top:6px">종합의견은 <b>새 인용을 만들지 않고</b> 각 소스답변(<span class="mono" style="color:#9BD0E6">SourceAnswer</span>)의 인용을 <b>상속</b>합니다.</small>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🔑 왜 "50/30/20 가중 혼합"을 폐기했나 (면접 후벼파기 포인트)</span>
+    <p style="margin:4px 0 0; font-size:9pt">자유서술 법리를 <b>산술 가중평균</b>으로 섞으면 빠르지만 부정확하고, <b>어디서 갈렸는지가 사라집니다.</b>
+    세 개의 완결 답변을 <b>비교·종합</b>하면 충돌이 드러나 오히려 회계사 검토에 유리합니다. <b>MVP는 충돌 케이스 1건을 반드시 시연</b>, 풀 오케스트레이션은 설계로.</p>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 6 / 16</div>
+</div>
+
+<!-- ============ P7 — 권위 위계 + claim 단위 감사추적 ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 충돌 조정 규칙 + claim 단위 감사추적</h2>
+  <p class="lead">충돌 났을 때 <b>무엇을 더 믿나?</b> 단순 채널 서열이 아니라, <b>법적 권위 위계 + 시점 + 사실관계 동일성</b>으로 조정합니다.</p>
+
+  <div class="card fill" style="margin-top:10px">
+    <h3 style="margin-top:0">법적 권위 위계 (위로 갈수록 우선)</h3>
+    <div class="flow">
+      <div class="step" style="border-top-color:var(--law)"><span class="t">법률</span><span class="d">최우선</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">시행령</span><span class="d">보충·해석</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">시행규칙</span><span class="d">세부</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">예규·판례·심판례</span><span class="d">해석사례</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">실무서</span><span class="d">참고</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step" style="border-top-color:var(--web)"><span class="t">웹</span><span class="d">동향(단독 단정✕)</span></div>
+    </div>
+    <small style="display:block; margin-top:6px">①(법령)을 더 신뢰하되, 시행령·예규·심판례는 법령을 <b>해석·보충</b>할 뿐 <b>override(뒤집기)하지 않음.</b> 웹은 공식 소스로 <b>승격</b>된 경우에만 결론 근거. (상세 <span class="mono">docs/02 §5</span>)</small>
+  </div>
+
+  <h3>감사추적 — "이 결론이 어느 근거로 어떻게 나왔나"가 재현·감사 가능</h3>
+  <div class="trace" style="margin-top:4px">
+    <div class="tnode"><div class="tl">주장(claim)</div><div class="tv">명제 단위</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">인용 계보</div><div class="tv">어느 조문이</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">충돌 해소 로그</div><div class="tv">왜 이렇게</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">정책·검토 이력</div><div class="tv">버전·사인</div></div>
+  </div>
+  <div class="callout" style="margin-top:10px"><span class="lab">💡 감사 직관</span><p style="margin:4px 0 0; font-size:9pt">claim(명제) 단위로 일치/충돌(<span class="mono">ClaimAlignment</span>)을 남기는 건, <b>시니어 세무전문가가 상충하는 권위를 따져 서명하는 절차를 전산화</b>한 것입니다. = "조서에 근거 첨부하고 검토자 사인 받기"의 AI판.</p></div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 7 / 16</div>
+</div>
+
+<!-- ============ P8 — 검증 게이트 G1~G5 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — 환각방지 검증 게이트 G1~G5</h2>
+  <p class="lead">결론이 나가기 전 통과해야 하는 <b>검문소 5개</b>. ✅=MVP 데모에서 실제 시연, 🟡=경량, ⬜=설계만. (docs/08)</p>
+
+  <div class="gateline" style="margin-top:10px">
+    <div class="gate"><div class="gid">G1</div><div class="gwho"><b>계산 Ground Truth 검산</b> — 절세효과·세법 한도를 코드 참값과 대조, 불일치 빨간 깃발. <b>★ 감사 DNA.</b></div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate"><div class="gid">G2</div><div class="gwho"><b>인용 검증</b> — 조문/예규 출처 <b>정확히 그 위치(pinpoint)</b>를 가리키고, 그 근거가 주장을 실제로 뒷받침하는지(entailment) 확인.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate"><div class="gid">G3</div><div class="gwho"><b>3소스 종합·충돌</b> — 독립답변→종합, 충돌 표면화. (도식 ④⑤)</div><div style="text-align:right"><span class="pill p1">🟡 경량</span></div></div>
+    <div class="gate"><div class="gid">G4</div><div class="gwho"><b>abstain(되물음)</b> — 시점·전제가 불명확하면 단정 대신 <b>"어느 사업연도 기준인가요?"</b> 되묻기. = 과신 방지.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate hi"><div class="gid">G5</div><div class="gwho"><b>HITL 검토항목 자동생성</b> — DOCX "회계사 검토 필요사항" 섹션을 자동으로 붙임.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card" style="border-top:4px solid var(--green)"><h3 style="margin-top:0">🔬 G1이 핵심인 이유</h3><small>법률 AI들은 <b>해석층 인용검증</b>까지만 합니다. 세무는 <b>정답이 있는 계산층</b>이 있어 <b>코드로 검산</b>이 가능 — 8개사 누구도 못 가진 영역(= 감사 배경의 무기).</small></div>
+    <div class="callout"><span class="lab">⬜ 설계만 (MVP 미구현)</span><p style="margin:4px 0 0; font-size:9pt">confidence(확신도) 점수 분리, 전체 앙상블 검증은 docs 08·09에 <b>정의는 돼 있으나 MVP에서는 구현하지 않음</b> — "이미 설계됨"으로 깊이를 증명.</p></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 8 / 16</div>
+</div>
+
+<!-- ============ P9 — HITL 게이트 + 보안/테넌시 ============ -->
+<div class="page">
+  <h2>도식 ⑦ — 사람 게이트(HITL) + 보안·테넌시</h2>
+  <p class="lead">AI는 <b>시나리오·수치·근거까지</b>. <b>결정·서명은 회계사(Reviewer).</b> 고위험·최종본은 승인 없이 고객 전달본을 못 만듭니다.</p>
+
+  <div class="gateline" style="margin-top:10px">
+    <div class="gate hi"><div class="gid">H</div><div class="gwho"><b>운영 게이트 H1~H5</b> (docs/03 §5) — 적극 절세·고위험·최종 검토패키지는 <b>Reviewer 승인 없이 고객 전달본 생성 금지.</b> 승인자·timeout·escalation·감사기록까지 계약으로 박음.</div><div style="text-align:right"><span class="chip">승인자</span><span class="chip">timeout</span><span class="chip esc">escalation</span></div></div>
+  </div>
+
+  <h3>보안·테넌시 — 고객 재무정보는 극도로 민감</h3>
+  <div class="dommap" style="grid-template-columns:repeat(2,1fr); margin-top:4px">
+    <div class="dom"><span class="code c-sec">격리 ✅</span><span class="nm">테넌트 격리키 전파</span><span class="ds"><span class="mono">client_id</span>/<span class="mono">matter_id</span>로 A사·B사 자료 <b>논리 격리</b></span></div>
+    <div class="dom"><span class="code c-sec">권한</span><span class="nm">최소권한</span><span class="ds"><span class="mono">RoleAssignment</span> 기반 — 볼 사람만 본다</span></div>
+    <div class="dom"><span class="code c-sec">분리</span><span class="nm">인덱스 물리분리</span><span class="ds"><b>공유 지식 ⟂ 고객 인덱스</b>는 물리적으로 섞이지 않음</span></div>
+    <div class="dom"><span class="code c-sec">감사 ✅</span><span class="nm">감사로그·재현성</span><span class="ds">누가·언제·무엇을 기록·재현 <span class="mono">(WORM 변조방지는 설계)</span></span></div>
+    <div class="dom"><span class="code c-sec">비학습 ✅</span><span class="nm">비학습·마스킹</span><span class="ds">고객자료로 모델 재학습 ✕, 민감정보 마스킹</span></div>
+    <div class="dom"><span class="code c-sec">배포</span><span class="nm">사내 경로</span><span class="ds">민감자료 사내 경로 처리 <span class="mono">(DLP는 설계)</span></span></div>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🚫 라이선스 하드게이트 (반드시 기억)</span>
+    <p style="margin:4px 0 0; font-size:9pt"><b>전직장(전 회계법인) 고객자료 반입은 비밀유지 위반 → 금지.</b> 내부 지식 DB는 <b>라이선스·공개·합성·신규 작성</b> 자료로만 채웁니다. (MVP에서 "전직장 데이터 금지"를 명시 시연 / SSO·SCIM·DLP·WORM 저장소는 docs/01 SEC-013/014/017에 설계, MVP 미구현.)</p>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 9 / 16</div>
+</div>
+
+<!-- ============ P10 — 용어 해부 1 ============ -->
+<div class="page">
+  <h2>개발용어 완전 해부 ① — AI·아키텍처</h2>
+  <p class="lead">이 설계서에 나오는 기술 용어를 <b>"무엇이고, 여기선 어디에 쓰이나"</b>로 끝까지 풉니다.</p>
+  <div style="margin-top:6px">
+    <div class="gl"><div class="term">Agent<span class="en">에이전트</span></div><div class="def">목표를 받아 <b>스스로 단계를 계획하고 도구를 써서 수행</b>하는 AI. (챗봇=한 번 응답, Agent=절차 수행). 여기선 Intake·Risk·Research·Strategy·Evidence·Draft 6개.</div></div>
+    <div class="gl"><div class="term">오케스트레이션<span class="en">Orchestration</span></div><div class="def">여러 Agent를 <b>지휘</b>하는 일 — 큰 작업을 <b>분해→병렬 실행→결과 통합.</b> 여기선 Claude Code가 담당(시니어 매니저 역할).</div></div>
+    <div class="gl"><div class="term">RAG<span class="en">Retrieval-Augmented Generation</span></div><div class="def">AI가 기억으로 추측하지 않고 <b>모델 밖의 사내·라이선스 DB를 검색해 근거로</b> 답하게 하는 방식. 여기선 사내·라이선스 실무서 DB(소스 ②). (※웹검색이 아님)</div></div>
+    <div class="gl"><div class="term">임베딩 / 벡터검색<span class="en">Embedding / Vector search</span></div><div class="def">문서를 <b>"의미 좌표(숫자 벡터)"</b>로 바꿔 저장 → 질문과 <b>의미가 가까운</b> 자료를 찾는 검색. RAG가 자료를 찾는 방법. (단어가 달라도 뜻이 비슷하면 매칭)</div></div>
+    <div class="gl"><div class="term">MCP<span class="en">Model Context Protocol</span></div><div class="def">AI가 외부 도구·데이터와 <b>통신하는 표준 프로토콜.</b> 여기선 <span class="mono">Korean-law-MCP</span>로 <b>법령 원문을 직접 조회</b>(소스 ①).</div></div>
+    <div class="gl"><div class="term">Grounding<span class="en">근거 결속</span></div><div class="def">AI 답을 <b>법령·예규·판례·원장·계산식 등 실제 근거에 묶는</b> 것. 추측 금지의 토대.</div></div>
+    <div class="gl"><div class="term">Ground Truth<span class="en">정답 기준값</span></div><div class="def">계산의 <b>참값.</b> 절세효과·세법 한도를 <b>코드로 계산</b>해 AI 답과 대조(=검산). 감사의 "독립 재계산"과 같은 개념.</div></div>
+    <div class="gl"><div class="term">HITL<span class="en">Human-In-The-Loop</span></div><div class="def">절차 중간·끝에 <b>사람(회계사)의 검토·승인</b>을 끼워 넣는 구조. AI는 초안·근거까지, <b>최종 결정·서명은 사람.</b></div></div>
+    <div class="gl"><div class="term">PoC<span class="en">Proof of Concept</span></div><div class="def">완성품은 아니지만 <b>"직접 만들 수 있다"를 증명</b>하는 작동 시제품. 여기선 세무조정 자동화·세법 리서치 2종.</div></div>
+    <div class="gl"><div class="term">MVP<span class="en">Minimum Viable Product</span></div><div class="def">핵심 가치만 담은 <b>최소 동작 제품.</b> "보여주는 건 적게, 설계는 깊게" — 일부만 시연, 나머지는 설계로.</div></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 10 / 16</div>
+</div>
+
+<!-- ============ P11 — 용어 해부 2 ============ -->
+<div class="page">
+  <h2>개발용어 완전 해부 ② — 검증·보안·데이터</h2>
+  <div style="margin-top:6px">
+    <div class="gl"><div class="term">pinpoint 인용<span class="en">Pinpoint citation</span></div><div class="def">출처를 두루뭉술이 아니라 <b>정확한 조·항·호(또는 판례 번호)까지</b> 콕 집어 가리키는 것. (G2)</div></div>
+    <div class="gl"><div class="term">entailment<span class="en">함의·논리적 뒷받침</span></div><div class="def">인용한 근거가 <b>그 주장을 실제로 뒷받침하는지</b> 확인. "조문은 맞는데 내용은 딴소리" 방지. (G2)</div></div>
+    <div class="gl"><div class="term">abstain<span class="en">판단 보류·되물음</span></div><div class="def">전제·시점이 불명확하면 <b>틀린 단정 대신 "되묻기".</b> 예: "어느 사업연도 기준인가요?" (G4, 과신 방지)</div></div>
+    <div class="gl"><div class="term">confidence<span class="en">확신도</span></div><div class="def">답이 얼마나 믿을 만한지 <b>점수로 분리 표기.</b> 본 설계엔 정의돼 있으나 <b>MVP 미구현(설계만).</b></div></div>
+    <div class="gl"><div class="term">SourceAnswer<span class="en">소스별 답변 객체</span></div><div class="def">소스 ①②③ <b>각각의 완결 답변</b>을 담는 데이터 단위. 종합의견은 여기서 <b>인용을 상속</b>(새 인용 안 만듦).</div></div>
+    <div class="gl"><div class="term">ClaimAlignment<span class="en">주장 정합 기록</span></div><div class="def">소스들의 답을 <b>명제(claim) 단위로 일치/충돌</b> 표시한 기록. 충돌 해소 로그·인용 계보와 함께 <b>감사추적</b>의 핵심.</div></div>
+    <div class="gl"><div class="term">테넌시 / 테넌트 격리<span class="en">Multi-tenancy</span></div><div class="def">한 시스템을 여러 고객이 쓰되 <b>서로 자료가 절대 안 섞이게</b> 칸막이. 키(<span class="mono">client_id</span>/<span class="mono">matter_id</span>)로 전파.</div></div>
+    <div class="gl"><div class="term">RoleAssignment<span class="en">역할 기반 권한</span></div><div class="def">"누가 무엇을 볼/할 수 있나"를 <b>역할로 부여</b> → 최소권한 원칙(볼 사람만 본다).</div></div>
+    <div class="gl"><div class="term">SSO / SCIM / DLP<span class="en">기업 보안 3종</span></div><div class="def">SSO=한 번 로그인으로 통합 인증 · SCIM=계정 자동 생성/회수 · DLP=민감정보 외부 유출 차단. <b>모두 설계만(MVP 미구현).</b></div></div>
+    <div class="gl"><div class="term">WORM 저장소<span class="en">Write Once Read Many</span></div><div class="def">한 번 쓰면 <b>못 고치는 저장소</b> → 감사로그 변조방지. 엔터프라이즈 하드닝 항목(설계만).</div></div>
+    <div class="gl"><div class="term">Tax Vault / Tax Memory / Tax Skill Library<span class="en">제품 구성요소</span></div><div class="def">Vault=회사별 <b>자료 저장소</b> · Memory=거래처별 과거 자료·이력 축적해 <b>다음 해 재활용</b> · Skill Library=세무항목별 <b>검토 규칙·절차 묶음.</b></div></div>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 11 / 16</div>
+</div>
+
+<!-- ============ P12 — 면접 Q&A 1 제품·전략 ============ -->
+<div class="page">
+  <h2>면접 질답 ① — 제품·전략</h2>
+  <p class="lead">예상 질문 + <b>모범 답변(말하듯)</b> + <span class="mono">왜 이렇게</span> 메모. 그대로 외우지 말고 자기 말로.</p>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-top:8px">
+    <h3 style="margin-top:0">Q1. 이 프로그램이 한 줄로 뭔가요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "회사 회계·세무 자료를 받아 세무 리스크·절세 기회를 찾고, 처리 선택지를 세부담·리스크·방어가능성으로 비교해, 회계사가 검토할 <b>DOCX 검토패키지 초안</b>을 만드는 자문 보조 AI입니다. 신고서 자동 작성이 아니라 <b>판단 전 단계를 보조</b>합니다."</p>
+    <small class="mono">왜: '신고 자동화'로 오해받으면 더존과 정면충돌 프레임 → 첫 문장에서 '자문 보조'로 못박기.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-top:9px">
+    <h3 style="margin-top:0">Q2. 더존이 이미 다 하지 않나요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "더존은 <b>컴플라이언스를 표준화</b>했습니다 — 신고·조정을 무료·ERP·대량으로. 그래서 오히려 회계사 가치는 더존이 <b>못 하는</b> 곳, 전략·복잡판단·세무조사 방어로 옮겨갔고, 제 솔루션은 그 <b>위층</b>을 노립니다. 한 줄로 <b>'더존은 데이터를 만들고, 저는 그 위에서 판단을 돕는다.'</b> 하나 더 — 계산·근거를 Ground Truth로 검산합니다."</p>
+    <small class="mono">왜: 더존을 폄하하지 않고 '다른 층'으로 재정의. 폄하는 감점.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--green); margin-top:9px">
+    <h3 style="margin-top:0">Q3. 왜 특정 절세항목을 깊게 안 파고 '구조'로 가나요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "2년차로서 특정 절세 주제의 <b>깊이</b>로 승부하기보다, 현 단계에서는 <b>어떤 세무항목이든 같은 파이프라인</b>(리스크→선택지비교→근거→계산검산→패키지)으로 처리되는 <b>검토 구조를 설계</b>하는 데 집중했습니다. 이 '전 항목 동일구조'가 'AI 만드는 회계사'의 강점이고, 항목별 깊이는 Phase 2에서 정교화합니다."</p>
+    <small class="mono">왜: 약점(세무 깊이)을 구조 설계 역량으로 전환. 구어체 빼고 로드맵으로 보강 약속.</small>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 12 / 16</div>
+</div>
+
+<!-- ============ P13 — 면접 Q&A 2 기술·아키텍처 ============ -->
+<div class="page">
+  <h2>면접 질답 ② — 기술·아키텍처</h2>
+
+  <div class="card" style="border-left:6px solid var(--navy2); margin-top:8px">
+    <h3 style="margin-top:0">Q4. 'Agent'가 그냥 챗봇과 뭐가 다른가요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "챗봇은 한 번 묻고 한 번 답합니다. Agent는 <b>목표를 받아 스스로 단계를 계획하고 도구를 써서 수행</b>한 뒤 산출물을 냅니다. 그래서 자료수집·리스크탐지·리서치·비교·작성을 <b>6개 전문 Agent로 나눠</b>, 어느 단계의 무엇이 틀렸는지 추적·검토가 가능합니다 — 감사 조서처럼요."</p>
+    <small class="mono">왜: '책임 추적 가능성'을 감사 직관과 연결 = 차별점.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--navy2); margin-top:9px">
+    <h3 style="margin-top:0">Q5. 근거 3소스를 어떻게 합치나요? 왜 가중평균을 안 쓰죠?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "법령(MCP)·내부 실무서(RAG)·최신 웹이 <b>각각 독립된 완결 답변</b>을 냅니다. 종합 에이전트가 <b>일치는 확정, 충돌은 평균내지 않고 그대로 드러내고</b>, 법적 권위 위계(법률&gt;시행령&gt;…&gt;실무서&gt;웹)와 시점으로 조정합니다. <b>가중평균은 폐기</b>했는데, 자유서술 법리를 산술로 섞으면 부정확하고 <b>어디서 갈렸는지가 사라지기</b> 때문입니다."</p>
+    <small class="mono">왜: 설계의 가장 깊은 후속질문. '왜 평균 폐기'가 핵심 — 충돌 가시성·권위 위계.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--navy2); margin-top:9px">
+    <h3 style="margin-top:0">Q6. RAG·MCP·임베딩이 뭔지 쉽게 설명해보세요.</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "RAG는 AI가 기억으로 추측하지 않고 <b>사내·라이선스 실무서 DB를 검색해 근거로</b> 답하게 하는 방식이고(웹검색이 아닙니다), 그 검색은 문서를 <b>의미 좌표(임베딩)</b>로 바꿔 뜻이 가까운 걸 찾습니다. MCP는 AI가 외부 도구·데이터와 <b>통신하는 표준 프로토콜</b>로, 저는 이걸로 <b>법령 원문을 직접 조회</b>합니다."</p>
+    <small class="mono">왜: 비개발자도 이해시킬 수 있다 = 'AI 만드는 회계사' 신뢰도. 한 문장씩 비유로.</small>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 13 / 16</div>
+</div>
+
+<!-- ============ P14 — 면접 Q&A 3 환각·검증·보안 ============ -->
+<div class="page">
+  <h2>면접 질답 ③ — 환각·검증·보안</h2>
+
+  <div class="card" style="border-left:6px solid var(--red); margin-top:8px">
+    <h3 style="margin-top:0">Q7. AI 환각(없는 사실 지어내기)을 어떻게 막나요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "구조로 막습니다. ①법령은 <b>원문(MCP)으로 고정</b>, ②모든 주장은 <b>출처 인용 의무</b>(조·항·호까지 pinpoint, 근거가 주장을 실제 뒷받침하는지 entailment 확인), ③시점·전제 불명이면 <b>단정 대신 되물음(abstain)</b>, ④계산은 <b>코드 Ground Truth로 검산</b>, ⑤미해소 충돌은 단정 않고 <b>회계사 검토</b>로 넘깁니다."</p>
+    <small class="mono">왜: G1~G5를 다섯 손가락으로. 특히 '계산 검산'이 우리만의 무기.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--red); margin-top:9px">
+    <h3 style="margin-top:0">Q8. 감사 배경이 세무 AI에 무슨 도움이 되나요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "감사는 <b>'검증'과 직업적 회의</b>가 본질입니다. 법률 AI들은 해석층 인용검증까지만 하지만, 세무는 <b>정답이 있는 계산층</b>이 있어 <b>코드로 검산</b>이 가능합니다. 한도·산식을 참값과 대조해 오류에 빨간 깃발을 다는 것 — 이게 8개사 벤치마크에서 상대적으로 공백으로 보인 영역이고, 감사한 회계사가 강점을 가질 수 있는 부분입니다."</p>
+    <small class="mono">왜: '약점인 줄 알았던 감사 배경'을 핵심 차별점으로 역전.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--red); margin-top:9px">
+    <h3 style="margin-top:0">Q9. 고객 재무정보 보안은요? 전 직장 자료 쓰면 안 되잖아요.</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "맞습니다 — <b>전직장 고객자료 반입은 비밀유지 위반이라 금지</b>이고, 내부 DB는 라이선스·공개·합성·신규 자료로만 채웁니다. <b>MVP에서는</b> 회사별 <b>격리(client_id)·전직장 데이터 금지·출처 재현·비학습</b>을 실제로 보여줍니다. 그 위에 최소권한·감사로그·인덱스 물리분리를 두고, <b>변조방지(WORM)·DLP·SSO·SCIM은 엔터프라이즈 하드닝으로 설계 단계</b>입니다 — 어디까지 구현이고 어디부터 설계인지 구분해 말씀드립니다."</p>
+    <small class="mono">왜: 윤리·보안 의식 = 회계사 필수 덕목. '설계는 했으나 MVP 미구현' 정직하게.</small>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 14 / 16</div>
+</div>
+
+<!-- ============ P15 — 면접 Q&A 4 약점·정직성 + 절대금지 ============ -->
+<div class="page">
+  <h2>면접 질답 ④ — 약점·정직성 + 절대 하지 말 것</h2>
+
+  <div class="card" style="border-left:6px solid var(--amber); margin-top:8px">
+    <h3 style="margin-top:0">Q10. 세무 실무 깊이가 부족하지 않나요? (압박)</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "세무 전문성은 <b>쌓는 중</b>입니다. 솔직히 인정합니다. 대신 <b>감사로 단련한 검증력 + AI 개발 경험</b>으로 빠르게 메우고, <b>과세·방어 양면 + 회계사 최종판단(HITL)</b> 구조로 제 부족함이 결론을 오염시키지 않게 설계했습니다. 안진에서 실무를 익히며 이 도구를 더 정교하게 만들고 싶습니다."</p>
+    <small class="mono">왜: 약점을 먼저 인정 → 신뢰. 구조로 보완 + 입사 후 성장 의지로 마무리.</small>
+  </div>
+  <div class="card" style="border-left:6px solid var(--amber); margin-top:9px">
+    <h3 style="margin-top:0">Q11. 10분에 96% 절감, 정말인가요?</h3>
+    <p style="margin:4px 0; font-size:9.4pt"><b>A.</b> "그건 <b>검토패키지 '초안' 1건 기준의 목표 KPI이자 내부 추정치</b>입니다(수기 ~4시간→10분). 실측으로 보정할 값이고, '빠르지만 얕다'로 안 읽히게 <b>출처 인용 100%·계산검산 통과·검토항목 자동첨부</b>라는 품질 지표를 함께 답니다. 완성 자문보고서가 아니라 회계사 검토·수정이 뒤따릅니다."</p>
+    <small class="mono">왜: 숫자를 실측처럼 말하면 자멸. '목표·추정'임을 명확히.</small>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🚫 면접에서 절대 하지 말 것 (자멸 멘트)</span>
+    <table style="margin-top:5px; font-size:8.7pt">
+      <tr><th width="46%">❌ 이렇게 말하면 끝</th><th>✅ 정확히는</th></tr>
+      <tr><td>"더존을 <b>대체</b>한다"</td><td>더존 위층에서 <b>판단을 보조</b>(정면경쟁=패배)</td></tr>
+      <tr><td>"AI가 <b>회계사를 대체</b>"</td><td>판단 전 단계 보조, <b>최종판단은 회계사(HITL)</b></td></tr>
+      <tr><td>"신고 <b>자동화</b> 프로그램"</td><td>리스크·절세·선택지·<b>검토패키지</b>가 핵심</td></tr>
+      <tr><td>"3소스 <b>50/30/20으로 섞음</b>"</td><td>독립답변 후 <b>충돌·권위순위로 종합</b></td></tr>
+      <tr><td>"보안기능 <b>전부 구현</b>"</td><td>일부 시연 · SSO/DLP/WORM은 <b>설계만</b></td></tr>
+      <tr><td>"PoC는 <b>완성품</b>"</td><td>'직접 만들 수 있다'의 <b>실력 증거</b></td></tr>
+    </table>
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 15 / 16</div>
+</div>
+
+<!-- ============ P16 — 핵심 정리 ============ -->
+<div class="page">
+  <h2>한 장 정리 — 면접 직전 마지막 점검</h2>
+
+  <div class="grid2" style="margin-top:8px">
+    <div class="card fill"><h3 style="margin-top:0">설계 핵심 5</h3><ul class="tight" style="font-size:9pt">
+      <li><b>역할 분담</b> — Tax Vault + 6 Agent + 오케스트레이션</li>
+      <li><b>근거 결속</b> — 3소스 독립답변 → 종합(평균✕)</li>
+      <li><b>충돌 조정</b> — 권위 위계 + 시점, claim 단위 감사추적</li>
+      <li><b>검증</b> — G1 계산검산(감사 DNA)~G5 검토항목</li>
+      <li><b>사람</b> — HITL: 결정·서명은 회계사</li>
+    </ul></div>
+    <div class="card fill"><h3 style="margin-top:0">면접 무기 3줄</h3><ul class="tight" style="font-size:9pt">
+      <li>"더존은 데이터, 저는 그 위 <b>판단을 보조</b>"</li>
+      <li>"<b>계산을 Ground Truth로 검산</b> = 감사 DNA, 8개사 공백"</li>
+      <li>"항목 깊이가 아니라 <b>전 항목 동일구조</b>를 설계"</li>
+    </ul></div>
+  </div>
+
+  <div class="synth" style="margin-top:12px; background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄 (정체성 선언)</div>
+    <p style="font-size:13pt; margin:6px 0 0; line-height:1.5"><b>"감사로 검증을 배운 회계사가, 신뢰할 수 있는 세무 전략 AI를 만듭니다.
+    AI는 회계사를 대체하지 않습니다 — 자료·계산·근거·선택지를 정리해, 회계사가 더 나은 판단을 하도록 돕습니다."</b></p>
+  </div>
+
+  <div class="callout" style="margin-top:11px"><span class="lab">✅ 이해도 자가점검</span><p style="margin:4px 0 0; font-size:9pt">이 6개를 자기 말로 설명할 수 있으면 충분합니다 → ①파이프라인 10단계 ②6 Agent가 왜 나뉘었나 ③3소스를 왜 평균 안 하나 ④권위 위계 ⑤G1 계산검산이 왜 특별한가 ⑥HITL이 무엇인가.</p></div>
+
+  <div style="margin-top:16px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 통합 설계서 v1.2 — 설계 동작·기술 해설 + 면접 Q&amp;A<br>
+    본 해설본은 <span class="mono">md 파일/법인세_세무AI_설계서_통합.md</span>를 비개발자 KICPA 눈높이로 푼 것입니다 · 정본은 원문 우선 · 2026-06-29
+  </div>
+  <div class="pgnote">법인세 세무 AI (TIW) · 설계 완전 이해 + 면접 Q&amp;A — 16 / 16</div>
+</div>
+
+</body></html>

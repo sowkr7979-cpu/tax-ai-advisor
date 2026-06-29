@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Secrets / env (NEVER commit) ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+infra/config/secrets*
+**/secrets.*
+
+# --- Runtime data (README boundary: 런타임 데이터 ≠ 소스코드) ---
+runs/
+logs/
+*.log
+# vector DB / embeddings store (data, not source)
+.chroma/
+*.duckdb
+*.sqlite
+*.sqlite3
+
+# NOTE: tests/golden/ and tests/fixtures/ ARE committed (ground truth + deterministic replay)
+
+# --- Node (frontend mockup) ---
+node_modules/
+.next/
+.vite/
+dist-frontend/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

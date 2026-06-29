@@ -1,0 +1,326 @@
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 설계 해설</div>
+      <div style="height:18px"></div>
+      <h1>외부 API 연동<span class="dot"></span><br>쉽게 읽기</h1>
+      <div class="rule"></div>
+      <div class="sub">법령·검색·문서를 '갈아끼울 수 있는 부품'으로 — 인프라 계층 설계</div>
+      <div class="file">docs / 07_외부API연동.md  →  비개발자(KICPA)용 도식 해설</div>
+      <div class="badgewrap">
+        <span class="badge">🔌 10종 어댑터 · API-001~014</span>
+        <span class="badge">🔁 법령조회 이중화(fallback)</span>
+        <span class="badge">🧾 SourceSnapshot 재현</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      작성 · 신현우 (KICPA, 2년차)<br>
+      목적 · 딜로이트 안진 Business Tax 지원 / 포트폴리오<br>
+      문서 · 법인세 자문 보조 AI 설계서 — 외부 API 연동 章 해설본<br>
+      날짜 · 2026-06-28
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — 30초 요약 + 비유 ============ -->
+<div class="page">
+  <h2>30초 요약 — 이 문서(07)가 뭐죠?</h2>
+  <p class="lead"><b>한 문장:</b> AI가 바깥세상(법령DB·검색엔진·OCR·공시·문서생성)과 주고받는 <b>모든 연결을 '어댑터(부품)'로 표준화</b>해,
+  공급업체가 바뀌거나 장애가 나도 <b>상위 판단이 흔들리지 않게</b> 만드는 <b>인프라 계층</b> 설계서입니다.</p>
+
+  <div class="grid3" style="margin-top:6px">
+    <div class="card fill"><h3 style="margin-top:0">① 무엇을 담나</h3>
+      <small>10종 외부 연결(어댑터) + 공통 규칙(재시도·이중화·비용·관측)을 정의. <b>"무엇을 호출하나"가 아니라 "어떻게 안전하게 갈아끼우나"</b>.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 왜 중요한가</h3>
+      <small>법령 같은 <b>핵심 근거가 외부 업체 하나에 묶이면(종속) 위험</b>. 이중화·시점복원이 없으면 답을 재현·신뢰할 수 없습니다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 06 웹과 차이</h3>
+      <small><b>07=인프라</b>(연결·재시도·비용), <b>06=제품 의미론</b>(어떤 출처를 권위로 볼지). 섞지 않습니다.</small></div>
+  </div>
+
+  <h3>회계사의 직관으로 번역하면 — 3가지 비유</h3>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 1 · 어댑터 = 「은행 조회서 양식 통일」</span>
+    <p style="margin:5px 0 0">은행마다 잔액조회서 양식이 달라도, 감사조서에는 <b>같은 양식으로 정리</b>하죠. 어댑터가 그 역할입니다.
+    공급업체(Tavily·MCP·OCR…)가 바뀌어도 <b>상위 로직은 벤더를 모른 채 같은 계약(contract)</b>으로 받습니다. <span class="mono">API-001</span></p>
+  </div>
+
+  <div class="analogy" style="margin-bottom:9px">
+    <span class="lab">비유 2 · fallback = 「핵심 확인서 지연 시 대체 증빙」</span>
+    <p style="margin:5px 0 0">조회서 회신이 늦으면 <b>원장·계약서·외부조회</b>로 보완하되, 대체증빙의 <b>권위·최신성은 따로 평가</b>하죠.
+    법령조회(MCP)가 막히면 <b>법제처 공식데이터로 자동 대체</b>하되, 그 한계를 표시합니다. <span class="mono">API-002 / API-007</span></p>
+  </div>
+
+  <div class="analogy">
+    <span class="lab">비유 3 · 재시도·비용·관측 = 「외주 용역관리표(SLA)」</span>
+    <p style="margin:5px 0 0">외부 전문가에게 일을 맡길 때 <b>납기·오류율·비용·재수행 이력</b>을 관리하듯,
+    모든 외부호출의 <b>지연·실패·비용을 로깅</b>하고 한도를 둡니다. <span class="mono">API-006 / API-008</span></p>
+  </div>
+
+  <div class="callout" style="margin-top:11px">
+    <span class="lab">⚠️ 오해 주의</span>
+    <p style="margin:4px 0 0">"외부 API는 그냥 갖다 쓰면 된다"가 아닙니다. <b>기밀등급별 전송정책·테넌트 격리 캐시·시점 복원</b>이
+    없으면 보안사고·재현불가가 됩니다. 코드 위치도 <b>어댑터는 전부 <span class="mono">src/ai/</span>, 키·엔드포인트는 <span class="mono">infra/config</span></b>(하드코딩 금지).</p>
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 2 / 10</div>
+</div>
+
+<!-- ============ P3 — 어댑터 목록 + 계층도 ============ -->
+<div class="page">
+  <h2>도식 ① — 어댑터 추상화 계층도 (상위는 벤더를 모른다)</h2>
+  <p class="lead">핵심 구조. 상위 로직은 <b>'무엇을 쓰는지' 모른 채 계약(contract)으로만 대화</b>하고,
+  실제 벤더는 어댑터 뒤에 숨습니다. 그래서 <b>벤더를 갈아끼워도 위가 안 바뀝니다</b>.</p>
+
+  <div style="margin-top:10px">
+    <div class="card" style="background:#0B2A3C; color:#fff; border:none; text-align:center; padding:11px">
+      <b style="font-size:11pt">상위 로직 — 에이전트·오케스트레이션·검증</b>　<span style="opacity:.8; font-size:9pt">(src/) "벤더를 모른다"</span>
+    </div>
+    <div style="text-align:center; color:var(--green-d); font-weight:900; font-size:14pt">▼ &nbsp; contract 스키마 (입·출력 고정) &nbsp; ▼</div>
+    <div class="card" style="background:#F0F7E6; border:1.3px dashed var(--green); text-align:center; padding:9px">
+      <b style="color:var(--green-d)">어댑터 경계 — 계약만 통과 (벤더 교체해도 위 불변)</b> <span class="mono">API-001</span>
+    </div>
+    <div style="text-align:center; color:var(--muted); font-weight:900; font-size:14pt">▼ &nbsp; src/ai/ (어댑터 전용) &nbsp; ▼</div>
+    <div class="dommap" style="grid-template-columns:repeat(5,1fr)">
+      <div class="dom"><span class="nm" style="margin-top:0">LLM</span><span class="ds">추론·요약·judge</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">Embedding</span><span class="ds">청크·쿼리 임베딩</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">Reranker</span><span class="ds">검색 재랭킹</span></div>
+      <div class="dom" style="border-color:var(--law)"><span class="nm" style="margin-top:0; color:var(--law)">Korean-law-MCP</span><span class="ds">①법령 원문</span></div>
+      <div class="dom" style="border-color:var(--web)"><span class="nm" style="margin-top:0; color:var(--web)">Tavily</span><span class="ds">웹검색 1순위</span></div>
+      <div class="dom" style="border-color:var(--web)"><span class="nm" style="margin-top:0; color:var(--web)">Brave</span><span class="ds">웹검색 보조</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">공식 커넥터</span><span class="ds">국세청·법제처</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">OCR</span><span class="ds">스캔·HWP</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">DART</span><span class="ds">공시·재무</span></div>
+      <div class="dom"><span class="nm" style="margin-top:0">DOCX</span><span class="ds">검토패키지</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card fill"><h3 style="margin-top:0">왜 이렇게까지 분리하나</h3>
+      <ul class="tight" style="margin-top:4px">
+        <li><b>이식성</b>: 임베딩·검색·벡터DB 벤더를 바꿔도 상위 무영향(<span class="mono">NFR-009</span>).</li>
+        <li><b>보안</b>: 전송정책을 어댑터 한 곳에서 강제(기밀등급별).</li>
+        <li><b>관측</b>: 모든 외부호출을 한 지점에서 로깅.</li>
+      </ul></div>
+    <div class="callout"><span class="lab">💡 회계사 포인트</span>
+      <p style="margin:4px 0 0">감사 시 <b>조회처가 바뀌어도 조서 양식·결론 도출은 그대로</b>여야 하듯,
+      벤더 교체가 <b>판단 품질을 흔들지 않도록</b> 경계를 고정한 것입니다.</p></div>
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 3 / 10</div>
+</div>
+
+<!-- ============ P4 — fallback 체인 + 횡단 ============ -->
+<div class="page">
+  <h2>도식 ② — 법령조회 이중화 (LawDataSource fallback 체인)</h2>
+  <p class="lead">가장 중요한 위험관리. <b>법령(①번 핵심근거)이 외부 MCP 하나에 묶이면 위험</b>하므로,
+  장애 시 <b>공식 데이터로 자동 대체</b>합니다. 모두 실패하면 <b>단정 대신 검토항목</b>으로.</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step" style="border-top-color:var(--law)"><span class="t" style="color:var(--law)">호출</span><span class="d">getProvision<br>(법령,조문,asOfDate)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">1</span><span class="t">korean-law-MCP</span><span class="d">1차 (Ground Truth)</span></div>
+    <div class="arrowcol" style="color:var(--red)">✕›</div>
+    <div class="step"><span class="n">2</span><span class="t">법제처 국가법령</span><span class="d">공식 API 대체</span></div>
+    <div class="arrowcol" style="color:var(--red)">✕›</div>
+    <div class="step"><span class="n">3</span><span class="t">국세법령정보</span><span class="d">공식 데이터피드</span></div>
+    <div class="arrowcol" style="color:var(--red)">✕›</div>
+    <div class="step" style="border-top-color:var(--red); background:#FCEEF0"><span class="t" style="color:var(--red)">모두 실패</span><span class="d">단정 금지<br>→ 검토항목(08)</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="danger"><span class="lab">🚫 직접 크롤링은 최후수단</span>
+      <p style="margin:4px 0 0">직접 크롤링은 <b>법적 진정성·갱신지연·파서 깨짐·로봇정책</b> 리스크가 큽니다.
+      결론 근거로 쓰기 전 <b>공식 원문 대조 + content_hash 인증</b> 필수. 실패 시 "참고"로만. <span class="mono">API-012</span></p></div>
+    <div class="card fill"><h3 style="margin-top:0">이중화의 3대 조건</h3>
+      <table style="margin:2px 0">
+        <tr><td class="mono">API-002</td><td>1차 MCP 장애 시 <b>대체 경로 동작</b></td></tr>
+        <tr><td class="mono">API-003</td><td><b>asOfDate</b>로 시행일 버전(2개 연도→다른 버전)</td></tr>
+        <tr><td class="mono">API-010</td><td>스키마 드리프트·다운타임·<b>커버리지 모니터</b></td></tr>
+      </table></div>
+  </div>
+
+  <h3>모든 어댑터 공통 — 횡단 관심사 (4)</h3>
+  <div class="grid2">
+    <div class="card"><b>🔁 Rate-limit / Retry</b><br><small>토큰버킷·지수 백오프·jitter. <b>idempotent 호출만</b> 자동 재시도, 횟수·타임아웃 상한. <span class="mono">API-006</span></small></div>
+    <div class="card"><b>⛔ Circuit breaker / Timeout</b><br><small>연속 실패 시 차단·degrade. 호출별 상한으로 <b>사용자 대기 보호</b>.</small></div>
+    <div class="card"><b>💰 Cost logging</b><br><small>호출당 비용(Tavily 1~2 credits, LLM 토큰가) → 예산·KPI. <span class="mono">API-008</span></small></div>
+    <div class="card"><b>🔒 Caching (테넌트 격리)</b><br><small>(법령,조문,asOfDate)·쿼리 결과 캐시 <b>+ 시점 키 + 고객 격리</b>(캐시 통한 누수 0). <span class="mono">API-009</span></small></div>
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 4 / 10</div>
+</div>
+
+<!-- ============ P5 — Coverage Matrix ============ -->
+<div class="page">
+  <h2>도식 ③ — Coverage Matrix (어느 소스가 무엇을 커버하나)</h2>
+  <p class="lead">법령 데이터원마다 <b>커버하는 법원(法源)이 다릅니다</b>. 공백을 자동 점검해
+  <b>빈 곳은 결론을 제한</b>합니다. = 감사에서 증거의 '커버리지 갭'을 표시하는 것.</p>
+
+  <table style="margin-top:10px; font-size:8.6pt">
+    <tr>
+      <th>LawDataSource 구현</th>
+      <th>법률</th><th>시행령</th><th>시행규칙</th><th>고시</th><th>예규</th><th>판례</th><th>심판례</th><th>기본통칙</th>
+    </tr>
+    <tr><td><b>korean-law-MCP</b> <span class="mono">1차</span></td>
+      <td>✓</td><td>✓</td><td>✓</td><td>△</td><td>△</td><td>△</td><td>✕</td><td>△</td></tr>
+    <tr><td><b>법제처 국가법령정보</b></td>
+      <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>△</td><td>✕</td><td>✕</td><td>△</td></tr>
+    <tr><td><b>국세법령정보시스템</b></td>
+      <td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+    <tr><td><b>직접 크롤링</b> <span class="mono">최후</span></td>
+      <td>△</td><td>△</td><td>△</td><td>△</td><td>△</td><td>△</td><td>△</td><td>△</td></tr>
+  </table>
+  <p style="font-size:8.4pt; color:var(--muted); margin:3px 0 0">✓ 신뢰 커버 · △ 부분/검증필요 · ✕ 미커버 &nbsp;|&nbsp; <b>예시 매트릭스</b> — 실제 커버리지는 자동 점검 결과로 채움(<span class="mono">API-012</span>)</p>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="callout"><span class="lab">왜 매트릭스를 자동 점검하나</span>
+      <p style="margin:4px 0 0">"법령은 다 있겠지"라는 가정이 가장 위험합니다. <b>심판례·기본통칙·고시</b>처럼 빠지기 쉬운 법원을
+      소스별로 점검해, <b>공백이면 그 쟁점은 결론을 제한</b>하고 알립니다.</p></div>
+    <div class="card fill"><h3 style="margin-top:0">10종 어댑터 한눈에</h3>
+      <small><b>법령</b>: Korean-law-MCP(①). <b>웹</b>: Tavily·Brave·공식 커넥터. <b>RAG</b>: Embedding·Reranker·OCR.
+      <b>데이터</b>: DART(공시). <b>추론·출력</b>: LLM·DOCX. — 각자 호출자·주의사항이 다름.</small></div>
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 5 / 10</div>
+</div>
+
+<!-- ============ P6 — SLA + KPI 대시보드 ============ -->
+<div class="page">
+  <h2>도식 ④ — Fallback SLA (대체 경로의 품질목표)</h2>
+  <p class="lead">대체 경로는 그냥 "되면 됨"이 아니라 <b>품질목표(SLA)를 명시</b>해야 합니다(미정의 금지).
+  네 가지 잣대로 평가합니다.</p>
+
+  <table style="margin-top:9px">
+    <tr><th>경로</th><th>coverage<br>(법원 포괄)</th><th>latency<br>(응답속도)</th><th>freshness<br>(갱신지연)</th><th>legal-authenticity<br>(법적 진정성)</th></tr>
+    <tr><td><b>korean-law-MCP</b></td><td><span class="pill p1">중</span></td><td><span class="pill" style="background:#16A34A">빠름</span></td><td><span class="pill p1">중</span></td><td><span class="pill p1">중</span></td></tr>
+    <tr><td><b>법제처 공식 API</b></td><td><span class="pill" style="background:#16A34A">높음</span></td><td><span class="pill p1">중</span></td><td><span class="pill" style="background:#16A34A">높음</span></td><td><span class="pill" style="background:#16A34A">높음</span></td></tr>
+    <tr><td><b>국세법령정보</b></td><td><span class="pill" style="background:#16A34A">높음</span></td><td><span class="pill p1">중</span></td><td><span class="pill" style="background:#16A34A">높음</span></td><td><span class="pill" style="background:#16A34A">높음</span></td></tr>
+    <tr><td><b>직접 크롤링</b></td><td><span class="pill p1">가변</span></td><td><span class="pill p2">느림</span></td><td><span class="pill p0">지연</span></td><td><span class="pill p0">낮음</span></td></tr>
+  </table>
+  <p style="font-size:8.4pt; color:var(--muted); margin:3px 0 0"><b>예시 SLA</b> — 실제 목표값은 정책으로 확정. 진정성 낮은 경로는 결론 근거 제한.</p>
+
+  <h2 style="margin-top:16px">도식 ⑤ — 비용·지연·오류 대시보드 (관측성)</h2>
+  <p class="lead">모든 외부호출을 <b>trace_id로 묶어</b> 비용·지연·오류를 집계합니다. <span class="mono">AgentRun→ToolCall→외부호출</span> 연결로 재현·정산.</p>
+  <div class="grid3" style="margin-top:8px">
+    <div class="card" style="border-top:4px solid var(--amber)"><small>호출당 비용</small><div style="font-size:19pt; font-weight:800; color:var(--navy)">cost</div><small>Tavily 1~2 credits · LLM 토큰가 → 예산·KPI(<span class="mono">NFR-001</span>)</small></div>
+    <div class="card" style="border-top:4px solid var(--law)"><small>응답 지연</small><div style="font-size:19pt; font-weight:800; color:var(--navy)">latency</div><small>단계별 p95 SLA, 초과 시 비동기 전환</small></div>
+    <div class="card" style="border-top:4px solid var(--red)"><small>오류·재시도</small><div style="font-size:19pt; font-weight:800; color:var(--navy)">error / retry</div><small>실패율·재시도 횟수·circuit 상태(<span class="mono">API-008</span>)</small></div>
+  </div>
+  <div class="callout" style="margin-top:11px"><span class="lab">💡 회계사 포인트</span>
+    <p style="margin:4px 0 0">외주 용역의 <b>비용·납기·오류를 장부화</b>하는 것과 같습니다. 측정되지 않으면 통제할 수 없습니다.</p></div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 6 / 10</div>
+</div>
+
+<!-- ============ P7 — SourceSnapshot 재현 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — SourceSnapshot: '그때 그 법령'을 박제·복원</h2>
+  <p class="lead">세무 결론은 <b>어느 시점 어느 조문 버전</b>으로 냈는지가 생명입니다.
+  외부에서 받은 원문을 <b>해시로 박제</b>해, 나중에 그 답의 근거를 <b>그대로 재현</b>합니다.</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step"><span class="n">1</span><span class="t">외부 호출</span><span class="d">asOfDate로<br>시행일 버전 요청</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">원문 수신</span><span class="d">ProvisionVersion<br>+ 본문</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">3</span><span class="t">해시 박제</span><span class="d">SourceSnapshot<br>(content_hash)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">4</span><span class="t">답변에 인용</span><span class="d">snapshot ID로<br>연결</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="t" style="color:var(--navy)">사후 복원</span><span class="d">"그 답이 쓴<br>정확한 버전"</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:13px">
+    <div class="card fill"><h3 style="margin-top:0">재현성이 왜 핵심인가</h3>
+      <p style="margin:4px 0">법령은 개정됩니다. 6개월 뒤 같은 질문에 <b>법이 바뀌어 답이 달라질 수</b> 있죠.
+      그때 "원래 답은 <b>그 시점 그 버전</b> 기준이었다"를 입증하려면 박제가 필요합니다. <span class="mono">API-004 · PROV-009</span></p></div>
+    <div class="card fill"><h3 style="margin-top:0">기밀·라이선스 게이트</h3>
+      <small><b>L3/L4</b> 임베딩은 on-prem/private 경로만(<span class="mono">API-013</span>).
+      라이선스 자료는 <b>임베딩·반출·캐시 허용권 별도 검사</b>, 금지자료 외부임베딩 0건(<span class="mono">API-014</span>).
+      기밀등급별 전송정책 위반 0(<span class="mono">API-005</span>).</small></div>
+  </div>
+
+  <div class="analogy" style="margin-top:11px"><span class="lab">Big4 한 줄 요약</span>
+    <p style="margin:4px 0 0"><b>"외부 의존을 어댑터로 캡슐화하고, 핵심 근거는 이중화·시점박제로 재현 가능하게."</b>
+    공급망 리스크를 통제하면서 감사 가능한 근거 사슬을 지킵니다.</p></div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 7 / 10</div>
+</div>
+
+<!-- ============ P8 — 용어사전 ============ -->
+<div class="page">
+  <h2>비개발자를 위한 전문용어 사전</h2>
+  <p class="lead">이 문서의 영어·기술 용어를 <b>회계사 눈높이</b>로 한 줄씩.</p>
+
+  <div style="margin-top:8px">
+    <div class="gl"><div class="term">어댑터<span class="en">Adapter</span></div><div class="def">외부 서비스 호출을 감싸는 <b>전용 연결부</b>. 상위 로직은 벤더(Tavily·MCP…) 세부를 몰라도 됨. = 조회서 양식 통일기.</div></div>
+    <div class="gl"><div class="term">추상화<span class="en">Abstraction</span></div><div class="def"><span class="mono">LawDataSource</span>처럼 <b>공통 인터페이스</b>를 둬 구현체를 갈아끼울 수 있게 만드는 것.</div></div>
+    <div class="gl"><div class="term">contract<span class="en">계약 스키마</span></div><div class="def">어댑터의 <b>입·출력 형식을 고정</b>한 약속. 벤더가 바뀌어도 이 약속은 그대로.</div></div>
+    <div class="gl"><div class="term">fallback<span class="en">대체 경로</span></div><div class="def">1차 경로 실패 시 <b>공식 API 등 대체 경로로 자동 전환</b>. = 확인서 지연 시 대체 증빙.</div></div>
+    <div class="gl"><div class="term">rate-limit<span class="en">호출량 제한</span></div><div class="def">외부 서비스 <b>호출량 한도</b>. 토큰버킷·백오프·jitter로 관리(너무 자주 부르면 차단됨).</div></div>
+    <div class="gl"><div class="term">멱등성<span class="en">Idempotency</span></div><div class="def">같은 요청을 <b>여러 번 보내도 결과·부작용이 안 변하는</b> 성질. 이런 호출만 자동 재시도.</div></div>
+    <div class="gl"><div class="term">circuit breaker<span class="en">회로 차단기</span></div><div class="def">연속 실패가 쌓이면 <b>잠시 호출을 끊고</b> 대체·degrade. 장애 확산 방지.</div></div>
+    <div class="gl"><div class="term">관측성<span class="en">Observability</span></div><div class="def"><span class="mono">trace_id</span>로 <b>AgentRun→ToolCall→외부호출을 연결</b>해 비용·지연·오류를 남기는 것.</div></div>
+    <div class="gl"><div class="term">MCP<span class="en">법령 원문 연결수단</span></div><div class="def">Korean-law-MCP 같은 <b>법령 Ground Truth 후보</b> 외부 연결. <b>단일 의존은 금지</b>.</div></div>
+    <div class="gl"><div class="term">LawDataSource<span class="en">법령 조회 인터페이스</span></div><div class="def"><span class="mono">getProvision(법령,조문,asOfDate)</span> → <b>시행일 버전</b>을 받는 표준 창구.</div></div>
+    <div class="gl"><div class="term">SourceSnapshot<span class="en">원문 박제</span></div><div class="def">받은 원문을 <b>해시(content_hash)로 저장</b>해, 답변 당시 법령 버전을 <b>사후 복원</b>하는 증거.</div></div>
+    <div class="gl"><div class="term">asOfDate<span class="en">기준 시점</span></div><div class="def">"<b>이 날짜에 유효한</b> 법령 버전을 달라"는 시점 키. 거래일·귀속연도 등.</div></div>
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 8 / 10</div>
+</div>
+
+<!-- ============ P9 — 흔한 오해 ============ -->
+<div class="page">
+  <h2>흔한 오해 — "이렇게 말하면 틀립니다"</h2>
+  <p class="lead">외부 연동을 소개할 때 <b>자주 빠지는 함정</b>. 오른쪽이 정확한 설명입니다.</p>
+
+  <table style="margin-top:9px">
+    <tr><th width="32">#</th><th width="40%">❌ 이렇게 말하면 틀림</th><th>✅ 정확히는</th><th width="98">근거</th></tr>
+    <tr><td>1</td><td>"법령은 <b>MCP 하나만</b> 붙이면 충분"</td><td>단일 종속은 위험 → <b>LawDataSource 추상화 + fallback</b>(법제처/국세법령정보)</td><td class="mono">API-002</td></tr>
+    <tr><td>2</td><td>"<b>최신 법령만</b> 조회하면 됨"</td><td>세무 판단은 <b>asOfDate 기준 시행일 버전</b>이 필요(연도마다 다름)</td><td class="mono">API-003</td></tr>
+    <tr><td>3</td><td>"외부 응답은 <b>링크만</b> 남기면 됨"</td><td><b>SourceSnapshot 해시</b>로 답변 당시 원문을 복원해야 함</td><td class="mono">API-004·PROV-009</td></tr>
+    <tr><td>4</td><td>"retry는 <b>많이 할수록</b> 좋다"</td><td><b>idempotent 호출만</b> 자동 재시도, 횟수·타임아웃 상한</td><td class="mono">API-006</td></tr>
+    <tr><td>5</td><td>"캐시는 <b>비용절감용</b>이면 충분"</td><td><b>시점 키 + 테넌트 격리</b> 필수, 캐시 통한 교차 누수 0</td><td class="mono">API-009·SEC-001</td></tr>
+    <tr><td>6</td><td>"<b>직접 크롤링</b>도 공식근거처럼 쓰면 됨"</td><td>공식 원문 대조 + <b>content_hash 인증</b>, 실패 시 '참고'로만</td><td class="mono">API-012</td></tr>
+    <tr><td>7</td><td>"벤더는 <b>한 번 고르면 끝</b>"</td><td>어댑터+contract로 <b>교체 가능</b>해야(이식성)</td><td class="mono">API-001·NFR-009</td></tr>
+    <tr><td>8</td><td>"외부 API가 편하면 <b>고객자료도 전송</b>"</td><td>기밀등급별 전송정책·비학습·마스킹·on-prem 강제</td><td class="mono">API-005·013</td></tr>
+  </table>
+
+  <div class="callout" style="margin-top:12px"><span class="lab">한 문장으로 안전하게</span>
+    <p style="margin:4px 0 0">"외부 의존을 <b>어댑터로 캡슐화</b>해 교체 가능하게 하고, 법령 같은 핵심 근거는 <b>이중화·시점 박제</b>로
+    장애에도 재현 가능하게 만든 인프라 계층입니다."</p></div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 9 / 10</div>
+</div>
+
+<!-- ============ P10 — 핵심 메시지 ============ -->
+<div class="page">
+  <h2>이 문서를 왜 이렇게 썼나 — 핵심 메시지 3</h2>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">01</span> &nbsp;외부 정보 제공자는 '어댑터 뒤'에 두어 교체 가능하게</h3>
+    <p style="margin:4px 0">상위 로직은 벤더를 모릅니다. <span class="mono">contract</span>로만 대화하므로 임베딩·검색·법령 소스를 갈아끼워도
+    판단 품질이 흔들리지 않습니다. <b>벤더 lock-in 회피 = 이식성.</b></p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:10px">
+    <h3 style="margin-top:0"><span class="num">02</span> &nbsp;핵심 근거(법령)는 asOfDate·SourceSnapshot으로 시점성·재현성 확보</h3>
+    <p style="margin:4px 0">법령은 <b>시행일 버전</b>으로 받고, 받은 원문을 <b>해시로 박제</b>합니다.
+    "이 답이 어느 시점 어느 조문으로 나왔는지"를 나중에 그대로 복원 — 감사 가능한 근거 사슬.</p>
+  </div>
+
+  <div class="card" style="border-left:6px solid var(--green); margin-bottom:14px">
+    <h3 style="margin-top:0"><span class="num">03</span> &nbsp;fallback·SLA·비용/오류 로깅이 공급망 통제의 핵심</h3>
+    <p style="margin:4px 0">단일 장애에 무너지지 않게 <b>이중화·회로차단</b>하고, 대체 경로엔 <b>품질목표(SLA)</b>를,
+    모든 호출엔 <b>비용·지연·오류 로깅</b>을 둡니다. 측정 안 되면 통제 불가.</p>
+  </div>
+
+  <div class="synth" style="background:linear-gradient(150deg,#0B2A3C,#13405A)">
+    <div class="kicker" style="color:#86BC25">면접 한 줄</div>
+    <p style="font-size:12pt; margin:6px 0 0; line-height:1.65">"법령을 핵심 근거로 쓰는데 그게 외부 MCP 하나에 묶이면 위험합니다.
+    그래서 법령 조회를 <b>인터페이스로 추상화</b>하고, 장애 시 <b>법제처 공식 데이터로 자동 대체</b>하게 했습니다.
+    받은 원문을 <b>해시로 박제</b>해, '이 답이 어느 시점 어느 조문으로 나왔는지'를 그대로 재현할 수 있게 했습니다."</p>
+  </div>
+
+  <div style="margin-top:20px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 법인세 자문 보조 AI 설계서<br>
+    본 해설본은 <span class="mono">docs/07_외부API연동.md</span>의 비개발자용 도식 요약입니다 · 정본은 원문을 따릅니다 · 2026-06-28
+  </div>
+  <div class="pgnote">외부 API 연동 · 쉬운 설명 — 10 / 10</div>
+</div>
