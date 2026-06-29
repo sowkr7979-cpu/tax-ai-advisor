@@ -319,5 +319,40 @@ def test_cli_demo_replay_succeeds(tmp_path):
     assert out.exists()
 
 
+def test_cli_live_construction_failure_fails_closed(monkeypatch, tmp_path):
+    """live 모드 키 부재 등 Orchestrator 생성 시점 오류도 raw traceback 없이 exit 2."""
+    import tiw.cli as cli
+    from src.ai.llm_client import LLMUnavailable
+
+    class _BoomCtor:
+        def __init__(self, *a, **k):
+            raise LLMUnavailable("no ANTHROPIC_API_KEY configured")
+
+    monkeypatch.setattr(cli, "Orchestrator", _BoomCtor)
+    out = tmp_path / "x.docx"
+    rc = cli.main(["run", "--live", "--out", str(out)])
+    assert rc == 2  # _REPRO_ERRORS 친화 안내(생성자도 try 안)
+    assert not out.exists()
+
+
+def test_cli_unexpected_error_no_traceback(monkeypatch, tmp_path, capsys):
+    """예기치 못한(비-repro) 오류도 CLI 는 깔끔히 exit 1 — raw traceback 금지."""
+    import tiw.cli as cli
+
+    class _BoomRun:
+        def __init__(self, *a, **k):
+            pass
+
+        def run(self, *a, **k):
+            raise RuntimeError("unexpected replay channel failure")
+
+    monkeypatch.setattr(cli, "Orchestrator", _BoomRun)
+    out = tmp_path / "x.docx"
+    rc = cli.main(["run", "--replay", "--out", str(out)])
+    assert rc == 1
+    assert "예기치 못한 오류" in capsys.readouterr().out
+    assert not out.exists()
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

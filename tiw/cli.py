@@ -101,16 +101,25 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if args.mode == "live":
         print("  (live) 실제 LLM/임베딩 호출 + fixture 녹화 — 네트워크/키 사용")
 
-    orch = Orchestrator(mode=args.mode)
+    # 생성자도 try 안에서 — live 모드 키 부재 등은 Orchestrator() 구성 시점에 발생한다.
     try:
+        orch = Orchestrator(mode=args.mode)
         result = orch.run(
             company=company, question=question, out_path=out,
             audience=args.audience, approve_demo=args.approve_demo,
             write_docx=out is not None,
         )
     except _REPRO_ERRORS as exc:
-        # fail-closed: 잘못된/합성 답변을 내지 않고 명확히 중단한다(raw traceback 금지).
+        # 재현불가/서비스 미가용 — 잘못된/합성 답변을 내지 않고 명확히 안내(raw traceback 금지).
         return _explain_unreproducible(exc, mode=args.mode, primary_hint=question)
+    except Exception as exc:  # noqa: BLE001
+        # 그 외 예기치 못한 오류도 CLI 는 raw traceback 대신 깔끔히 중단한다(fail-closed).
+        print()
+        print("⚠ 예기치 못한 오류로 중단했습니다(fail-closed — 산출물 미생성).")
+        print(f"  사유: {type(exc).__name__}: {str(exc)[:200]}")
+        if args.mode == "replay":
+            print("  replay 에 녹화되지 않은 입력일 수 있습니다 — 데모 범위로 실행하거나 --live 를 사용하세요.")
+        return 1
 
     print("\n── 진행 로그(§4-1 단계·소스·인용) ──")
     for line in result.log:

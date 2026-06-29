@@ -29,7 +29,7 @@
   - **지급이자 절세기회 템플릿** 추가(validate ≥1 opportunity 충족 → 지급이자 단독 matter 도 정상).
   - 회귀테스트 5건(요약 누출0·심화절 유지·웹 정직·증빙 쟁점일치·질문→주쟁점). **codex 재검증 STILL-LEAKS 지적 전부 해소**. pytest **210**, 데모 결정성 유지(sha `01775e`), 슬라이스 회귀 0.
   - **3라운드(draft.py 섹션 헤더)**: 11목차 §8 고정 헤더 "관련 법령·예규·판례 근거"가 **예규/판례를 무조건 표기**(데모조차 법령+웹만 인용 → 과표기) → **"관련 법령·근거 자료"**(법령·예규·판례·웹 포괄, 실제 인용만 본문 나열)로 정정. 백엔드(REQUIRED_SECTIONS·validate)·프론트(DraftScreen·fixture·Playwright)·테스트 동기 갱신. **pytest 210 + Playwright 3 passed**. codex 최종 STILL-LEAKS의 유일 잔여 항목 해소 → **SUMMARY-SAFE**.
-  - **4라운드(비-데모 replay 경로 fail-closed UX)**: 질문→주쟁점 승격 후, replay 에 녹화 안 된 질문/쟁점(예: 지급이자)은 LLM fixture 부재로 **raw traceback(exit 1)** 노출 → CLI 가 transport fail-closed(`LLMError`/`LawSourceError`/`WebSearchError`/`Embedding*`)를 잡아 **명확한 안내 + exit 2**로 변환(데모는 질문 없이 결정적 실행, 새 질문은 `--live`). 잘못된/합성 답을 만들지 않고 산출물도 미생성. 회귀테스트 2건(비-데모 replay→exit2·산출없음 / 데모 replay→exit0·DOCX). **pytest 212 passed**.
+  - **4라운드(비-데모 replay 경로 fail-closed UX)**: 질문→주쟁점 승격 후, replay 에 녹화 안 된 질문/쟁점(예: 지급이자)은 LLM fixture 부재로 **raw traceback(exit 1)** 노출 → CLI 가 transport fail-closed(`LLMError`/`LawSourceError`/`WebSearchError`/`Embedding*`)를 잡아 **명확한 안내 + exit 2**로 변환(데모는 질문 없이 결정적 실행, 새 질문은 `--live`). 잘못된/합성 답을 만들지 않고 산출물도 미생성. **codex 재검증 2차 잔여 2건 반영**: (1) Orchestrator 생성자를 try 밖→**안으로 이동**(live 키 부재 등 구성 시점 오류도 친화 exit 2), (2) `_REPRO_ERRORS` 외 예기치 못한 예외(비-repro RuntimeError 등)도 **catch-all 로 깔끔히 exit 1**(raw traceback 전면 금지). 회귀테스트 4건(비-데모 replay→exit2·산출없음 / 데모 replay→exit0·DOCX / live 생성실패→exit2 / 예기치못한 오류→exit1·traceback 없음). **pytest 214 passed**.
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
