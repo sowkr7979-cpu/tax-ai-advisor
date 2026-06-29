@@ -14,7 +14,7 @@ collections/namespaces and MUST preserve this contract.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Protocol, runtime_checkable
 
 from contract.base import ConfidentialityLevel, IndexScope
 from src.ai.base import Embedder
@@ -38,6 +38,16 @@ class ScoredItem:
     scope: IndexScope
     owner_client_id: Optional[str]
     text: str
+
+
+@runtime_checkable
+class VectorStore(Protocol):
+    """The isolation-preserving store contract shared by the pure-Python
+    ``DeterministicVectorStore`` (slice ⑥) and the Chroma-backed
+    ``ChromaVectorStore`` (slice ②). SEC-002: ``search`` REQUIRES a TenantScope —
+    there is no overload without one."""
+
+    def search(self, scope: "TenantScope", query: str, top_k: int = 5) -> list[ScoredItem]: ...
 
 
 def _cosine(a: list[float], b: list[float]) -> float:

@@ -146,6 +146,50 @@ class LawAnchorQuery(TIWModel):
     gold_issues: list[str] = Field(default_factory=list)
 
 
+# --- slice ② RAG gold schema (RAG-002/005/007/013/017, HALU-003) --------- #
+class RagCorpusDoc(TIWModel):
+    """One ingestible unit for the internal-RAG index.
+
+    Two kinds (docs/05 §4 분류 routes the splitter):
+      * ``law``    — a SHARED reference 조문. The harness CHUNKS it from the
+        committed 법제처 fixture (``effective_year`` picks the 시행일 버전 body),
+        so the long statute text is NOT duplicated in the gold JSON. Structure-
+        aware chunking (조/항/호/목 + metadata) happens in src.chunking.
+      * ``client`` — L3/L4 client material (inline text). Routed to that client's
+        TENANT partition (SEC-003); the isolation key is mandatory."""
+
+    doc_id: str
+    kind: str = "client"                     # "law" | "client"
+    # law-doc fields
+    law_name: Optional[str] = None
+    article_label: Optional[str] = None
+    effective_year: Optional[int] = None     # which 시행일 fixture (2020/2024)
+    # client-doc fields
+    confidentiality_level: str = "L3_CLIENT"
+    client_id: Optional[str] = None
+    text: str = ""
+    chunk_type: str = "메모"
+    tax_type: Optional[str] = None
+    expect_reject: bool = False              # SEC-001 NULL-key negative ingestion
+
+
+class RagQuery(TIWModel):
+    """One slice-② internal-RAG question scoped to a tenant + as-of date."""
+
+    query_id: str
+    question_text: str
+    as_client: str                           # TenantScope (SEC-002, 끌 수 없음)
+    as_of_date: date                         # temporal validity filter (RAG-005)
+    basis_kind: BasisKind = BasisKind.FISCAL_YEAR
+    high_risk: bool = False
+    # the version-pinned provision the citation-grounded answer MUST anchor to
+    gold_law: LawAnchorGoldCitation
+    gold_chunk_ids: list[str] = Field(default_factory=list)      # recall@k targets
+    forbidden_chunk_ids: list[str] = Field(default_factory=list)  # leakage set (must be 0)
+    expect_shared: list[str] = Field(default_factory=list)       # SHARED chunks allowed
+    gold_issues: list[str] = Field(default_factory=list)         # issue-spotting (independent)
+
+
 class EvaluationCase(TIWModel):
     case_id: str
     slice: int
@@ -157,3 +201,6 @@ class EvaluationCase(TIWModel):
     top_k: int = 5
     # slice ① only (empty for other slices)
     law_queries: list[LawAnchorQuery] = Field(default_factory=list)
+    # slice ② only (empty for other slices)
+    rag_corpus: list[RagCorpusDoc] = Field(default_factory=list)
+    rag_queries: list[RagQuery] = Field(default_factory=list)

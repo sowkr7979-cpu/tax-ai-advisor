@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from contract.base import ConfidentialityLevel, SourceKind
+from contract.base import BasisKind, ConfidentialityLevel, SourceKind, SourceType
 from contract.cluster_d_provenance import ProvisionVersion, SourceSnapshot
 from contract.cluster_f_qa import Citation, Claim, SourceAnswer
 from src.ai.law_data_source import ProvisionLookupResult
@@ -180,6 +180,10 @@ def generate_research_answer(
     confidentiality_level: ConfidentialityLevel = ConfidentialityLevel.L0_PUBLIC,
     llm_client: Optional[LLMClient] = None,
     registry: Optional[SourceRegistry] = None,
+    answer_source_type: SourceType = SourceType.LAW_MCP,
+    channel_label: str = "①",
+    retrieval_run_id: Optional[str] = None,
+    basis_kind: BasisKind = BasisKind.FISCAL_YEAR,
 ) -> ResearchLiteAnswer:
     # 0) confidentiality send-boundary guard (codex P2-2, docs/01 §8 / API-005):
     # block BEFORE any external-LLM send. The Anthropic default path is NOT
@@ -200,10 +204,16 @@ def generate_research_answer(
         answer_run_id=answer_run_id,
         source_answer_id=source_answer_id,
         source_type_label=source_type_label,
+        basis_kind=basis_kind,
         high_risk=False,            # warning is attached below per needs_review/high_risk
         registry=registry,
+        answer_source_type=answer_source_type,
+        channel_label=channel_label,
     )
     pv = bundle.provision_version
+    if retrieval_run_id is not None:
+        # link the answer to its RetrievalRun (RAG-013 / SEC-007 reproducibility)
+        bundle.source_answer.retrieval_run_id = retrieval_run_id
 
     # 2) LLM legal reasoning, grounded in the provision text
     system, user = build_generation_prompt(lookup, question_text)
@@ -256,7 +266,7 @@ def generate_research_answer(
     # 4) compose the user-facing answer text + reviewer warning (HALU-009)
     warnings: list[str] = list(bundle.review_warnings)
     parts = [
-        f"[법령 앵커 — 채널 ①] {bundle.claim.proposition}",
+        f"[법령 앵커 — 채널 {channel_label}] {bundle.claim.proposition}",
         f"근거 조문: {lookup.law_name} {lookup.article_label} "
         f"(시행 {pv.effective_from:%Y-%m-%d})",
         f"■ 법리 결론 ({certainty}): {legal_conclusion}",

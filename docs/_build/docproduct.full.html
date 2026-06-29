@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><title>Tax Intelligence Workspace (TIW) — 제품·시스템 설계 개요</title>
+<style>
+  :root{
+    --green:#86BC25; --green-d:#5E8A18; --navy:#0B2A3C; --navy2:#13405A;
+    --ink:#1A2230; --muted:#5C6B7A; --line:#D8E0E8; --bg:#F4F7FA;
+    --law:#2563EB; --rag:#16A34A; --web:#EA580C;
+    --amber:#E0A100; --red:#D64550;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:'Malgun Gothic','맑은 고딕','Segoe UI',sans-serif;
+    color:var(--ink); font-size:10.5pt; line-height:1.6;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  @page{ size:A4; margin:14mm 13mm; }
+  .page{ page-break-after:always; }
+  .page:last-child{ page-break-after:auto; }
+  h1,h2,h3{ color:var(--navy); margin:0 0 6px; line-height:1.25; }
+  h2{ font-size:17pt; border-left:6px solid var(--green); padding-left:11px; margin-top:2px; }
+  h3{ font-size:12.5pt; color:var(--navy2); margin-top:14px; }
+  p{ margin:7px 0; }
+  small{ color:var(--muted); }
+  .lead{ font-size:11pt; color:#2C3A48; }
+  .tag{ display:inline-block; background:var(--green); color:#fff; font-size:8.5pt;
+    font-weight:700; padding:2px 9px; border-radius:11px; letter-spacing:.3px; vertical-align:middle; }
+  .tag.alt{ background:var(--navy); }
+  .kicker{ color:var(--green-d); font-weight:800; letter-spacing:2px; font-size:9pt; text-transform:uppercase; }
+
+  /* ---------- COVER ---------- */
+  .cover{ height:262mm; display:flex; flex-direction:column; justify-content:space-between;
+    background:linear-gradient(150deg,#0B2A3C 0%,#13405A 55%,#1C5470 100%); color:#fff;
+    margin:-14mm -13mm; padding:24mm 20mm; }
+  .cover .dot{ width:15px; height:15px; background:var(--green); border-radius:50%; display:inline-block; margin-left:5px; }
+  .cover h1{ color:#fff; font-size:33pt; line-height:1.2; margin:0; }
+  .cover .sub{ font-size:14pt; color:#CBE6F2; margin-top:14px; font-weight:600; }
+  .cover .file{ font-family:Consolas,monospace; font-size:10.5pt; color:#86BC25; margin-top:6px; }
+  .cover .meta{ font-size:10.5pt; color:#AFC8D6; line-height:1.9; }
+  .cover .rule{ height:4px; width:80px; background:var(--green); margin:18px 0; border-radius:2px; }
+  .cover .badgewrap{ margin-top:16px; }
+  .cover .badge{ display:inline-block; border:1.4px solid #4E7488; color:#DCEAF2; border-radius:7px;
+    padding:7px 13px; font-size:9.5pt; margin:4px 7px 4px 0; }
+
+  /* ---------- generic blocks ---------- */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:11px; }
+  .card{ background:#fff; border:1.3px solid var(--line); border-radius:10px; padding:13px 15px; }
+  .card.fill{ background:var(--bg); }
+  .card h3{ margin-top:0; }
+  .analogy{ background:#F0F7E6; border:1.3px solid #CFE3A8; border-left:6px solid var(--green);
+    border-radius:9px; padding:13px 16px; }
+  .analogy .lab{ color:var(--green-d); font-weight:800; font-size:9.5pt; }
+  .callout{ background:#FFF8E6; border:1.3px solid #F0D98A; border-left:6px solid var(--amber);
+    border-radius:9px; padding:12px 15px; }
+  .callout .lab{ color:#A87B00; font-weight:800; font-size:9.5pt; }
+  .danger{ background:#FCEEF0; border:1.3px solid #F2C2C8; border-left:6px solid var(--red);
+    border-radius:9px; padding:12px 15px; }
+  .danger .lab{ color:#B3303C; font-weight:800; font-size:9.5pt; }
+  ul.tight{ margin:6px 0; padding-left:19px; }
+  ul.tight li{ margin:3px 0; }
+  .pill{ display:inline-block; font-size:8pt; font-weight:700; padding:1px 7px; border-radius:9px; color:#fff; }
+  .p0{ background:var(--red); } .p1{ background:var(--amber); } .p2{ background:#7C8B99; }
+
+  table{ width:100%; border-collapse:collapse; font-size:9.3pt; margin:8px 0; }
+  th{ background:var(--navy); color:#fff; text-align:left; padding:6px 9px; font-weight:700; }
+  td{ border-bottom:1px solid var(--line); padding:5px 9px; vertical-align:top; }
+  tr:nth-child(even) td{ background:#F7FAFC; }
+  .mono{ font-family:Consolas,monospace; font-size:8.6pt; color:var(--navy2); font-weight:700; }
+
+  /* ---------- flow diagram (UC) ---------- */
+  .flow{ display:flex; align-items:stretch; gap:0; flex-wrap:wrap; }
+  .step{ flex:1; min-width:0; background:#fff; border:1.3px solid var(--line); border-top:4px solid var(--green);
+    border-radius:8px; padding:9px 8px; text-align:center; position:relative; }
+  .step .n{ display:inline-block; background:var(--green); color:#fff; width:21px; height:21px; line-height:21px;
+    border-radius:50%; font-weight:800; font-size:9pt; margin-bottom:4px; }
+  .step .t{ font-weight:700; font-size:9.3pt; color:var(--navy); display:block; }
+  .step .d{ font-size:8.2pt; color:var(--muted); display:block; margin-top:2px; }
+  .arrowcol{ display:flex; align-items:center; justify-content:center; width:16px; color:var(--green);
+    font-weight:900; font-size:13pt; }
+
+  /* ---------- HITL gates ---------- */
+  .gateline{ display:flex; flex-direction:column; gap:8px; }
+  .gate{ display:grid; grid-template-columns:54px 1fr 130px; align-items:center; gap:11px;
+    background:#fff; border:1.3px solid var(--line); border-radius:9px; padding:9px 12px; }
+  .gate .gid{ background:var(--navy); color:#fff; font-weight:800; text-align:center; border-radius:7px;
+    padding:8px 4px; font-size:11pt; }
+  .gate.hi .gid{ background:var(--red); }
+  .gate .gwho{ font-size:8.6pt; }
+  .gate .gwho b{ color:var(--navy2); }
+  .chip{ display:inline-block; background:#EAF1F6; color:var(--navy2); border-radius:7px; padding:1px 7px;
+    font-size:8pt; font-weight:700; margin:1px 2px; }
+  .chip.esc{ background:#FBE7C8; color:#8A6400; }
+
+  /* ---------- 3-source synthesis ---------- */
+  .srcwrap{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .src{ border-radius:10px; padding:11px 12px; color:#fff; }
+  .src.law{ background:linear-gradient(160deg,#2563EB,#1E40AF); }
+  .src.rag{ background:linear-gradient(160deg,#16A34A,#0F7A38); }
+  .src.web{ background:linear-gradient(160deg,#EA580C,#B5470B); }
+  .src .sh{ font-weight:800; font-size:10.5pt; }
+  .src .ss{ font-size:8.4pt; opacity:.92; }
+  .src .sa{ background:rgba(255,255,255,.16); border-radius:6px; padding:5px 8px; margin-top:7px; font-size:8.3pt; }
+  .merge{ text-align:center; font-weight:900; color:var(--green-d); font-size:15pt; margin:4px 0; }
+  .synth{ background:var(--navy); color:#fff; border-radius:10px; padding:13px 16px; }
+  .synth h3{ color:#fff; margin:0 0 4px; }
+  .synth .claim{ background:rgba(134,188,37,.18); border:1px solid rgba(134,188,37,.5); border-radius:6px;
+    padding:4px 9px; font-size:8.6pt; margin:4px 0; }
+
+  /* ---------- domain map ---------- */
+  .dommap{ display:grid; grid-template-columns:repeat(4,1fr); gap:9px; }
+  .dom{ background:#fff; border:1.3px solid var(--line); border-radius:9px; padding:9px 10px; }
+  .dom .code{ font-family:Consolas,monospace; font-weight:800; color:#fff; font-size:9pt;
+    padding:1px 8px; border-radius:6px; }
+  .dom .cnt{ float:right; font-size:8pt; color:var(--muted); font-weight:700; }
+  .dom .nm{ font-weight:700; font-size:9.2pt; color:var(--navy); display:block; margin-top:6px; }
+  .dom .ds{ font-size:8.2pt; color:var(--muted); display:block; }
+  .c-intk{background:#0EA5A5}.c-orch{background:#7C3AED}.c-agt{background:#DB2777}.c-out{background:#0284C7}
+  .c-sec{background:#475569}.c-prov{background:#B45309}.c-rag{background:#16A34A}.c-web{background:#EA580C}
+  .c-api{background:#0891B2}.c-halu{background:#D64550}.c-nfr{background:#1F2937}
+
+  /* ---------- traceability ---------- */
+  .trace{ display:flex; align-items:stretch; gap:0; }
+  .tnode{ flex:1; background:#fff; border:1.3px solid var(--line); border-radius:8px; padding:10px; text-align:center; }
+  .tnode .tl{ font-size:8pt; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .tnode .tv{ font-family:Consolas,monospace; font-weight:800; color:var(--navy); font-size:9pt; margin-top:3px; }
+  .tarr{ display:flex; align-items:center; color:var(--green); font-weight:900; font-size:14pt; padding:0 5px; }
+
+  .agtgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .agt{ background:#fff; border:1.3px solid var(--line); border-left:5px solid var(--navy2); border-radius:8px; padding:8px 11px; }
+  .agt .an{ font-weight:800; color:var(--navy); }
+  .agt.star{ border-left-color:var(--green); background:#F6FBEF; }
+  .agt .ad{ font-size:8.7pt; color:var(--muted); }
+
+  .gl{ display:grid; grid-template-columns:128px 1fr; gap:0; border-bottom:1px solid var(--line); padding:6px 0; }
+  .gl .term{ font-weight:800; color:var(--navy2); font-size:9.6pt; }
+  .gl .term .en{ display:block; font-size:7.8pt; color:var(--muted); font-family:Consolas,monospace; font-weight:600; }
+  .gl .def{ font-size:9.3pt; }
+  .footer{ position:running(footer); }
+  .pgnote{ text-align:right; font-size:8pt; color:var(--muted); margin-top:10px; border-top:1px solid var(--line); padding-top:5px; }
+  .num{ color:var(--green-d); font-weight:800; }
+  .twocol{ column-count:2; column-gap:16px; }
+</style></head>
+<body>
+<!-- ============ COVER ============ -->
+<div class="page">
+  <div class="cover">
+    <div>
+      <div class="kicker" style="color:#86BC25">Tax Intelligence Workspace · 제품·시스템 설계 개요</div>
+      <div style="height:18px"></div>
+      <h1>법인세 세무 AI<span class="dot"></span><br>Tax Intelligence<br>Workspace (TIW)</h1>
+      <div class="rule"></div>
+      <div class="sub">회사별 회계·세무자료 기반 — 리스크·절세 기회·선택지 비교부터<br>근거 검증·검토패키지 초안까지의 자문 보조 AI 설계</div>
+      <div class="file">제품·시스템 설계 개요 (검토자용)</div>
+      <div class="badgewrap">
+        <span class="badge">🧭 6 Agent 파이프라인</span>
+        <span class="badge">🔬 3소스 근거 종합 + 계산 검산</span>
+        <span class="badge">🧑‍⚖️ 회계사 최종판단(HITL)</span>
+        <span class="badge">🔐 테넌트 격리·감사추적</span>
+      </div>
+    </div>
+    <div class="meta">
+      <div class="rule" style="width:50px"></div>
+      문서 성격 · 제품 컨셉·아키텍처·검증/보안 설계 개요<br>
+      범위 · MVP 시연 범위와 설계 단계를 구분 표기<br>
+      비고 · 개발 용어는 본문·용어집에서 평이하게 풀이<br>
+      날짜 · 2026-06-29
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 — Executive Summary ============ -->
+<div class="page">
+  <h2>Executive Summary — 한눈에</h2>
+  <p class="lead"><b>TIW</b>는 회사의 회계·세무 자료를 입력받아 세무 <b>리스크와 절세 기회</b>를 식별하고, 처리 <b>선택지(보수/중립/적극)</b>를
+  세부담·리스크·방어가능성으로 비교한 뒤, 법령 근거와 계산검산을 붙여 <b>회계사가 검토할 DOCX 검토패키지 초안</b>을 생성하는 자문 보조 AI다.</p>
+
+  <div class="callout" style="margin-top:8px">
+    <span class="lab">⚖ 포지셔닝</span>
+    <p style="margin:4px 0 0"><b>신고서 작성 자동화가 아니다.</b> 신고·컴플라이언스(ERP 처리)는 기존 솔루션의 영역으로 두고,
+    TIW는 그 <b>위층 — 전략·복잡 판단의 자문 보조</b>에 초점을 둔다. 결론을 내리지 않고, <b>회계사가 최종 판단</b>할 수 있도록 자료·계산·근거·선택지를 정리한다.</p>
+  </div>
+
+  <h3>설계의 3대 기둥</h3>
+  <div class="grid3" style="margin-top:4px">
+    <div class="card fill"><h3 style="margin-top:0">① 역할 분담 (Agent)</h3><small>하나의 거대 챗봇이 아니라 <b>업무 단계별 전문 AI 6개</b>가 각자 산출물을 만들고 처리 이력을 남긴다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">② 근거 결속 (Grounding)</h3><small>AI 기억으로 추측하지 않고 <b>법령 원문·실무서·웹</b>의 실제 근거에 묶고 출처를 인용한다.</small></div>
+    <div class="card fill"><h3 style="margin-top:0">③ 검증 + 사람 (HITL)</h3><small>계산은 <b>코드로 검산</b>, 상충은 <b>회계사 검토</b>로. 미해소 사안을 단정하지 않는다.</small></div>
+  </div>
+
+  <h3>대상 업무 — 전 세무항목 동일 구조</h3>
+  <p style="margin:4px 0">접대비 · 업무용승용차 · 가지급금 인정이자 · 지급이자 손금불산입 · 기부금 한도 · 감가상각 · 세액공제 등 —
+  <b>어떤 항목이든 같은 파이프라인</b>(리스크 → 선택지 비교 → 근거 → 계산 검산 → 검토패키지)으로 처리한다(Tax Skill Library).</p>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 2 / 12</div>
+</div>
+
+<!-- ============ P3 — 전체 파이프라인 ============ -->
+<div class="page">
+  <h2>도식 ① — 전체 파이프라인 (자료 → 검토패키지)</h2>
+  <p class="lead">데이터가 들어와 검토패키지로 나오기까지 <b>10단계</b>. 단계마다 책임지는 Agent가 다르다(괄호).</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step"><span class="n">0</span><span class="t">자료수집 인터뷰</span><span class="d">Intake — 대화로 필요자료 수집·결손 고지</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">1</span><span class="t">Workspace 생성</span><span class="d">회사별 작업공간·격리</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">자료 적재</span><span class="d">Tax Vault에 저장</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">3</span><span class="t">이상항목 탐지</span><span class="d">Risk — 계정변동·이상</span></div>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:3px 0">⌄</div>
+  <div class="flow">
+    <div class="step"><span class="n">4</span><span class="t">리스크·절세 후보</span><span class="d">Risk — 쟁점 후보 생성</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">5</span><span class="t">법령 리서치</span><span class="d">Research — 3소스 근거</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--green)"><span class="n" style="background:var(--green)">6</span><span class="t" style="color:var(--green-d)">★ 선택지 비교</span><span class="d">Strategy — 세부담·방어</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">7</span><span class="t">결론·보류 정리</span><span class="d">검토항목 도출</span></div>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:3px 0">⌄</div>
+  <div class="flow">
+    <div class="step"><span class="n">8</span><span class="t">DOCX 초안 생성</span><span class="d">Draft — 11목차 패키지</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="n" style="background:var(--navy)">9</span><span class="t">회계사 판단·이력</span><span class="d">HITL — 수정·최종판단 저장</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">10</span><span class="t">다음해 재활용</span><span class="d">Tax Memory 축적</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card"><h3 style="margin-top:0">🔁 같은 파이프라인, 모든 항목</h3><small>어떤 세무항목이든 위 10단계를 동일하게 통과한다(Tax Skill Library). 특정 항목을 깊게가 아니라 <b>"구조"로 일관 처리</b>하는 것이 설계 의도.</small></div>
+    <div class="analogy"><span class="lab">증빙 연결 (Evidence)</span><p style="margin:4px 0 0; font-size:9pt">원장·계약서·통장·세금계산서를 각 쟁점에 <b>연결(인덱스)</b>해, "이 주장은 이 증빙이 뒷받침"을 항상 추적 가능하게 둔다.</p></div>
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 3 / 12</div>
+</div>
+
+<!-- ============ P4 — Intake 인터뷰 루프 ============ -->
+<div class="page">
+  <h2>도식 ② — 0단계: 자료수집 인터뷰 (Intake Agent)</h2>
+  <p class="lead">분석 <b>전</b> 단계. 어떤 자료가 필요한지 사전에 모두 알기 어렵기 때문에, AI가 <b>대화로 필요한 자료를 하나씩 안내·수집</b>한다.</p>
+
+  <div class="trace" style="margin-top:10px">
+    <div class="tnode"><div class="tl">시작</div><div class="tv">검토 목적·대상</div><small style="font-size:7.6pt">"A제조 2026 절세"</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode" style="border-color:#CFE3A8; background:#F6FBEF"><div class="tl">인터뷰 루프</div><div class="tv">질문→답변→적재</div><small style="font-size:7.6pt">충분할 때까지 반복</small></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">마감 정리</div><div class="tv">범위·결손·한계</div><small style="font-size:7.6pt">"한계 꼬리표" 부착</small></div>
+  </div>
+
+  <div class="card fill" style="margin-top:12px">
+    <h3 style="margin-top:0">인터뷰 루프 내부 (4스텝 반복)</h3>
+    <div class="flow">
+      <div class="step"><span class="n">①</span><span class="t">AI 질문</span><span class="d">"전기 신고서 있나요? 계정별 원장은요?"</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">②</span><span class="t">사용자 답변</span><span class="d">업로드 / "없음" / "모름"</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">③</span><span class="t">수집·적재</span><span class="d">Tax Vault 저장·체크</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="n">④</span><span class="t">충분성 점검</span><span class="d">부족 → ①로 / 충분 → 종료</span></div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card" style="border-top:4px solid var(--green)"><h3 style="margin-top:0">루프 종료 2가지</h3><small>(a) AI가 <b>"자료 충분"</b> 판단 / (b) 사용자가 <b>"여기까지만 입력"</b> 선언 시 <b>즉시 탈출</b>(조기 종료).</small></div>
+    <div class="callout"><span class="lab">💡 마감 정리가 필수인 이유</span><p style="margin:4px 0 0; font-size:9pt"><b>어떤 자료로 어디까지 검토 가능한지 + 부족분·전제·한계</b>를 명시 → 이후 모든 결론에 <b>"자료 한계" 꼬리표</b>가 붙어 <b>과신을 방지</b>한다.</p></div>
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 4 / 12</div>
+</div>
+
+<!-- ============ P5 — 6 Agent + 오케스트레이션 ============ -->
+<div class="page">
+  <h2>도식 ③ — 6 Agent와 오케스트레이션</h2>
+  <p class="lead"><b>오케스트레이션 = 지휘.</b> 큰 작업을 <b>잘게 쪼개(작업 분해)</b> 여러 Agent에게 <b>나눠 맡기고(병렬)</b>, 결과를 <b>하나로 합치는(통합)</b> 관리 계층이다.</p>
+
+  <div class="card fill" style="margin-top:10px; text-align:center; border:1.3px solid var(--navy2)">
+    <span class="mono" style="color:var(--navy)">오케스트레이터 (Claude Code)</span> &nbsp;—&nbsp; <small>작업 분해 · 에이전트 병렬 실행 · 결과 통합</small>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:2px 0">⌄</div>
+
+  <div class="card fill" style="margin-top:2px; text-align:center; border:1.3px solid var(--navy2)">
+    <h3 style="margin:0; color:var(--navy)">🗄 Tax Vault (회사별 자료 저장소)</h3>
+    <small>TB · 계정별 원장 · 전기 신고서 · 재무제표 · 계약서 · 증빙 — 회사별 격리(<span class="mono">client_id</span>)</small>
+  </div>
+  <div style="text-align:center; color:var(--green); font-weight:900; font-size:13pt; margin:2px 0">⌄</div>
+
+  <div class="agtgrid" style="margin-top:2px">
+    <div class="agt"><span class="an">🗂 Intake</span> <span class="ad">— 자료수집 인터뷰. 필요자료 안내·결손/한계 고지.</span></div>
+    <div class="agt"><span class="an">🚩 Risk</span> <span class="ad">— 리스크 식별. 계정변동·특수관계자·손금·조사 리스크.</span></div>
+    <div class="agt"><span class="an">📚 Research</span> <span class="ad">— 세법 근거 검색. <b>3소스</b>로 법령·예규·판례 정리.</span></div>
+    <div class="agt star"><span class="an">⭐ Strategy</span> <span class="ad">— 선택지 비교. 절세효과·리스크·방어·실행가능성.</span></div>
+    <div class="agt"><span class="an">🔗 Evidence</span> <span class="ad">— 증빙 연결. 원장·계약·통장·세금계산서 ↔ 쟁점.</span></div>
+    <div class="agt"><span class="an">📝 Draft</span> <span class="ad">— 보고서 작성. 검토메모·소명논리·DOCX 초안.</span></div>
+  </div>
+
+  <div class="callout" style="margin-top:11px"><span class="lab">💡 단계를 나눈 이유</span><p style="margin:4px 0 0; font-size:9pt">한 AI에 전부 맡기면 "어느 단계의 무엇이 틀렸는지" 추적이 어렵다. 단계별로 나누면 <b>책임·근거가 추적·검토 가능</b>하다(감사 조서의 분개처럼).</p></div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 5 / 12</div>
+</div>
+
+<!-- ============ P6 — 근거 엔진 3소스 → 종합 ============ -->
+<div class="page">
+  <h2>도식 ④ — 근거 엔진: 3소스 "독립답변 → 종합"</h2>
+  <p class="lead">세무에서 AI 환각은 치명적이므로, <b>한 AI가 한 번에 답하지 않는다.</b> 서로 다른 근거 3개가 <b>각각 따로 완결된 답</b>을 만든 뒤, 종합 에이전트가 <b>비교·조정</b>한다.</p>
+
+  <div class="srcwrap" style="margin-top:10px">
+    <div class="src law"><div class="sh">① 법령 원문</div><div class="ss">Korean-law-MCP (Ground Truth)</div><div class="sa">①만으로 완결 답변 A</div></div>
+    <div class="src rag"><div class="sh">② 내부 실무서</div><div class="ss">RAG (사내·라이선스 DB)</div><div class="sa">②만으로 완결 답변 B</div></div>
+    <div class="src web"><div class="sh">③ 최신 웹</div><div class="ss">국세청·기재부·법원 등 공식만</div><div class="sa">③만으로 완결 답변 C</div></div>
+  </div>
+  <div class="merge">▼  종합 에이전트  ▼</div>
+  <div class="synth">
+    <h3>종합의견 = (a) 일치 확정 · (b) 충돌 표면화(평균 ✕) · (c) 권위·시점으로 조정</h3>
+    <div class="claim">a · 세 답이 일치 → 그대로 확정</div>
+    <div class="claim">b · 갈리면 <b>평균내지 않고</b> "여기서 충돌" 그대로 드러냄 → 회계사 검토항목으로</div>
+    <div class="claim">c · 법적 권위 위계 + 시점 유효성으로 tie-break (채널 ①&gt;②&gt;③)</div>
+    <small style="color:#CBE6F2; display:block; margin-top:6px">종합의견은 <b>새 인용을 만들지 않고</b> 각 소스답변(<span class="mono" style="color:#9BD0E6">SourceAnswer</span>)의 인용을 <b>상속</b>한다.</small>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🔑 가중 혼합(50/30/20)을 쓰지 않는 이유</span>
+    <p style="margin:4px 0 0; font-size:9pt">자유서술 법리를 <b>산술 가중평균</b>으로 섞으면 빠르지만 부정확하고, <b>어디서 갈렸는지(충돌)가 사라진다.</b>
+    세 개의 완결 답변을 <b>비교·종합</b>하면 충돌이 드러나 오히려 회계사 검토에 유리하다. <b>MVP는 충돌 케이스 1건을 시연</b>, 풀 오케스트레이션은 설계 단계.</p>
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 6 / 12</div>
+</div>
+
+<!-- ============ P7 — 권위 위계 + claim 단위 감사추적 ============ -->
+<div class="page">
+  <h2>도식 ⑤ — 충돌 조정 규칙 + claim 단위 감사추적</h2>
+  <p class="lead">충돌 시 <b>무엇을 더 신뢰하는가?</b> 단순 채널 서열이 아니라 <b>법적 권위 위계 + 시점 + 사실관계 동일성</b>으로 조정한다.</p>
+
+  <div class="card fill" style="margin-top:10px">
+    <h3 style="margin-top:0">법적 권위 위계 (위로 갈수록 우선)</h3>
+    <div class="flow">
+      <div class="step" style="border-top-color:var(--law)"><span class="t">법률</span><span class="d">최우선</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">시행령</span><span class="d">보충·해석</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">시행규칙</span><span class="d">세부</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">예규·판례·심판례</span><span class="d">해석사례</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step"><span class="t">실무서</span><span class="d">참고</span></div>
+      <div class="arrowcol">›</div>
+      <div class="step" style="border-top-color:var(--web)"><span class="t">웹</span><span class="d">동향(단독 단정✕)</span></div>
+    </div>
+    <small style="display:block; margin-top:6px">법령을 더 신뢰하되, 시행령·예규·심판례는 법령을 <b>해석·보충</b>할 뿐 <b>override(뒤집기)하지 않는다.</b> 웹은 공식 소스로 <b>승격</b>된 경우에만 결론 근거로 쓴다.</small>
+  </div>
+
+  <h3>감사추적 — "이 결론이 어느 근거로 어떻게 나왔나"가 재현·감사 가능</h3>
+  <div class="trace" style="margin-top:4px">
+    <div class="tnode"><div class="tl">주장(claim)</div><div class="tv">명제 단위</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">인용 계보</div><div class="tv">어느 조문이</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">충돌 해소 로그</div><div class="tv">왜 이렇게</div></div>
+    <div class="tarr">→</div>
+    <div class="tnode"><div class="tl">정책·검토 이력</div><div class="tv">버전·사인</div></div>
+  </div>
+  <div class="callout" style="margin-top:10px"><span class="lab">💡 의미</span><p style="margin:4px 0 0; font-size:9pt">claim(명제) 단위로 일치/충돌(<span class="mono">ClaimAlignment</span>)을 남기는 것은, <b>전문가가 상충하는 권위를 따져 서명하는 절차를 전산화</b>한 것이다. = "조서에 근거 첨부하고 검토자 사인 받기"의 시스템판.</p></div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 7 / 12</div>
+</div>
+
+<!-- ============ P8 — 검증 게이트 G1~G5 ============ -->
+<div class="page">
+  <h2>도식 ⑥ — 환각방지 검증 게이트 G1~G5</h2>
+  <p class="lead">결론이 나가기 전 통과해야 하는 <b>검문소 5개</b>. ✅=MVP 데모 시연, 🟡=경량, ⬜=설계만.</p>
+
+  <div class="gateline" style="margin-top:10px">
+    <div class="gate"><div class="gid">G1</div><div class="gwho"><b>계산 Ground Truth 검산</b> — 절세효과·세법 한도를 코드 참값과 대조, 불일치를 자동 플래그(빨간 깃발).</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate"><div class="gid">G2</div><div class="gwho"><b>인용 검증</b> — 조문/예규 출처의 <b>정확한 위치(pinpoint)</b>를 가리키고, 그 근거가 주장을 실제로 뒷받침하는지(entailment) 확인.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate"><div class="gid">G3</div><div class="gwho"><b>3소스 종합·충돌</b> — 독립답변→종합, 충돌 표면화. (도식 ④⑤)</div><div style="text-align:right"><span class="pill p1">🟡 경량</span></div></div>
+    <div class="gate"><div class="gid">G4</div><div class="gwho"><b>abstain(되물음)</b> — 시점·전제가 불명확하면 단정 대신 <b>"어느 사업연도 기준인가요?"</b> 되묻기. = 과신 방지.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+    <div class="gate hi"><div class="gid">G5</div><div class="gwho"><b>HITL 검토항목 자동생성</b> — DOCX "회계사 검토 필요사항" 섹션을 자동으로 첨부.</div><div style="text-align:right"><span class="pill" style="background:var(--green)">✅ 시연</span></div></div>
+  </div>
+
+  <div class="grid2" style="margin-top:12px">
+    <div class="card" style="border-top:4px solid var(--green)"><h3 style="margin-top:0">🔬 계산 검산(G1)의 위치</h3><small>인용·출처 검증은 업계 표준에 가깝다. 세무는 <b>정답이 있는 계산층</b>이 존재해 <b>코드로 검산</b>이 가능하고, 8개사 벤치마크에서 <b>상대적으로 공백</b>으로 보인 영역이다.</small></div>
+    <div class="callout"><span class="lab">⬜ 설계만 (MVP 미구현)</span><p style="margin:4px 0 0; font-size:9pt">confidence(확신도) 점수 분리, 전체 앙상블 검증은 명세상 <b>정의돼 있으나 MVP에서는 미구현</b>이다.</p></div>
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 8 / 12</div>
+</div>
+
+<!-- ============ P9 — HITL 게이트 + 보안/테넌시 ============ -->
+<div class="page">
+  <h2>도식 ⑦ — 사람 게이트(HITL) + 보안·테넌시</h2>
+  <p class="lead">AI는 <b>시나리오·수치·근거까지</b>. <b>결정·서명은 회계사(Reviewer).</b> 고위험·최종본은 승인 없이 고객 전달본을 생성하지 못한다.</p>
+
+  <div class="gateline" style="margin-top:10px">
+    <div class="gate hi"><div class="gid">H</div><div class="gwho"><b>운영 게이트 H1~H5</b> — 운영 설계상 적극 절세·고위험·최종 검토패키지는 <b>Reviewer 승인 없이 고객 전달본을 생성하지 않도록 규정</b>(승인자·timeout·escalation·감사기록 포함). MVP에서는 <b>G5 검토항목 자동생성을 시연</b>하고, 전체 승인 워크플로는 설계 단계.</div><div style="text-align:right"><span class="chip">승인자</span><span class="chip">timeout</span><span class="chip esc">escalation</span></div></div>
+  </div>
+
+  <h3>보안·테넌시 — 고객 재무정보는 극도로 민감</h3>
+  <div class="dommap" style="grid-template-columns:repeat(2,1fr); margin-top:4px">
+    <div class="dom"><span class="code c-sec">격리 ✅</span><span class="nm">테넌트 격리키 전파</span><span class="ds"><span class="mono">client_id</span>/<span class="mono">matter_id</span>로 A사·B사 자료 <b>논리 격리</b></span></div>
+    <div class="dom"><span class="code c-sec">권한</span><span class="nm">최소권한</span><span class="ds"><span class="mono">RoleAssignment</span> 기반 — 볼 사람만 본다</span></div>
+    <div class="dom"><span class="code c-sec">분리</span><span class="nm">인덱스 물리분리</span><span class="ds"><b>공유 지식 ⟂ 고객 인덱스</b>는 물리적으로 섞이지 않음</span></div>
+    <div class="dom"><span class="code c-sec">감사 ✅</span><span class="nm">감사로그·재현성</span><span class="ds">누가·언제·무엇을 기록·재현 <span class="mono">(WORM 변조방지는 설계)</span></span></div>
+    <div class="dom"><span class="code c-sec">비학습 ✅</span><span class="nm">비학습·마스킹</span><span class="ds">고객자료로 모델 재학습 ✕, 민감정보 마스킹</span></div>
+    <div class="dom"><span class="code c-sec">배포</span><span class="nm">사내 경로</span><span class="ds">민감자료 사내 경로 처리 <span class="mono">(DLP는 설계)</span></span></div>
+  </div>
+
+  <div class="danger" style="margin-top:11px">
+    <span class="lab">🚫 데이터 라이선스 원칙</span>
+    <p style="margin:4px 0 0; font-size:9pt">무권한·외부 고객자료 반입은 비밀유지 위반으로 <b>금지</b>한다. 내부 지식 DB는 <b>라이선스·공개·합성·신규 작성</b> 자료로만 구성한다.
+    (MVP에서 격리·무권한 데이터 금지·출처 재현·비학습을 시연 / SSO·SCIM·DLP·WORM은 엔터프라이즈 하드닝으로 <b>설계 단계</b>.)</p>
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 9 / 12</div>
+</div>
+
+<!-- ============ P10 — 산출물 + 차별점 ============ -->
+<div class="page">
+  <h2>산출물과 차별점</h2>
+  <p class="lead">핵심 산출물은 <b>선택지별 비교표</b>와 <b>DOCX 검토패키지 초안(11목차)</b>이다.</p>
+
+  <h3 style="margin-top:8px">선택지별 비교표 (Strategy Agent 산출)</h3>
+  <table style="margin-top:4px">
+    <tr><th>선택지</th><th>예상 세부담</th><th>세무 리스크(과세논리)</th><th>방어 가능성(방어논리)</th><th>필요 증빙</th><th>회계사 검토 포인트</th></tr>
+    <tr><td>🛡 보수적</td><td>증가</td><td>낮음</td><td>높음</td><td>기본 자료</td><td>고객 수용 가능성</td></tr>
+    <tr><td>⚖ 중립적</td><td>중간</td><td>중간</td><td>중간</td><td>계약서·원장</td><td>예규 근거 확인</td></tr>
+    <tr><td>🚀 적극적</td><td>감소</td><td>높음</td><td>낮음~중간</td><td>추가 소명자료</td><td>조사 대응 가능성</td></tr>
+  </table>
+
+  <h3 style="margin-top:12px">법률·세무 AI 8개사 벤치마크 대비 위치</h3>
+  <table style="margin-top:4px">
+    <tr><th>역량</th><th>업계 (주요사 보유)</th><th>TIW</th></tr>
+    <tr><td>근거 인용·출처 검증</td><td>✓ (LBOX·슈퍼로이어 등)</td><td>✓</td></tr>
+    <tr><td>워크플로/Skills·계획→결과물</td><td>✓ (LexisNexis·슈퍼로이어)</td><td>✓</td></tr>
+    <tr><td>맥락 메모리·자료 보관</td><td>✓ (슈퍼로이어·네플라)</td><td>✓ Tax Memory</td></tr>
+    <tr><td>ERP·신고 자동화</td><td>✓ (더존)</td><td>— (의도적 제외)</td></tr>
+    <tr style="background:#F6FBEF"><td><b>★ 계산층 Ground Truth 검증</b></td><td><b style="color:var(--red)">상대적 공백</b> (해석층 인용검증까지)</td><td><b style="color:var(--green-d)">✓ (G1, MVP 시연)</b></td></tr>
+  </table>
+  <div class="callout" style="margin-top:10px"><span class="lab">💡 요지</span><p style="margin:4px 0 0; font-size:9pt">업계 정석(Skills/워크플로 + grounding·인용 + 팩트체커 검증 + HITL + 맥락 메모리)을 <b>정확히 따르되</b>, <b>정답이 존재하는 세무 계산층의 검산</b>을 더한 것이 본 설계의 위치다.</p></div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 10 / 12</div>
+</div>
+
+<!-- ============ P11 — 로드맵 + MVP 범위 + ROI ============ -->
+<div class="page">
+  <h2>로드맵 · MVP 범위 · 정량 목표</h2>
+  <p class="lead">MVP는 <b>구조 데모</b>(Phase 1), 이후 항목 심화 → 검증·품질 → 전략 확장으로 단계 확장한다. MVP는 <b>제한된 기능을 시연</b>하고, 미구현 항목은 <b>설계 범위로 명확히 구분</b>한다.</p>
+
+  <div class="flow" style="margin-top:10px">
+    <div class="step" style="border-top-color:var(--green)"><span class="n" style="background:var(--green)">1</span><span class="t">구조 데모</span><span class="d">목업 3화면·Tax Skill<br>Library(얕은 라우팅)</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">2</span><span class="t">Skill 심화</span><span class="d">접대비·승용차·가지급금<br>·세액공제 계산 정교화</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step"><span class="n">3</span><span class="t">검증·품질</span><span class="d">출처표시·계산로그<br>·검토자 승인</span></div>
+    <div class="arrowcol">›</div>
+    <div class="step" style="border-top-color:var(--navy)"><span class="n" style="background:var(--navy)">4</span><span class="t">전략 확장</span><span class="d">조사대응·재편·산업별<br>·장기 Tax Memory</span></div>
+  </div>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card" style="border-top:4px solid var(--green)">
+      <h3 style="margin-top:0">정량 목표 (ROI)</h3>
+      <p style="margin:6px 0; text-align:center; font-size:10pt">
+        <b>검토패키지 초안 1건</b><br>
+        <span style="color:var(--muted)">수기 ~4시간</span> &nbsp;→&nbsp; <b style="color:var(--green-d); font-size:14pt">10분</b>
+        <span style="font-size:8.5pt; color:var(--muted)">(≈96% 절감 · <b>목표 KPI·내부 추정치, 실측 보정 예정</b>)</span></p>
+      <p style="margin:4px 0 0; font-size:8.4pt; color:var(--navy2)">"빠르지만 얕다" 오해 방지 → <b>품질 동반 목표 지표</b>(출처 인용 100% · 계산검산 통과 · 검토항목 자동첨부)를 함께 표기.</p>
+    </div>
+    <div class="card fill">
+      <h3 style="margin-top:0">MVP 노출 범위</h3>
+      <small><b>시연 ✅</b>: G1 계산검산 · G2 인용검증 · G4 되물음 · G5 검토항목 / 회사별 격리(client_id) · 무권한 데이터 금지 · 출처 재현 · 비학습<br>
+      <b>경량 🟡</b>: G3 충돌 케이스 1건<br>
+      <b>설계만 ⬜</b>: 풀 3소스 오케스트레이션 · confidence · SSO/SCIM/DLP/WORM.</small>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:11px"><span class="lab">📦 데이터 접근 (MVP)</span><p style="margin:4px 0 0; font-size:9pt"><b>수기 입력 + 엑셀 TB 업로드</b> 혼합. ERP 연동은 향후 단계. 입력: TB·계정별 원장·전기 신고서·재무제표(+확장: 계약서·이사회의사록·통장·법인카드·세금계산서).</p></div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 11 / 12</div>
+</div>
+
+<!-- ============ P12 — 용어집 ============ -->
+<div class="page">
+  <h2>용어집 — 기술 용어 평이하게</h2>
+  <p class="lead">본 문서에 등장하는 기술 용어를 <b>"무엇이고, 여기선 어디에 쓰이나"</b>로 풀이한다.</p>
+  <div style="margin-top:6px">
+    <div class="gl"><div class="term">Agent<span class="en">에이전트</span></div><div class="def">목표를 받아 <b>스스로 단계를 계획하고 도구를 써서 수행</b>하는 AI. (챗봇=한 번 응답, Agent=절차 수행). 여기선 6개.</div></div>
+    <div class="gl"><div class="term">오케스트레이션<span class="en">Orchestration</span></div><div class="def">여러 Agent를 <b>지휘</b> — 작업 분해→병렬 실행→결과 통합.</div></div>
+    <div class="gl"><div class="term">RAG<span class="en">Retrieval-Augmented Generation</span></div><div class="def">AI가 기억으로 추측하지 않고 <b>모델 밖의 사내·라이선스 DB를 검색해 근거로</b> 답하게 하는 방식(웹검색이 아님).</div></div>
+    <div class="gl"><div class="term">임베딩 / 벡터검색<span class="en">Embedding / Vector search</span></div><div class="def">문서를 <b>"의미 좌표(숫자 벡터)"</b>로 바꿔 저장 → 질문과 <b>의미가 가까운</b> 자료를 찾는 검색. RAG가 자료를 찾는 방법.</div></div>
+    <div class="gl"><div class="term">MCP<span class="en">Model Context Protocol</span></div><div class="def">AI가 외부 도구·데이터와 <b>통신하는 표준 프로토콜.</b> 여기선 <span class="mono">Korean-law-MCP</span>로 법령 원문 직접 조회.</div></div>
+    <div class="gl"><div class="term">Grounding / Ground Truth<span class="en">근거 결속 / 정답 기준값</span></div><div class="def">Grounding=답을 <b>실제 근거에 묶기.</b> Ground Truth=계산의 <b>참값</b>(한도·산식을 코드로 계산해 대조=검산).</div></div>
+    <div class="gl"><div class="term">HITL<span class="en">Human-In-The-Loop</span></div><div class="def">절차 중간·끝에 <b>사람(회계사)의 검토·승인</b>을 끼워 넣는 구조. 최종 결정·서명은 사람.</div></div>
+    <div class="gl"><div class="term">pinpoint / entailment / abstain<span class="en">인용·함의·보류</span></div><div class="def">pinpoint=출처를 <b>조·항·호까지</b> 정확히 지목 · entailment=근거가 주장을 <b>실제 뒷받침</b>하는지 · abstain=불명확하면 <b>단정 대신 되물음.</b></div></div>
+    <div class="gl"><div class="term">테넌시 / RoleAssignment<span class="en">Multi-tenancy / 역할권한</span></div><div class="def">여러 고객 자료가 <b>서로 안 섞이게</b> 칸막이(키로 전파) + "누가 무엇을" 역할로 부여(최소권한).</div></div>
+    <div class="gl"><div class="term">WORM / SSO·SCIM·DLP<span class="en">엔터프라이즈 보안</span></div><div class="def">WORM=한 번 쓰면 <b>못 고치는 저장소</b>(변조방지) · SSO=통합 인증 · SCIM=계정 자동 관리 · DLP=유출 차단. <b>모두 설계 단계.</b></div></div>
+    <div class="gl"><div class="term">MVP / PoC<span class="en">최소제품 / 개념증명</span></div><div class="def">MVP=핵심 가치만 담은 <b>최소 동작 제품</b> · PoC=<b>"구현 가능"을 증명</b>하는 작동 시제품.</div></div>
+  </div>
+  <div style="margin-top:14px; text-align:center; color:var(--muted); font-size:8.5pt; border-top:1px solid var(--line); padding-top:10px">
+    Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 · 2026-06-29<br>
+    본 문서는 통합 설계서(v1.2)의 제품·아키텍처·검증/보안 설계를 검토자용으로 정리한 것이며, MVP 시연 범위와 설계 단계를 구분 표기했습니다.
+  </div>
+  <div class="pgnote">Tax Intelligence Workspace (TIW) · 제품·시스템 설계 개요 — 12 / 12</div>
+</div>
+
+</body></html>

@@ -1,9 +1,33 @@
 {
+  "17dd8d777318468bb5e5d99cb490a073817652d0aee7cc37197a404f98d11615": {
+    "file": "gen_sa_S2-PUB-001_S2-PUB-001-q1_17dd8d777318468b.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:11:23.084253+00:00",
+    "tag": "gen_sa_S2-PUB-001_S2-PUB-001-q1"
+  },
+  "30778ea9bde73dcc79a9de640d75ccca1d86ab5cc6e2c1677454f119f8cfd212": {
+    "file": "judge_S2-HID-001_S2-HID-001-q1_30778ea9bde73dcc.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:14:18.690309+00:00",
+    "tag": "judge_S2-HID-001_S2-HID-001-q1"
+  },
   "30bf74b93f569d494b933821d8a4c4f3da41bb4d58bb0e098208f3af0fc28358": {
     "file": "judge_S1-PUB-001_S1-PUB-001-q1_30bf74b93f569d49.json",
     "model": "claude-opus-4-8",
     "recorded_at": "2026-06-29T07:23:09.549483+00:00",
     "tag": "judge_S1-PUB-001_S1-PUB-001-q1"
+  },
+  "4e1a9af9c0d660761b1c03f580937c12b1fa211e350e77d5b984b5a745824011": {
+    "file": "gen_sa_S2-PUB-002_S2-PUB-002-q1_4e1a9af9c0d66076.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:12:28.158469+00:00",
+    "tag": "gen_sa_S2-PUB-002_S2-PUB-002-q1"
+  },
+  "5c6aeb652a0ded1af18b1837df0713871783da791abf3a76db5183b287c7d55c": {
+    "file": "judge_S2-PUB-002_S2-PUB-002-q1_5c6aeb652a0ded1a.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:13:07.059263+00:00",
+    "tag": "judge_S2-PUB-002_S2-PUB-002-q1"
   },
   "69d0a444dd2abe9cd0e43a0af11802cf117670693340385dbb8e169f1a6cca8f": {
     "file": "judge_S1-HID-001_S1-HID-001-q1_69d0a444dd2abe9c.json",
@@ -34,5 +58,17 @@
     "model": "claude-opus-4-8",
     "recorded_at": "2026-06-29T07:24:40.130744+00:00",
     "tag": "gen_sa_S1-HID-001_S1-HID-001-q1"
+  },
+  "dd3d7db46c64e24a9c3e34b04a551e2d9926fa499d915b1f06f3bf7d36677cd5": {
+    "file": "judge_S2-PUB-001_S2-PUB-001-q1_dd3d7db46c64e24a.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:11:52.159850+00:00",
+    "tag": "judge_S2-PUB-001_S2-PUB-001-q1"
+  },
+  "f6f7e73b1de829011760eadf961fcae8796c40cc3a3246eca48627c8a4f7edbe": {
+    "file": "gen_sa_S2-HID-001_S2-HID-001-q1_f6f7e73b1de82901.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-29T08:13:46.489944+00:00",
+    "tag": "gen_sa_S2-HID-001_S2-HID-001-q1"
   }
 }

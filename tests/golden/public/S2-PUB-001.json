@@ -1,0 +1,43 @@
+{
+  "case_id": "S2-PUB-001",
+  "slice": 2,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "내부 RAG citation 검증 — client_A 가 기업업무추진비(제25조, 2024) 손금불산입을 질의. 공유 법령 인덱스(제25조 2024/2020·제24조)와 테넌트 인덱스(A·B 메모)가 물리 분리되어, A 질의는 A 메모 + 공유 법령만 회수하고 B 메모는 누수 0(SEC-003). 답변은 회수된 2024 시행일 버전(기업업무추진비)에 grounding + ProvisionVersion 인용(HALU-003).",
+  "top_k": 5,
+  "rag_corpus": [
+    {"doc_id": "law25-2024", "kind": "law", "law_name": "법인세법", "article_label": "제25조", "effective_year": 2024, "tax_type": "법인세"},
+    {"doc_id": "law25-2020", "kind": "law", "law_name": "법인세법", "article_label": "제25조", "effective_year": 2020, "tax_type": "법인세"},
+    {"doc_id": "law24-2024", "kind": "law", "law_name": "법인세법", "article_label": "제24조", "effective_year": 2024, "tax_type": "법인세"},
+    {"doc_id": "A-memo", "kind": "client", "client_id": "client_A", "confidentiality_level": "L3_CLIENT", "chunk_type": "메모", "tax_type": "법인세", "text": "client_A 2024 사업연도 기업업무추진비 거래처 접대 식대 지출 한도 초과분 손금불산입 검토 메모 적격 증빙 신용카드"},
+    {"doc_id": "B-memo", "kind": "client", "client_id": "client_B", "confidentiality_level": "L3_CLIENT", "chunk_type": "메모", "tax_type": "법인세", "text": "client_B 2024 사업연도 기업업무추진비 거래처 접대 식대 지출 한도 초과분 손금불산입 검토 메모 적격 증빙 신용카드"}
+  ],
+  "rag_queries": [
+    {
+      "query_id": "S2-PUB-001-q1",
+      "question_text": "우리 회사(2024 사업연도)의 기업업무추진비 한도 초과액 손금불산입 처리의 근거 조문과 유효 버전, 그리고 검토할 쟁점은?",
+      "as_client": "client_A",
+      "as_of_date": "2024-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "high_risk": false,
+      "gold_law": {
+        "law_name": "법인세법",
+        "source_type": "법률",
+        "article_label": "제25조",
+        "expected_effective_from": "2024-01-01",
+        "expected_promulgated_date": "2022-12-31",
+        "title_contains": "기업업무추진비"
+      },
+      "gold_chunk_ids": ["law25-2024", "A-memo"],
+      "forbidden_chunk_ids": ["B-memo"],
+      "expect_shared": ["law25-2024"],
+      "gold_issues": [
+        "기업업무추진비 해당 여부(접대·교제 등 업무관련 지출)와 광고선전비·복리후생비·회의비와의 구분",
+        "손금불산입 한도 = 기본한도(중소기업 차등) + 수입금액 구간별 한도율; 한도 초과액 손금불산입",
+        "건당 일정금액 초과 지출의 적격 증빙(신용카드·세금계산서 등) 요건과 미수취 시 손금불산입",
+        "2024 사업연도 기준 시행일 버전은 '기업업무추진비'(구 '접대비' 명칭 개정) — 시점 유효성",
+        "손금불산입액의 세무조정(가산) 및 법인세 신고서 반영"
+      ]
+    }
+  ]
+}

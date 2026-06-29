@@ -13,7 +13,7 @@ from typing import Optional
 from contract.cluster_i_eval import RubricResult, Visibility
 from rules.hard_gates import COMPLETION_THRESHOLD
 from tiw.eval.loader import load_hidden_cases, load_public_cases
-from tiw.eval.slices import slice1_law_anchor, slice6_isolation
+from tiw.eval.slices import slice1_law_anchor, slice2_rag, slice6_isolation
 
 
 @dataclass
@@ -69,6 +69,7 @@ class SliceReport:
 # slice_no -> (display name, callable(cases) -> list[RubricResult])
 _REGISTRY = {
     1: ("법령MCP 앵커 답변", slice1_law_anchor.run_cases),
+    2: ("citation 검증 RAG", slice2_rag.run_cases),
     6: ("테넌트 격리", slice6_isolation.run_cases),
 }
 

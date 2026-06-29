@@ -1,0 +1,42 @@
+{
+  "case_id": "S2-PUB-002",
+  "slice": 2,
+  "visibility": "PUBLIC",
+  "adversarial": true,
+  "description": "시점 유효성(RAG-005) 적대 케이스: 같은 제25조라도 2020 사업연도 기준이면 시점 필터가 '접대비'(구 명칭, 시행 2020) 버전만 검색공간에 남겨야 한다. 2024 '기업업무추진비' 버전을 grounding 하면 TEMPORAL_ERROR. 시점 필터는 재랭킹 전 후보생성 단계에서 버전을 가른다.",
+  "top_k": 5,
+  "rag_corpus": [
+    {"doc_id": "law25-2024", "kind": "law", "law_name": "법인세법", "article_label": "제25조", "effective_year": 2024, "tax_type": "법인세"},
+    {"doc_id": "law25-2020", "kind": "law", "law_name": "법인세법", "article_label": "제25조", "effective_year": 2020, "tax_type": "법인세"},
+    {"doc_id": "A-memo20", "kind": "client", "client_id": "client_A", "confidentiality_level": "L3_CLIENT", "chunk_type": "메모", "tax_type": "법인세", "text": "client_A 2020 사업연도 접대비 거래처 식대 지출 한도 초과분 손금불산입 검토 메모 적격 증빙"},
+    {"doc_id": "B-memo20", "kind": "client", "client_id": "client_B", "confidentiality_level": "L3_CLIENT", "chunk_type": "메모", "tax_type": "법인세", "text": "client_B 2020 사업연도 접대비 거래처 식대 지출 한도 초과분 손금불산입 검토 메모 적격 증빙"}
+  ],
+  "rag_queries": [
+    {
+      "query_id": "S2-PUB-002-q1",
+      "question_text": "우리 회사의 2020 사업연도 접대비 손금불산입 근거 조문은 무엇이고, 그 사업연도에 유효한 조문 명칭과 버전은?",
+      "as_client": "client_A",
+      "as_of_date": "2020-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "high_risk": false,
+      "gold_law": {
+        "law_name": "법인세법",
+        "source_type": "법률",
+        "article_label": "제25조",
+        "expected_effective_from": "2020-01-01",
+        "expected_promulgated_date": "2018-12-24",
+        "title_contains": "접대비"
+      },
+      "gold_chunk_ids": ["law25-2020", "A-memo20"],
+      "forbidden_chunk_ids": ["B-memo20"],
+      "expect_shared": ["law25-2020"],
+      "gold_issues": [
+        "2020 사업연도 기준 유효 버전은 구 명칭 '접대비'(2024 '기업업무추진비'와 명칭 상이) — 시행일 버전 적용",
+        "접대비 손금불산입 한도 = 기본한도 + 수입금액 구간별 한도; 한도 초과액 손금불산입",
+        "건당 일정금액 초과 접대비의 적격 증빙(신용카드 등) 요건과 미수취 시 손금불산입",
+        "접대비와 광고선전비·기부금의 구분(사실판단)",
+        "손금불산입액의 세무조정 및 신고 반영"
+      ]
+    }
+  ]
+}

@@ -26,11 +26,15 @@ api = [
   "uvicorn>=0.29",
   "httpx>=0.27",
 ]
-# Real external adapters (src/ai/*). NOT required for deterministic tests —
-# every adapter has a deterministic fake/fallback so the harness is hermetic.
+# Real external adapters (src/ai/*). Slices ①/⑥ need NONE of these (deterministic
+# fakes/fallbacks). Slice ② REPLAY needs `chromadb` (the vector engine — there is
+# no fake Chroma; slice⑥ uses src.vector_store instead) but NOT `model2vec`/torch
+# (embeddings replay from tests/fixtures/embeddings/). `model2vec` is needed ONLY
+# to RECORD those embedding fixtures (scripts/record_rag_fixtures.py).
 adapters = [
   "anthropic>=0.40",   # LLM — default model claude-opus-4-8
   "chromadb>=0.5",     # local embedded vector DB (behind src/ai adapter)
+  "model2vec>=0.3",    # slice ② local on-prem static multilingual embedder (record only)
   "httpx>=0.27",       # tavily / brave / dart / korean-law-mcp HTTP clients
   "python-docx>=1.1",  # DOCX review package
   "requests>=2.31",    # slice ① 법제처 DRF live recording (lazy; replay uses stdlib)

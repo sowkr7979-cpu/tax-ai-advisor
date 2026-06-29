@@ -12,10 +12,15 @@ llm:
   temperature: 0.0
 
 embedding:
-  provider: TODO                  # multilingual/Korean embedder (wire in slice ②)
-  model: TODO-multilingual-embedder
-  dimension: 1024
-  api_key_env: EMBEDDING_API_KEY
+  # LOCAL on-prem static multilingual embedder (slice ②). torch-free; weights are
+  # fetched once to the local HF cache and run in-process — L3/L4 client text is
+  # NEVER sent to an external API (SEC). e5/sentence-transformers was first choice
+  # but torch has no wheel for this interpreter → model2vec static fallback.
+  provider: model2vec
+  model: minishlab/potion-multilingual-128M
+  dimension: 256
+  on_prem: true                   # no external embedding API for client chunks
+  api_key_env: EMBEDDING_API_KEY  # unused for the local model (kept for a future API embedder)
 
 reranker:
   provider: TODO

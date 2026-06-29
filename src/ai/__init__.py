@@ -9,9 +9,12 @@ from __future__ import annotations
 
 from .base import AdapterConfigError, Embedder  # noqa: F401
 from .embedding_client import (  # noqa: F401
+    CachedEmbedder,
     DeterministicFakeEmbedder,
+    Model2VecEmbedder,
     RealEmbeddingClient,
     default_embedder,
+    default_rag_embedder,
 )
 from .llm_client import LLMClient, LLMConfig  # noqa: F401
 from .reranker_client import RerankerClient  # noqa: F401
@@ -21,4 +24,6 @@ from .brave_client import BraveClient  # noqa: F401
 from .dart_client import DartClient  # noqa: F401
 from .ocr_client import OcrClient  # noqa: F401
 from .docx_client import DocxClient  # noqa: F401
-from .chroma_backend import ChromaBackend  # noqa: F401
+# NB: ChromaVectorStore is intentionally NOT eagerly imported here — it depends on
+# src.vector_store (which imports src.ai.base), so eager import would create a
+# circular import. Import it directly: ``from src.ai.chroma_backend import …``.

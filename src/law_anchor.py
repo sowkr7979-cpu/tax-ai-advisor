@@ -72,6 +72,8 @@ def build_law_source_answer(
     matter_id: Optional[str] = None,
     high_risk: bool = False,
     registry: Optional[SourceRegistry] = None,
+    answer_source_type: SourceType = SourceType.LAW_MCP,
+    channel_label: str = "①",
 ) -> LawSourceAnswerBundle:
     pv = lookup.provision_version
     snap = lookup.snapshot
@@ -115,7 +117,7 @@ def build_law_source_answer(
     warnings: list[str] = []
     promulgated_str = pv.promulgated_date.strftime("%Y-%m-%d") if pv.promulgated_date else "N/A"
     answer_text = (
-        f"[법령 앵커 — 채널 ①] {proposition}\n"
+        f"[법령 앵커 — 채널 {channel_label}] {proposition}\n"
         f"근거: {lookup.law_name} {lookup.article_label} "
         f"(시행 {pv.effective_from:%Y-%m-%d}, 공포 {promulgated_str})\n"
         f"※ 법리·사실적용 결론은 회계사/judge 검토 보류(PENDING_JUDGE)."
@@ -127,7 +129,7 @@ def build_law_source_answer(
     source_answer = SourceAnswer(
         source_answer_id=source_answer_id,
         answer_run_id=answer_run_id,
-        source_type=SourceType.LAW_MCP,
+        source_type=answer_source_type,
         answer_text=answer_text,
         retrieval_run_id=None,
         client_id=client_id,

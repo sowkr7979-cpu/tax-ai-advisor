@@ -15,7 +15,7 @@ from typing import Optional
 from contract.base import IndexScope
 from contract.cluster_f_qa import RetrievalRun
 from src.isolation import TenantScope
-from src.vector_store import DeterministicVectorStore, ScoredItem
+from src.vector_store import ScoredItem, VectorStore
 
 
 @dataclass
@@ -34,7 +34,7 @@ class IsolatedRetriever:
     """SEC-002: `retrieve` requires a TenantScope. There is no code path that
     retrieves without one — the filter is part of the call signature."""
 
-    def __init__(self, store: DeterministicVectorStore) -> None:
+    def __init__(self, store: VectorStore) -> None:
         self._store = store
 
     def retrieve(
