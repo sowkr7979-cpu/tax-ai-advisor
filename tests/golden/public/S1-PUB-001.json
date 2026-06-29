@@ -1,0 +1,28 @@
+{
+  "case_id": "S1-PUB-001",
+  "slice": 1,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "법인세법상 기업업무추진비(구 접대비) 손금불산입 한도 근거 조문 — 2024 귀속(사업연도) 기준. 채널 ①은 법제처 시행일 버전(제25조, 시행 2024-01-01)에 앵커링하고 ProvisionVersion을 인용해야 한다(API-002/003/004).",
+  "law_queries": [
+    {
+      "query_id": "S1-PUB-001-q1",
+      "question_text": "법인세법상 기업업무추진비(접대비) 손금불산입의 근거 조문은 무엇이고, 2024 사업연도 기준 유효 버전은?",
+      "law_name": "법인세법",
+      "article_label": "제25조",
+      "basis_kind": "FISCAL_YEAR",
+      "as_of_date": "2024-01-01",
+      "high_risk": false,
+      "gold": [
+        {
+          "law_name": "법인세법",
+          "source_type": "법률",
+          "article_label": "제25조",
+          "expected_effective_from": "2024-01-01",
+          "expected_promulgated_date": "2022-12-31",
+          "title_contains": "기업업무추진비"
+        }
+      ]
+    }
+  ]
+}

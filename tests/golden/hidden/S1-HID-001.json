@@ -1,0 +1,28 @@
+{
+  "case_id": "S1-HID-001",
+  "slice": 1,
+  "visibility": "HIDDEN",
+  "adversarial": false,
+  "description": "숨김 freeze 케이스(공개셋과 다른 조문): 법인세법 제24조 기부금 손금불산입 — 2024 사업연도 기준. 공개셋(제25조)과 다른 조문/명칭(기부금)으로 overfit 방지. 채널 ①은 제24조 시행일 버전에 앵커링해야 한다.",
+  "law_queries": [
+    {
+      "query_id": "S1-HID-001-q1",
+      "question_text": "법인세법상 기부금 손금불산입의 근거 조문과 2024 사업연도 기준 유효 버전은?",
+      "law_name": "법인세법",
+      "article_label": "제24조",
+      "basis_kind": "FISCAL_YEAR",
+      "as_of_date": "2024-01-01",
+      "high_risk": true,
+      "gold": [
+        {
+          "law_name": "법인세법",
+          "source_type": "법률",
+          "article_label": "제24조",
+          "expected_effective_from": "2024-01-01",
+          "expected_promulgated_date": "2022-12-31",
+          "title_contains": "기부금"
+        }
+      ]
+    }
+  ]
+}

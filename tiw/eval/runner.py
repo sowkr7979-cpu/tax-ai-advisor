@@ -8,11 +8,12 @@ transparency. A slice PASSES iff score >= 90 AND no hard-gate hit (PROMPT.md §5
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from contract.cluster_i_eval import RubricResult, Visibility
 from rules.hard_gates import COMPLETION_THRESHOLD
 from tiw.eval.loader import load_hidden_cases, load_public_cases
-from tiw.eval.slices import slice6_isolation
+from tiw.eval.slices import slice1_law_anchor, slice6_isolation
 
 
 @dataclass
@@ -23,11 +24,38 @@ class SliceReport:
     score: float = 0.0          # headline = min(case totals)
     mean_total: float = 0.0
     hard_gate_hit: bool = False
+    pending: bool = False        # any dimension awaiting judge/CPA (PROMPT.md §0)
     threshold: int = COMPLETION_THRESHOLD
 
     @property
     def passed(self) -> bool:
-        return (not self.hard_gate_hit) and self.score >= self.threshold
+        # A slice with PENDING_JUDGE dimensions can NEVER be a ≥90 completion:
+        # the judge-scored dimensions (법리 등) are explicitly withheld, so the
+        # slice is INCOMPLETE — not a pass. This is fail-closed for completion
+        # and strictly to the implementer's DISadvantage (anti-gaming safe).
+        return (not self.hard_gate_hit) and self.score >= self.threshold and not self.pending
+
+    # Headline separation (codex P2-B): `score` is the judge-free min over case
+    # deterministic subtotals. While `pending` it is NOT a completion score.
+    @property
+    def deterministic_subtotal(self) -> float:
+        """Judge-free headline = min over case deterministic subtotals (== score)."""
+        return self.score
+
+    @property
+    def completion_score(self) -> Optional[float]:
+        """Completion headline — ``None`` while any dimension is PENDING_JUDGE
+        (the slice is INCOMPLETE, so there is no completion score to report)."""
+        return None if self.pending else self.score
+
+    @property
+    def pending_dimensions(self) -> list[str]:
+        seen: list[str] = []
+        for r in self.case_results:
+            for d in r.pending_dimensions:
+                if d not in seen:
+                    seen.append(d)
+        return seen
 
     @property
     def public_count(self) -> int:
@@ -40,6 +68,7 @@ class SliceReport:
 
 # slice_no -> (display name, callable(cases) -> list[RubricResult])
 _REGISTRY = {
+    1: ("법령MCP 앵커 답변", slice1_law_anchor.run_cases),
     6: ("테넌트 격리", slice6_isolation.run_cases),
 }
 
@@ -69,6 +98,7 @@ def run_slice(slice_no: int) -> SliceReport:
         score=round(min(totals), 2),
         mean_total=round(sum(totals) / len(totals), 2),
         hard_gate_hit=any(r.hard_gate_hit for r in results),
+        pending=any(r.has_pending for r in results),
     )
 
 

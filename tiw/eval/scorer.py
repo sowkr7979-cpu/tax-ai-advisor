@@ -40,8 +40,34 @@ def build_rubric_result(
     hard_gate_codes: list[str],
     metrics: dict | None = None,
     target_kind: TargetKind = TargetKind.SLICE,
+    pending_dimensions: list[str] | None = None,
 ) -> RubricResult:
+    """Build a RubricResult. A dimension is in exactly ONE of three states:
+
+      * SCORED   — key present in ``dim_fractions``; snapped to a bucket and it
+        DOES enter the weighted total.
+      * PENDING  — name present in ``pending_dimensions``; the slice exercises it
+        but it needs the judge/CPA pass that is not wired. It is recorded as
+        applicable=True, score=None, and is EXCLUDED from the total (never
+        credited as full marks — docs/09 §6 anti-gaming) yet flagged so the
+        runner refuses to call the slice a ≥90 completion (PROMPT.md §0).
+      * N/A      — neither; not exercised by this slice (excluded from total).
+
+    PENDING dims do NOT change the frozen scoring math: raw_total/total are the
+    weighted mean over SCORED dims only, exactly as before.
+    """
     dim_details = dim_details or {}
+    pending = list(pending_dimensions or [])
+    pending_set = set(pending)
+    overlap = pending_set & set(dim_fractions)
+    if overlap:
+        raise ValueError(
+            f"dimension(s) cannot be both scored and pending: {sorted(overlap)}"
+        )
+    unknown_pending = pending_set - set(DIMENSION_WEIGHTS)
+    if unknown_pending:
+        raise KeyError(f"unknown pending dimension(s): {sorted(unknown_pending)}")
+
     scores: list[Score] = []
     applicable_weight = 0
     weighted_sum = 0.0
@@ -60,6 +86,16 @@ def build_rubric_result(
             )
             applicable_weight += weight
             weighted_sum += bucket * weight
+        elif dim in pending_set:
+            scores.append(
+                Score(
+                    dimension=dim,
+                    weight=weight,
+                    score=None,
+                    applicable=True,
+                    detail=dim_details.get(dim, "PENDING_JUDGE — judge/CPA 미연결 (보류)"),
+                )
+            )
         else:
             scores.append(
                 Score(
@@ -100,4 +136,5 @@ def build_rubric_result(
         raw_total=round(raw_total, 2),
         total=round(total, 2),
         metrics=metrics or {},
+        pending_dimensions=pending,
     )

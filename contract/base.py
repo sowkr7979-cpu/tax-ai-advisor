@@ -11,7 +11,7 @@ level (pydantic v2). Every cluster module builds on these.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Annotated, Optional
 
@@ -171,4 +171,6 @@ class ApplicableBasis(TIWModel):
 
 
 def utc_now() -> datetime:
-    return datetime.utcnow()
+    # timezone-aware UTC (datetime.utcnow() is deprecated as of 3.12); behaviour
+    # is identical for our use (provenance/log timestamps) minus the warning.
+    return datetime.now(timezone.utc)

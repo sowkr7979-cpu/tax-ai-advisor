@@ -1,0 +1,28 @@
+{
+  "case_id": "S1-PUB-002",
+  "slice": 1,
+  "visibility": "PUBLIC",
+  "adversarial": true,
+  "description": "시점 유효성(PROV-003/012) 적대 케이스: 같은 제25조라도 2020 사업연도 기준이면 '접대비'(구 명칭) 버전이어야 한다. as-of=2020 질의에 2024 '기업업무추진비' 버전을 주면 시행일 오류(TEMPORAL_ERROR). 채널 ①은 시행일 버전을 갈라 인용해야 한다.",
+  "law_queries": [
+    {
+      "query_id": "S1-PUB-002-q1",
+      "question_text": "법인세법 제25조의 2020 사업연도 기준 유효 버전과 조문 명칭은?",
+      "law_name": "법인세법",
+      "article_label": "제25조",
+      "basis_kind": "FISCAL_YEAR",
+      "as_of_date": "2020-01-01",
+      "high_risk": false,
+      "gold": [
+        {
+          "law_name": "법인세법",
+          "source_type": "법률",
+          "article_label": "제25조",
+          "expected_effective_from": "2020-01-01",
+          "expected_promulgated_date": "2018-12-24",
+          "title_contains": "접대비"
+        }
+      ]
+    }
+  ]
+}

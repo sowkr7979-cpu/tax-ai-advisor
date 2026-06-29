@@ -17,40 +17,69 @@ from tiw.eval.runner import SliceReport, implemented_slices, run_all, run_slice
 def _fmt_dims(result) -> str:
     parts = []
     for s in result.dimension_scores:
-        if s.applicable:
+        if s.applicable and s.score is not None:
             parts.append(f"{s.dimension}={int(s.score)}")
     return " ".join(parts)
 
 
+_CIRCLED = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥"}
+
+
+def _fmt_pending(result) -> str:
+    pend = [s.dimension for s in result.dimension_scores if s.applicable and s.score is None]
+    return (" pending(judge)=" + ",".join(pend)) if pend else ""
+
+
 def _print_report(report: SliceReport) -> None:
-    status = "PASS" if report.passed else "FAIL"
+    if report.pending:
+        status = "PENDING_JUDGE (미완료 — 결정적 차원만 채점)"
+    elif report.passed:
+        status = "PASS"
+    else:
+        status = "FAIL"
     gate = "HARD-GATE 위반" if report.hard_gate_hit else "하드게이트 0"
-    print(f"\n=== slice ⑥ '{report.name}' (slice {report.slice_no}) ===")
+    glyph = _CIRCLED.get(report.slice_no, str(report.slice_no))
+    print(f"\n=== slice {glyph} '{report.name}' (slice {report.slice_no}) ===")
+    headline = "결정적 소계" if report.pending else "headline=min"
     print(
-        f"  점수(headline=min): {report.score:.1f}/100  |  mean: {report.mean_total:.1f}  "
+        f"  점수({headline}): {report.score:.1f}/100  |  mean: {report.mean_total:.1f}  "
         f"|  완료게이트(≥{report.threshold}): {status}  |  {gate}"
     )
+    if report.pending:
+        print(f"  PENDING_JUDGE 차원(보류, 만점 아님): {', '.join(report.pending_dimensions)}")
     print(f"  케이스: public={report.public_count} hidden={report.hidden_count}")
     for r in report.case_results:
         vis = "H" if r.visibility == Visibility.HIDDEN else "P"
         flags = ",".join(f.code for f in r.failure_modes) or "-"
         cap = f" cap={r.cap}" if r.cap is not None else ""
+        extra = []
+        for key in ("leakage_count", "recall", "shared_recall", "citation_grounding",
+                    "temporal_error", "reproducible", "entailment"):
+            if key in r.metrics:
+                extra.append(f"{key}={r.metrics.get(key)}")
         print(
             f"    [{vis}] {r.case_id:<14} total={r.total:>5.1f}{cap}  "
-            f"leak={r.metrics.get('leakage_count')}  "
-            f"recall={r.metrics.get('recall')}  shared={r.metrics.get('shared_recall')}  "
-            f"null_rej={r.metrics.get('null_key_rejected')}  gate=[{flags}]"
+            f"{'  '.join(extra)}  gate=[{flags}]"
         )
-        print(f"         dims: {_fmt_dims(r)}")
+        print(f"         dims: {_fmt_dims(r)}{_fmt_pending(r)}")
 
 
 def _report_to_dict(report: SliceReport) -> dict:
     return {
         "slice": report.slice_no,
         "name": report.name,
+        # Headline separation (codex P2-B): a PENDING slice has NO completion
+        # score — expose the judge-free `deterministic_subtotal` separately and
+        # null out `completion_score` so a reader of the JSON cannot mistake the
+        # subtotal for a ≥90 completion. (`score` retained for back-compat = the
+        # deterministic subtotal/min.)
+        "completion_score": report.completion_score,
+        "deterministic_subtotal": report.deterministic_subtotal,
         "score": report.score,
         "mean_total": report.mean_total,
         "hard_gate_hit": report.hard_gate_hit,
+        "pending": report.pending,
+        "pending_dimensions": report.pending_dimensions,
         "passed": report.passed,
         "public_count": report.public_count,
         "hidden_count": report.hidden_count,

@@ -36,7 +36,15 @@ web_search:
 
 korean_law_mcp:
   endpoint_env: KOREAN_LAW_MCP_ENDPOINT
-  fallback: LawDataSource          # API-004 fallback
+  fallback: LawDataSource          # API-002/003 fallback chain [MCP → 법제처]
+
+# 법제처 국가법령정보 OpenAPI (DRF) — slice ① 동작 백엔드(MOLEGLawDataSource).
+# 인증키(OC)는 .env(LAW_OC)에만; 여기엔 env-var 이름만(어댑터에 하드코딩 금지).
+law_drf:
+  base_url: https://www.law.go.kr/DRF
+  oc_env: LAW_OC
+  as_of_endpoint: lawService.do?target=eflaw   # efYd=YYYYMMDD → 시행일 버전
+  search_endpoint: lawSearch.do?target=law
 
 dart:
   api_key_env: DART_API_KEY
