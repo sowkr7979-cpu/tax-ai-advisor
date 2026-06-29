@@ -112,6 +112,22 @@ class AlignmentStatus(str, Enum):
     SILENT = "SILENT"
 
 
+class ConflictOutcome(str, Enum):
+    """Outcome of the deterministic conflict-resolution decision table
+    (docs/08 §5-1, HALU-012). The synthesis records exactly one outcome per
+    aligned topic so the resolution is reproducible/auditable.
+
+    NOTE: NOT a weighted average — averaging/merging a real conflict is forbidden
+    (docs/04 §4 모델 변경: 50/30/20 가중 폐기)."""
+
+    AGREE = "AGREE"                                 # all answering sources concur
+    TEMPORAL = "TEMPORAL"                           # 적용시점 유효 버전 채택, 구버전 배제
+    AUTHORITY = "AUTHORITY"                         # 권위 위계(법률>…>웹)로 채택
+    FACT_MISMATCH = "FACT_MISMATCH"                 # 사실관계 불일치 예규 원용 불가 → 배제
+    UNRESOLVED_ABSTAIN = "UNRESOLVED_ABSTAIN"       # 권위·시점 동급 충돌 → 단정 금지
+    NON_AUTHORITATIVE_CONSENSUS = "NON_AUTHORITATIVE_CONSENSUS"  # ①법령부재·②③합의(가이드)
+
+
 class BasisKind(str, Enum):
     """Invariant ③: which date fact anchors temporal validity (docs/04 §0)."""
 

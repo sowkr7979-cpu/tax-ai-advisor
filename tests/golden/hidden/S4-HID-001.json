@@ -1,0 +1,58 @@
+{
+  "case_id": "S4-HID-001",
+  "slice": 4,
+  "visibility": "HIDDEN",
+  "adversarial": false,
+  "description": "숨김 freeze — 3소스 종합(EVAL-011 (c) 3자 모두 불일치, 공개셋과 다른 ensemble). 제25조 기업업무추진비 적용 범위에 대한 해석 쟁점(특정 신종 지출의 해당 여부). ①법령 원문은 문언상 직접 규정이 없어 불명확(비-dispositive), ②예규는 '해당함(포함)', ③심판례는 '해당하지 않음(불포함)'으로 세 입장이 갈린다. 권위(예규=판례·심판례 동급)·시점이 우열을 가르지 못하므로 결정테이블이 '단정 금지'를 반환 → 종합의견 보류(abstain) + 소스별 입장 그대로 노출 + 고위험 검토항목·escalation. 미해소 충돌을 단정하면 차단(FABRICATED).",
+  "synthesis_scenarios": [
+    {
+      "scenario_id": "S4-HID-001-s1",
+      "question_text": "특정 신종 지출이 법인세법 제25조 기업업무추진비에 해당하는지(2024 사업연도)를 법령 원문·예규·심판례 세 근거로 각각 판단하고 종합해줘. 세 근거가 갈리면 평균내지 말고 어디서 어떻게 갈리는지 표면화하고, 우열을 못 가리면 단정하지 말고 회계사 검토로 남겨라.",
+      "as_of_date": "2024-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "ensemble_kind": "CONFLICT_3WAY",
+      "high_risk": true,
+      "sources": [
+        {
+          "source_type": "LAW_MCP", "channel_label": "①", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "신종지출_기업업무추진비_해당여부",
+          "stance": "조문 문언상 해당 여부를 직접 규정하지 않음(불명확)",
+          "stance_from_subject": false, "dispositive": false, "is_primary": true
+        },
+        {
+          "source_type": "INTERNAL_RAG", "channel_label": "②", "status": "ANSWERED",
+          "authority_label": "예규", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "신종지출_기업업무추진비_해당여부",
+          "stance": "기업업무추진비에 해당한다(포함)",
+          "stance_from_subject": false, "dispositive": true
+        },
+        {
+          "source_type": "WEB", "channel_label": "③", "status": "ANSWERED",
+          "authority_label": "심판례", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "신종지출_기업업무추진비_해당여부",
+          "stance": "기업업무추진비에 해당하지 않는다(불포함)",
+          "stance_from_subject": false, "dispositive": true
+        }
+      ],
+      "topics": [
+        {
+          "topic_key": "신종지출_기업업무추진비_해당여부",
+          "expected_status": "CONFLICT",
+          "expected_outcome": "UNRESOLVED_ABSTAIN",
+          "expected_adopted": [],
+          "expected_excluded": []
+        }
+      ],
+      "expect_abstain": true,
+      "expect_authority_deficit": false,
+      "gold_issues": [
+        "법령 문언이 쟁점을 직접 규정하지 않을 때(비-dispositive) 예규·심판례 해석이 갈리면 단정 금지",
+        "예규와 판례·심판례는 권위 위계상 동급 해석 — 다수결/평균으로 우열을 가리지 않음(충돌 표면화)",
+        "권위·시점이 우열을 가르지 못하는 미해소 충돌 → 종합의견 보류(abstain) + 소스별 입장 각각 표시",
+        "고위험 해석 쟁점이므로 회계사 검토경고 + escalation(H2/H3) 필요",
+        "보류해도 소스별 답변은 보여줘 방어가능성·유용성을 양립(docs/08 §5 핵심)"
+      ]
+    }
+  ]
+}

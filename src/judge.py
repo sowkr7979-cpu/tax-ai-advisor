@@ -38,6 +38,7 @@ from src.legal_research import ResearchLiteAnswer, _top_level_objects
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _JUDGE_PROMPT_PATH = _REPO_ROOT / "prompts" / "judge.md"
+_SYNTH_JUDGE_PROMPT_PATH = _REPO_ROOT / "prompts" / "judge_synthesis.md"
 _JUDGE_DIMS = ("legal_reasoning", "issue_spotting", "risk", "output")
 _JUDGE_MAX_TOKENS = 6000
 _PROVISION_MAX = 6000
@@ -305,3 +306,118 @@ class Judge:
 
 def default_judge(llm_client: Optional[LLMClient] = None) -> Judge:
     return Judge(llm_client=llm_client)
+
+
+# --------------------------------------------------------------------------- #
+# Synthesis judge (slice ④) — scores the SynthesisOpinion (channel ④)
+# --------------------------------------------------------------------------- #
+@dataclass
+class EntailTarget:
+    """One inherited claim↔citation pair to verify entailment for (deterministic)."""
+
+    claim_text: str
+    quote: str
+    provision_text: str
+
+
+def build_synthesis_judge_prompt(
+    *, question_text: str, opinion_text: str, source_positions: str,
+    resolution_summary: str, entail_targets: list[EntailTarget],
+    provision_body: str, gold_issues: list[str],
+) -> tuple[str, str]:
+    """(system, user). Centralized so record/replay keys match (deterministic)."""
+    system = _SYNTH_JUDGE_PROMPT_PATH.read_text(encoding="utf-8")
+    body = (provision_body or "").strip()
+    if len(body) > _PROVISION_MAX:
+        body = body[:_PROVISION_MAX] + "…"
+    cite_lines = [
+        f"{i}) claim: {t.claim_text}\n   상속 인용 발췌: {t.quote}"
+        for i, t in enumerate(entail_targets, start=1)
+    ] or ["(표시된 종합 결론 인용 없음 — 보류 종합)"]
+    gold_block = "\n".join(f"- {g}" for g in gold_issues) if gold_issues else "(없음 — 본문에서 도출)"
+    user = (
+        f"[질문]\n{question_text}\n\n"
+        f"[3소스 독립 입장]\n{source_positions}\n\n"
+        f"[충돌 해소(결정테이블 결과 — 결정적)]\n{resolution_summary}\n\n"
+        f"[채점 대상 종합의견]\n{opinion_text}\n\n"
+        f"[상속 인용 (claim ↔ 조문 발췌) — entailment 판정 대상]\n"
+        + "\n".join(cite_lines)
+        + f"\n\n[권위(채택) 조문 본문 — entailment 판정 근거]\n{body}\n\n"
+        f"[gold 기대쟁점 — issue_spotting 채점 기준]\n{gold_block}\n\n"
+        f"위 엄격 루브릭으로 4개 차원과 entailment를 채점하고, 지정 JSON으로만 답하라."
+    )
+    return system, user
+
+
+class SynthesisJudge:
+    """Strict LLM-judge over the SynthesisOpinion (channel ④). Reuses the bucket /
+    JSON / deterministic-entailment machinery of ``Judge`` (codex P1-1)."""
+
+    def __init__(self, llm_client: Optional[LLMClient] = None) -> None:
+        self.client = llm_client or default_llm_client()
+
+    def score(
+        self, *, question_text: str, opinion_text: str, source_positions: str,
+        resolution_summary: str, entail_targets: list[EntailTarget],
+        provision_body: str, gold_issues: list[str], tag: str,
+    ) -> JudgeVerdict:
+        system, user = build_synthesis_judge_prompt(
+            question_text=question_text, opinion_text=opinion_text,
+            source_positions=source_positions, resolution_summary=resolution_summary,
+            entail_targets=entail_targets, provision_body=provision_body,
+            gold_issues=gold_issues,
+        )
+        resp = self.client.complete(system=system, user=user, tag=tag,
+                                    max_tokens=_JUDGE_MAX_TOKENS)
+        data = _extract_json(resp.text)
+
+        raw_scores = data.get("scores", {})
+        if not isinstance(raw_scores, dict):
+            raise JudgeError("judge 'scores' must be an object")
+        fractions: dict[str, float] = {}
+        for dim in _JUDGE_DIMS:
+            if dim not in raw_scores:
+                raise JudgeError(f"judge omitted dimension '{dim}'")
+            fractions[dim] = _exact_bucket_fraction(raw_scores[dim])
+
+        # DETERMINISTIC entailment over the inherited claim↔citation pairs (codex
+        # P1-1). The judge self-report is AUXILIARY (never an upgrade).
+        det_checks = [
+            verify_entailment(t.claim_text, t.quote, t.provision_text)
+            for t in entail_targets
+        ]
+        if not det_checks:
+            raise JudgeError("synthesis carries no inherited citations to verify entailment for")
+
+        judge_flags = [
+            bool(e.get("supported", False))
+            for e in (data.get("entailment", []) or [])
+            if isinstance(e, dict)
+        ]
+        if not judge_flags:
+            raise JudgeError("judge returned no entailment verdicts")
+        judge_corroborates = all(judge_flags)
+
+        entailments = [
+            EntailmentCheck(
+                claim=det.claim,
+                supported=bool(det.deterministic and judge_corroborates),
+                rationale=(det.rationale if det.deterministic
+                           else f"[deterministic 미지지] {det.rationale}"),
+                deterministic=det.deterministic,
+                judge_supported=judge_corroborates,
+            )
+            for det in det_checks
+        ]
+        return JudgeVerdict(
+            fractions=fractions,
+            entailments=entailments,
+            missed_issues=[str(x).strip() for x in data.get("missed_issues", []) or []],
+            unsupported_claims=[str(x).strip() for x in data.get("unsupported_claims", []) or []],
+            rationale=str(data.get("rationale", "")).strip(),
+            llm=resp,
+        )
+
+
+def default_synthesis_judge(llm_client: Optional[LLMClient] = None) -> SynthesisJudge:
+    return SynthesisJudge(llm_client=llm_client)

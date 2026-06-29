@@ -12,7 +12,15 @@ from typing import Optional
 
 from pydantic import Field, computed_field
 
-from .base import BasisKind, ScopeType, TIWModel
+from .base import (
+    AlignmentStatus,
+    BasisKind,
+    ConflictOutcome,
+    ScopeType,
+    SourceAnswerStatus,
+    SourceType,
+    TIWModel,
+)
 from .cluster_a_tenancy import RoleName
 
 
@@ -259,6 +267,69 @@ class HitlScenario(TIWModel):
     gold_review_categories: list[str] = Field(default_factory=list)  # HALU-008 coverage
 
 
+# --- slice ④ synthesis gold schema (ORCH-008~012, HALU-005/012/013/014) ---- #
+class EnsembleKind(str, Enum):
+    """The four EVAL-011 ensemble cases (docs/08 §5-0, docs/09 EVAL-011)."""
+
+    SILENT = "SILENT"               # (a) one source silent (커버리지 갭), 나머지 합의
+    CONFLICT_2V1 = "CONFLICT_2V1"   # (b) 2 합치·1 충돌
+    CONFLICT_3WAY = "CONFLICT_3WAY"  # (c) 3자 모두 불일치 → 해소불가
+    LAW_ABSENT = "LAW_ABSENT"       # (d) ①법령 부재, ②③ 비권위적 합의
+
+
+class SynthesisSourceSpec(TIWModel):
+    """One channel's INDEPENDENT, complete answer input to the synthesis (docs/04
+    §4-1). Each source grounds on a version-pinned provision (its own as-of/version),
+    takes a ``stance`` on an aligned ``topic_key``, and carries an authority label
+    used by the deterministic decision table. A SILENT source contributes a coverage
+    gap, NOT a conflict (docs/08 §5-0)."""
+
+    source_type: SourceType                          # LAW_MCP|INTERNAL_RAG|WEB (유일)
+    channel_label: str                               # ①|②|③ — tie-break order only
+    status: SourceAnswerStatus = SourceAnswerStatus.ANSWERED
+    authority_label: str = "법률"                    # 법률/시행령/시행규칙/예규/판례/실무서/웹
+    # grounding (ANSWERED): which 시행일 버전 this channel anchors to
+    law_name: Optional[str] = None
+    article_label: Optional[str] = None
+    grounding_year: Optional[int] = None             # 2020/2024 → 시행일 버전 (구/현)
+    # stance on the aligned topic
+    topic_key: str = ""
+    stance: str = ""                                 # normalized position label
+    stance_from_subject: bool = False                # True → stance = pv 제목 핵심어(버전 충돌)
+    dispositive: bool = True                         # 조문 문언이 그 쟁점을 직접 규율하는가
+    fact_match: bool = True                          # 예규 사실관계 동일성(PROV-015)
+    is_primary: bool = False                         # 종합이 제시하는 법리(생성기 호출 대상)
+
+
+class SynthesisTopicGold(TIWModel):
+    """Gold-expected alignment + resolution for one atomic claim topic. Derived
+    INDEPENDENTLY from the law/사실관계 (anti-gaming) — the synthesis must REPRODUCE
+    these from the source stances via the decision table, not be told them."""
+
+    topic_key: str
+    expected_status: AlignmentStatus                 # AGREE|CONFLICT|SILENT
+    expected_outcome: ConflictOutcome = ConflictOutcome.AGREE
+    expected_adopted: list[str] = Field(default_factory=list)   # channel labels 채택
+    expected_excluded: list[str] = Field(default_factory=list)  # channel labels 배제/강등
+
+
+class SynthesisScenario(TIWModel):
+    """One slice-④ synthesis case: a question, 3 INDEPENDENT source answers, and the
+    gold-expected claim-level alignment/resolution + abstention/lineage expectations."""
+
+    scenario_id: str
+    question_text: str
+    as_of_date: date
+    basis_kind: BasisKind = BasisKind.FISCAL_YEAR
+    ensemble_kind: EnsembleKind
+    high_risk: bool = False
+    sources: list[SynthesisSourceSpec] = Field(default_factory=list)
+    topics: list[SynthesisTopicGold] = Field(default_factory=list)
+    expect_abstain: bool = False                     # 미해소/법령부재 → 결론 보류
+    expect_authority_deficit: bool = False           # ①법령 부재 표시
+    gold_issues: list[str] = Field(default_factory=list)  # issue-spotting (independent)
+
+
 class EvaluationCase(TIWModel):
     case_id: str
     slice: int
@@ -275,5 +346,7 @@ class EvaluationCase(TIWModel):
     rag_queries: list[RagQuery] = Field(default_factory=list)
     # slice ③ only (empty for other slices)
     web_queries: list[WebQuery] = Field(default_factory=list)
+    # slice ④ only (empty for other slices)
+    synthesis_scenarios: list[SynthesisScenario] = Field(default_factory=list)
     # slice ⑤ only (empty for other slices)
     hitl_scenarios: list[HitlScenario] = Field(default_factory=list)

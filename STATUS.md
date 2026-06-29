@@ -11,7 +11,7 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**slice ⑥·①·②·③·⑤ 완료 (5/6 PASS)** (autonomous 루프 진입 전 수동 검증 단계 — '통제된 시작'). 남은: ④(충돌종합) + 목업.
+**slice ⑥·①·②·③·④·⑤ 완료 (6/6 PASS)** (autonomous 루프 진입 전 수동 검증 단계 — '통제된 시작'). 남은: 프론트 목업 3화면.
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
@@ -20,7 +20,7 @@
 | ① | 법령MCP 앵커 답변 | **90.5** (min: PUB-001=100·PUB-002=96.8·HID-001=90.5) | 0 (TEMPORAL/FABRICATED/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — judge 연결 + codex 하드닝(결정적 entailment·추상 프롬프트). 분모 79(conflict/security는 ④/⑥) |
 | ② | citation 검증 RAG | **97.3** (min: PUB-001=100·PUB-002=97.3·HID-001=97.3) | 0 (TENANT_LEAK/FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 실 Chroma 테넌트 격리(누수0) + 구조분할 + 실 임베딩(model2vec) replay + judge. 분모 93(conflict는 ④) |
 | ③ | 공식소스 Web run | **96.8** (min: PUB-001=100·PUB-002=97.2·HID-001=96.8) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — Tavily 실 wiring(공식도메인 발견·RECORD/REPLAY) + Source Policy(사전/사후) + 승격(WEB-011, 법령 원문 대조) + WEB-012(최신성⟂적용시점 분리) + slice① 생성기 재사용(채널③/WEB). 분모 79(conflict는 ④·웹은 공유 L0 보안은 ⑥) |
-| ④ | 충돌 케이스(3소스 종합) | — | — | 미착수 |
+| ④ | 충돌 케이스(3소스 종합) | **93.5** (min: PUB-001=93.5·PUB-002=100·HID-001=96.4·HID-002=100) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 결정테이블(권위·시점·사실·채널 tie-break) + claim 단위 정합 + 인용 상속(신규 0) + lineage 100%. conflict(7) 차원 측정(①②③에서 N/A였던 차원)=100. 분모 77(search per-source·security는 ⑥) |
 | ⑤ | CPA HITL 워크플로 | **92.3** (min: PUB-001=100·PUB-002=92.3·HID-001=95.2) | 0 (UNAPPROVED_RELEASE/MISSING_WARNING/TENANT_LEAK 미발생) | **통과 (≥90)** — H1~H5 게이트·승인 전 FinalMemo/고객본 차단(contract proof + 감사로그 이중)·검토항목 자동·graceful degrade·ReviewHistory 해시체인 |
 
 ### slice ① 법령 코어 (이번 빌드 — judge 제외 결정적 부분만)
@@ -72,9 +72,19 @@
 - **실측 점수(정직)**: PUB-001 100·PUB-002 97.2(output=75)·HID-001 96.8(issue=75) → slice③ **96.8 PASS**. 라이브 1회 녹화(Tavily 3 검색 + opus 생성/judge 6콜 ~$0.60) → replay 결정성. judge entail 2/2 전 케이스·citation_grounding 14/14·web_provenance 1/1·recall 1.0·temporal_error False·비공식 승격 0.
 - **정직성 증거(동일 채점 경로 적발, tests/test_web_slice3.py 25개)**: 비공식 블로그 주입→배제(승격 0)·**비공식 강제승격→FABRICATED(cap60)**·날조 인용→FABRICATED·**web-provenance 변조→FABRICATED**·시점불일치→TEMPORAL(cap55)·tavily/gen/judge fixture 부재→NOT_REPRODUCIBLE·비지지 entailment→FABRICATED·**web 단독 단정(미abstain)→차단**·tavily 해시변조→WebNotReproducible.
 
+### slice ④ 충돌 케이스(3소스 종합) (이번 빌드 — 캡스톤, 실연동 완료)
+- **결정테이블(`rules/conflict_resolution.py`, HALU-012)**: 권위 위계(법률>시행령>…>실무서>웹) + 시점 유효성(적용시점 유효 버전 채택·구버전 배제) + 사실관계 동일성(예규 원용 배제) + 채널 ①>②>③ **tie-break만**. **deterministic(LLM 재량 ✕)** — 결과를 `ConflictResolution`(inputs·rule·outcome)로 로그. **평균/다수결 금지**(50/30/20 폐기).
+- **종합 엔진(`src/synthesis.py`)**: 3 독립 `SourceAnswer`(①LAW_MCP·②INTERNAL_RAG·③WEB, 공유 SourceAnswer 생성기 `build_law_source_answer`/`generate_research_answer` 재사용) → **claim 단위 `ClaimAlignment`**(AGREE/CONFLICT/SILENT, ORCH-011) + `ConflictResolution` + `SynthesisOpinion`. **인용 상속(ORCH-012 신규 인용 0)** · **lineage 무결성(HALU-014, 추적불가 0)** · 미해소→abstain+검토항목+confidence캡 · 법령부재→authority_deficit. HALU-013(소스 인용 날조→60캡+종합 경고 전파).
+- **종합 judge(`src/judge.py SynthesisJudge` + `prompts/judge_synthesis.md`)**: 종합의견을 법리20/쟁점10/리스크11/산출9로 채점 + **상속 인용 결정적 entailment** 재사용. judge가 "템플릿 수준" 지적 → 종합 opinion에 권위 소스 substantive 법리(규칙→사실·한도·기한·신고영향) + escalation 등급(H2/H3/H4) + 다음단계 surface → 정직한 점수 상승(87→93.5).
+- **하버스(`tiw/eval/slices/slice4_synthesis.py`)**: **conflict(7) 차원**(①②③에서 N/A였던 차원!) = 충돌탐지 F1 + 결정테이블 outcome 일치 + 정확보류 + authority_deficit + lineage 100%(EVAL-012). + 인용 grounding(상속, 12)·법리/쟁점/리스크/산출(judge)·요구(ORCH-008/009)·재현성. 분모 77(search per-source ①②③·security는 ⑥ N/A).
+- **EVAL-011 앙상블 4종**: PUB-001 (b)2v1 충돌(시점 TEMPORAL 해소) · PUB-002 (a)소스 침묵(②SILENT 커버리지갭) · HID-001 (c)3way 충돌(권위·시점 동급→UNRESOLVED_ABSTAIN, 고위험) · HID-002 (d)법령부재 합의(①SILENT·②③ NON_AUTHORITATIVE_CONSENSUS, 캡·HITL). public≠hidden ensemble(overfit 방지, hidden src/ 미import).
+- **하드게이트**: NOT_REPRODUCIBLE(gen/judge fixture 부재·해시불일치·**lineage 추적불가** HALU-014) · TEMPORAL_ERROR(구 시행일 버전 권위 채택) · FABRICATED_CITATION(소스 인용 날조 OR entailment 미지지 OR **신규 인용 생성** ORCH-012 OR **충돌 평균/뭉갬** OR **미해소 충돌 단정** OR **권위 위계 위반/웹 override**) · MISSING_REVIEW_WARNING.
+- **결정성**: 신규 종합 케이스 라이브 1회 녹화(4 primary 생성 + 4 종합 judge = 8콜 ~$0.82) → `scripts/record_synthesis_fixtures.py`(하버스를 recording transport로 구동 → replay 키 일치). 법령 fixture는 기존 2024/2020 body 재사용(신규 0). 테스트/CI 재생(네트워크/키 0), 부재/불일치 fail-closed.
+- **실측 점수(정직)**: PUB-001 93.5(legal=75)·PUB-002 100·HID-001 96.4(risk=75)·HID-002 100 → slice④ **93.5 PASS**. conflict_dim 1.0·F1 1.0·lineage 100%·entailment 2/2·신규인용 0·temporal_error False 전 케이스.
+- **정직성 증거(동일 채점 경로 적발, tests/test_synthesis_slice4.py 22개)**: 충돌 평균/뭉갬→conflict 0+FABRICATED · 구버전/권위 무시 채택→TEMPORAL_ERROR · 웹으로 법령 override→authority_violated+FABRICATED · 미해소 단정→FABRICATED · 신규 인용→FABRICATED · lineage 추적불가→NOT_REPRODUCIBLE · 소스 인용 날조→FABRICATED · 고위험 검토경고 누락→MISSING_REVIEW_WARNING · gen/judge fixture 부재→NOT_REPRODUCIBLE. + 결정테이블 단위테스트(법률>웹·TEMPORAL·FACT_MISMATCH·UNRESOLVED·NON_AUTH·AGREE).
+
 ## 다음 타겟
-1. slice ④ 충돌 케이스(3소스 종합) — ①②③ SourceAnswer claim 단위 정합 + conflict(7) 차원 측정. **slice③ WEB SourceAnswer가 ④의 세 번째 입력**(LAW_MCP·INTERNAL_RAG·WEB).
-2. 프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기).
+1. 프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기).
 3. (선택) slice① HID-001 lr/is=75 개선 / korean-law-mcp 실 wiring(현재 fallback 법제처).
 4. (선택) slice② children 색인을 dense 회수 경로에 직접 편입(현재 parent-level 회수 + child 메타) — recall 견고성 유지 전제.
 5. (선택) slice③ 공식소스 커넥터(국세청·법제처 직접 연계)·PDF/HWP OCR(WEB-009)·Tavily 게시일 부재 시 freshness 보강.
@@ -91,6 +101,7 @@
 - **slice ② 독립 codex 리뷰** (P0 없음): 격리 우회불가·flaky 수정 안전·시점필터·anti-gaming(L3 미송신·hidden≠public) 모두 **SOUND** 확인. **P1 2건 반영** — recall 분모 중복집계 제거(`set(gold)|set(shared)` dedupe) · entailment를 **retrieved chunk 직접 검증**(회수 밖 인용→FABRICATED, citation 8/8). codex 종합: "전반적으로 정직, flaky 수정 안전." **pytest 96 passed**(실패하던 순서·전체×3 green, 순서 독립).
 - **slice ⑤ HITL codex 리뷰** (P0 1건 반영): **P0** FinalMemo/ClientDeliverable 모델 생성자가 승인 미검증(워크플로 우회 직접생성 가능) → **contract 레이어에 `ReleaseAuthorization` proof 필수**(필요 게이트 승인+테넌트 정합 없으면 ValidationError) + **P1** 감사이벤트 기반 판정(side-effect release→`record_release` 로그 적발) = **이중 차단**. 견고 확인: 게이트로직(저위험 H5/고위험 H4+H5)·approver 권한(무권한·교차테넌트·timeout 거부)·fixture 재사용 정당(HITL 로직 실제 실행, graceful degrade req<100)·ReviewHistory 변조감지. **pytest 117 passed**(×3 일관). `UNAPPROVED_RELEASE:0` additive(기존 캡 frozen).
 - **slice ③ 공식소스 Web codex 리뷰** (P0 2건 반영): **P0-1** WEB-011 "법령 원문 대조"가 토큰 존재 검사에 그침(공식 도메인 안내 페이지도 승격) → **실질 원문 대조**로 강화: 후보 원문과 ① ProvisionVersion.text 의 **최장 공통 verbatim 부분문자열(difflib, ≥40자)** 을 요구(`content_corroborated`). 실측상 진짜 조문 본문 페이지는 500~924자 일치, 안내 페이지는 ≤28자 → 깨끗이 분리. **P0-2** web `SOURCE_SNAPSHOT` citation 의 quote 가 웹 콘텐츠가 아닌 `pv.text`에서 생성 → **실제 스냅샷 원문 발췌**(원문 대조 verbatim 공유 구간)로 변경: quote 가 공식 웹 콘텐츠 **AND** 법령 원문 양쪽의 verbatim 부분문자열 → 하버스가 `quote ⊂ official_content` 와 `quote ⊂ pv.text` **둘 다** 검증. **P1-1** `expect_promote=False`(정상 abstain) 케이스가 NOT_REPRODUCIBLE 처리 → `abstain_ok` 분리 집계로 정상 abstain 을 PASS 경로로 채점. **P1-2** replay `retrieved_at` 누락 시 wall-clock now() 폴백 → ReplayTavilyTransport 가 manifest `recorded_at` 부재/파싱불가 시 **fail-closed(`WebNotReproducible`)**. **P2** `.env` 없으면 키 스캔 skip → **무조건 secret marker 정적 스캔**(tvly-/Bearer/sk-ant-) 추가. 견고 확인: 가중치/캡/게이트 불변·hidden(제24조)≠public(제25조)·src/ hidden 미import·fixture/judge/citation/temporal fail-closed 경로 정상. 회귀테스트 `test_promotion_requires_real_provision_overlap`·`test_web_citation_quote_comes_from_official_content` 추가. **pytest 145 passed**(×3 일관, 순서 독립).
+- **slice ④ 충돌종합 codex 리뷰** (빌드 자체 CLEAN + **독립 재검증이 더 깊이 적발**): 독립 codex **P0 1 + P1 2 + P2 2 반영** — **P0** 권위위계 하드게이트가 `outcome` 필드 신뢰(변조 시 우회) → **채택 권위 rank 직접 비교**(하위가 상위 법령 override → conflict 0 + FABRICATED, outcome 라벨 무관). **P1-1** lineage가 id 존재만 검증 → **합성 claim↔채택 조문 내용 entailment**(`verify_entailment`) 추가, 미지지 → 무결성 위반(NOT_REPRODUCIBLE). **P1-2** gold `expected_excluded` 미채점 → 배제채널 일치율을 conflict 산식에 반영. **P2-1** 빈 citation `[0]` 예외 → fail-closed. **P2-2** no-positive(SILENT/LAW_ABSENT) `conflict_f1=1.0` 트리비얼 → `N/A` 분리. 견고 확인: 결정테이블 deterministic(LLM fallback 0)·평균/다수결 금지·신규인용 이중차단. **점수 무변(93.5)** — 정직성 강화는 적대 입력만 하락. **pytest 172 passed**(×3 일관, 순서 독립). 수용: fixture가 case_id로 키됨(결정테이블·채점은 fixture 무관 결정적).
 
 ## 빌드 환경 메모
 - 스택: Python 3.11+ (검증: 3.14.4). 핵심 deps = `pydantic>=2.7`+`pyyaml`(결정적 경로). 어댑터(fastapi/anthropic/chromadb/python-docx)는 `[adapters]`/`[api]` extra — slice⑥ 테스트는 실키·heavy wheel 없이 통과.

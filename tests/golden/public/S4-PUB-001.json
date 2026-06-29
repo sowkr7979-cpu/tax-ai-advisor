@@ -1,0 +1,55 @@
+{
+  "case_id": "S4-PUB-001",
+  "slice": 4,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "충돌 케이스 — 3소스 종합(EVAL-011 (b) 2vs1 충돌). 법인세법 제25조 기업업무추진비 손금불산입 한도(2024 사업연도). ①법령 원문(2024 '기업업무추진비')과 ③공식 웹(2024)은 합치하나, ②내부 실무서가 구 시행일 버전('접대비', 2020)을 기준으로 답한다. 종합은 평균/다수결이 아니라 '같은 조문 다른 시행일 버전 → 적용시점 유효 버전 채택'(결정테이블·HALU-012)으로 ①③(2024) 채택, ②(2020 구버전) 배제 + 내부 실무서 갱신 검토항목. 인용은 소스 인용 상속(ORCH-012), lineage 추적 가능(HALU-014).",
+  "synthesis_scenarios": [
+    {
+      "scenario_id": "S4-PUB-001-s1",
+      "question_text": "법인세법상 기업업무추진비(구 접대비) 손금불산입 한도의 근거 조문과 2024 사업연도 기준 유효 버전을, 법령 원문·내부 실무서·공식 웹 세 근거로 각각 확인하고 종합해줘. 세 근거가 갈리면 어디서 갈리는지(충돌)와 어느 것이 우선인지(권위·시점)를 밝혀라.",
+      "as_of_date": "2024-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "ensemble_kind": "CONFLICT_2V1",
+      "high_risk": false,
+      "sources": [
+        {
+          "source_type": "LAW_MCP", "channel_label": "①", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "제25조_적용버전",
+          "stance_from_subject": true, "dispositive": true, "is_primary": true
+        },
+        {
+          "source_type": "INTERNAL_RAG", "channel_label": "②", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2020, "topic_key": "제25조_적용버전",
+          "stance_from_subject": true, "dispositive": true
+        },
+        {
+          "source_type": "WEB", "channel_label": "③", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "제25조_적용버전",
+          "stance_from_subject": true, "dispositive": true
+        }
+      ],
+      "topics": [
+        {
+          "topic_key": "제25조_적용버전",
+          "expected_status": "CONFLICT",
+          "expected_outcome": "TEMPORAL",
+          "expected_adopted": ["①"],
+          "expected_excluded": ["②"]
+        }
+      ],
+      "expect_abstain": false,
+      "expect_authority_deficit": false,
+      "gold_issues": [
+        "동일 조문(제25조)의 시행일 버전 충돌 — 2024 '기업업무추진비' vs 구 '접대비'(2020) 명칭/내용 개정",
+        "적용시점 유효성(as-of 2024 사업연도)으로 유효 버전을 선택하고 구버전을 배제 — 평균/다수결 금지",
+        "내부 실무서가 구 시행일 버전 기준이면 갱신 필요(검토항목으로 승격)",
+        "손금불산입 한도 = 기본한도 + 수입금액 구간별 한도 — 적용 버전이 명확해야 한도 산정 가능",
+        "종합의견은 새 인용을 만들지 않고 권위 소스(①법령)의 인용을 상속하며 추적 가능해야 함"
+      ]
+    }
+  ]
+}

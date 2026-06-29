@@ -1,0 +1,53 @@
+{
+  "case_id": "S4-PUB-002",
+  "slice": 4,
+  "visibility": "PUBLIC",
+  "adversarial": false,
+  "description": "충돌 케이스 — 3소스 종합(EVAL-011 (a) 소스 침묵). 법인세법 제24조 기부금 손금산입 한도(2024 사업연도). ①법령 원문과 ③공식 웹은 2024 유효 버전으로 합치하나, ②내부 RAG는 해당 쟁점의 사내 자료가 없어 침묵(SILENT)한다. 침묵은 불일치가 아니라 커버리지 갭으로 처리(docs/08 §5-0) — 종합은 ①③ 합의로 진행하되 '② 내부자료 없음'을 표시. 권위 채널 ①의 인용 상속(채널 tie-break ①>③).",
+  "synthesis_scenarios": [
+    {
+      "scenario_id": "S4-PUB-002-s1",
+      "question_text": "우리 회사(2024 사업연도)의 기부금 손금산입·손금불산입 한도의 근거 조문과 유효 버전을 법령 원문·내부 자료·공식 웹으로 각각 확인하고 종합해줘. 내부 자료가 없으면 그 사실(커버리지 갭)도 함께 밝혀라.",
+      "as_of_date": "2024-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "ensemble_kind": "SILENT",
+      "high_risk": false,
+      "sources": [
+        {
+          "source_type": "LAW_MCP", "channel_label": "①", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제24조",
+          "grounding_year": 2024, "topic_key": "제24조_기부금한도",
+          "stance_from_subject": true, "dispositive": true, "is_primary": true
+        },
+        {
+          "source_type": "INTERNAL_RAG", "channel_label": "②", "status": "SILENT",
+          "topic_key": "제24조_기부금한도"
+        },
+        {
+          "source_type": "WEB", "channel_label": "③", "status": "ANSWERED",
+          "authority_label": "법률", "law_name": "법인세법", "article_label": "제24조",
+          "grounding_year": 2024, "topic_key": "제24조_기부금한도",
+          "stance_from_subject": true, "dispositive": true
+        }
+      ],
+      "topics": [
+        {
+          "topic_key": "제24조_기부금한도",
+          "expected_status": "AGREE",
+          "expected_outcome": "AGREE",
+          "expected_adopted": ["①"],
+          "expected_excluded": []
+        }
+      ],
+      "expect_abstain": false,
+      "expect_authority_deficit": false,
+      "gold_issues": [
+        "기부금 종류 구분(특례/일반/비지정)과 종류별 손금산입 한도 차등",
+        "손금산입 한도(기준소득금액 대비 비율) 계산과 한도 초과액 손금불산입·이월공제",
+        "내부 자료 침묵(SILENT)은 충돌이 아니라 커버리지 갭 — 종합은 ①③ 합의로 진행하되 갭 표시",
+        "권위 채널(①법령 원문)의 인용을 상속하고 공식 웹(③)은 합의로 교차확인",
+        "적용시점(2024 사업연도) 유효 버전 기준 — 시점 가정 명시"
+      ]
+    }
+  ]
+}

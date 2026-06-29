@@ -17,6 +17,7 @@ from tiw.eval.slices import (
     slice1_law_anchor,
     slice2_rag,
     slice3_web,
+    slice4_synthesis,
     slice5_hitl,
     slice6_isolation,
 )
@@ -77,6 +78,7 @@ _REGISTRY = {
     1: ("법령MCP 앵커 답변", slice1_law_anchor.run_cases),
     2: ("citation 검증 RAG", slice2_rag.run_cases),
     3: ("공식소스 Web run", slice3_web.run_cases),
+    4: ("충돌 케이스(3소스 종합)", slice4_synthesis.run_cases),
     5: ("CPA HITL 워크플로", slice5_hitl.run_cases),
     6: ("테넌트 격리", slice6_isolation.run_cases),
 }

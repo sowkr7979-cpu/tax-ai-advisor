@@ -1,0 +1,55 @@
+{
+  "case_id": "S4-HID-002",
+  "slice": 4,
+  "visibility": "HIDDEN",
+  "adversarial": false,
+  "description": "숨김 freeze — 3소스 종합(EVAL-011 (d) 법령부재 합의, 공개셋과 다른 ensemble). 법령 원문이 직접 규율하지 않는 실무 처리 쟁점(제25조 운영 관련). ①법령 원문은 해당 세부 처리에 대한 직접 근거가 없어 침묵(SILENT), ②내부 실무서와 ③공식 웹(국세청 안내)은 실무 처리 방법에 합의한다. 비권위적 합의(docs/08 §5-0 (d)): 실무·웹 합의는 법령을 대체하지 못하므로 '법적 결론 보류 + 실무 가이드로만 제시 + authority_deficit 표시 + confidence 캡 + 고위험 HITL'. 웹/실무서를 법령처럼 단정(authority override)하면 적발.",
+  "synthesis_scenarios": [
+    {
+      "scenario_id": "S4-HID-002-s1",
+      "question_text": "법령 원문이 직접 규정하지 않는 기업업무추진비 실무 처리(2024 사업연도)에 대해 법령 원문·내부 실무서·공식 웹으로 각각 확인하고 종합해줘. 법령 근거가 없으면 그 사실을 밝히고 실무·웹 합의를 법령처럼 단정하지 말고 가이드로만 제시하라.",
+      "as_of_date": "2024-01-01",
+      "basis_kind": "FISCAL_YEAR",
+      "ensemble_kind": "LAW_ABSENT",
+      "high_risk": true,
+      "sources": [
+        {
+          "source_type": "LAW_MCP", "channel_label": "①", "status": "SILENT",
+          "topic_key": "실무처리_법령부재"
+        },
+        {
+          "source_type": "INTERNAL_RAG", "channel_label": "②", "status": "ANSWERED",
+          "authority_label": "실무서", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "실무처리_법령부재",
+          "stance": "실무상 일관된 처리 방법(가이드)",
+          "stance_from_subject": false, "dispositive": true, "is_primary": true
+        },
+        {
+          "source_type": "WEB", "channel_label": "③", "status": "ANSWERED",
+          "authority_label": "웹", "law_name": "법인세법", "article_label": "제25조",
+          "grounding_year": 2024, "topic_key": "실무처리_법령부재",
+          "stance": "실무상 일관된 처리 방법(가이드)",
+          "stance_from_subject": false, "dispositive": true
+        }
+      ],
+      "topics": [
+        {
+          "topic_key": "실무처리_법령부재",
+          "expected_status": "AGREE",
+          "expected_outcome": "NON_AUTHORITATIVE_CONSENSUS",
+          "expected_adopted": ["②"],
+          "expected_excluded": []
+        }
+      ],
+      "expect_abstain": true,
+      "expect_authority_deficit": true,
+      "gold_issues": [
+        "법령 원문이 쟁점을 규율하지 않을 때(① SILENT) 실무·웹 합의는 법령을 대체하지 못함(비권위적 합의)",
+        "authority_deficit 표시 — 법적 결론은 보류하고 실무 가이드로만 제시(법적결론/실무가이드 구분)",
+        "비권위적 합의는 confidence 캡 + 고위험 HITL escalation 필요",
+        "웹/실무서를 법령처럼 단정(권위 override)하지 않음 — 권위 위계 준수",
+        "②③ 합의여도 권위 부재이므로 회계사 검토·법령 근거 추가확인을 검토항목으로 승격"
+      ]
+    }
+  ]
+}
