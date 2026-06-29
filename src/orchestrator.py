@@ -341,8 +341,8 @@ class Orchestrator:
 
         # -- Draft (DraftPackageData → 11목차) ----------------------------- #
         package = self._assemble_package(
-            company=company, question=question, materials=materials, limits=limits,
-            risks=risks, opportunities=opportunities, strategy=strategy,
+            company=company, question=question, primary=primary, materials=materials,
+            limits=limits, risks=risks, opportunities=opportunities, strategy=strategy,
             issue_memos=issue_memos, citations=citations, source_objects=source_objects,
             review_items=review_items, additional_requests=self._evidence_requests(company, deficits),
             synthesis=synthesis,
@@ -411,7 +411,13 @@ class Orchestrator:
         primary_lookup, as_of: date, registry: SourceRegistry,
     ) -> tuple[list[SourceContribution], ResearchLiteAnswer, Optional[WebSourceAnswer]]:
         ar = f"ar_{company.matter_id}"
-        stance = "기업업무추진비 한도초과·적격증빙 미수취분 손금불산입(법령 원문 기준)"
+        # stance 는 주쟁점에서 도출한다. 데모 주쟁점(기업업무추진비)은 기존 녹화 fixture 키와
+        # 동일한 문자열을 유지(stance → 종합 opinion → strategy 프롬프트로 전파되므로 replay
+        # 결정성 보존)하고, 다른 쟁점이 주쟁점이면 해당 쟁점 기준으로 정정한다(접대비 stance 오용 차단).
+        if primary["issue_key"] == "기업업무추진비":
+            stance = "기업업무추진비 한도초과·적격증빙 미수취분 손금불산입(법령 원문 기준)"
+        else:
+            stance = f"{primary['title']} 한도·요건 위반분 손금불산입(법령 원문 기준)"
         topic = f"{primary['issue_key']}_손금한도"
         contributions: list[SourceContribution] = []
 
@@ -684,23 +690,54 @@ class Orchestrator:
         ]
         return reqs
 
-    def _assemble_package(self, *, company, question, materials, limits, risks,
+    @staticmethod
+    def _summary_texts(company: CompanyProfile, primary: dict) -> tuple[str, str, list[str]]:
+        """주쟁점에서 도출한 (executive_summary, conclusion, recommended_order).
+
+        접대비 전용 심화 절(예규·심판례 미해소·증빙 부인 범위)은 주쟁점이 **실제
+        기업업무추진비일 때만** 포함한다 — 다른 쟁점에 접대비 서사를 출력하지 않는다."""
+        ptitle = primary["title"]
+        is_meal = primary["issue_key"] == "기업업무추진비"
+        meal_caveat = (
+            " 적격증빙 부인 범위는 예규·심판례 충돌이 미해소되어 회계사 검토(HITL)로 승격한다."
+            if is_meal else ""
+        )
+        exec_summary = (
+            f"{company.company_name} {company.fiscal_year} 법인세 검토 결과, "
+            f"{ptitle}({_LAW_NAME} {primary['article']}) 관련 손금불산입이 핵심 리스크다. "
+            f"3소스(①법령·②내부RAG·③웹)를 독립 회수해 권위 위계·시점으로 종합했으며, "
+            f"보수/중립/적극 선택지의 세부담·과세리스크·방어가능성을 비교 제시한다.{meal_caveat} "
+            f"모든 법적 주장은 법령 원문(버전 객체) 인용을 동반하며, 결손 자료에는 자료한계 "
+            f"꼬리표를 부착했다."
+        )
+        conclusion_tail = (
+            "적격증빙 부인 범위와 업무용 승용차 한도는" if is_meal
+            else "세부 적용 요건과 한도 계산은"
+        )
+        conclusion = (
+            f"{ptitle} 손금불산입은 법령 원문으로 확정되나, {conclusion_tail} 자료 보완·회계사 "
+            "판단이 선행되어야 한다. 중립적 처리를 기준안으로 제시하되 최종 선택지와 고객 전달본은 "
+            "Reviewer 승인(H4·H5) 후 확정한다."
+        )
+        recommended_order = [
+            "자료 결손(운행기록부·증빙 매칭 등) 보완(H1)",
+            f"{ptitle} 한도 계산 검산(H2)",
+        ]
+        if is_meal:
+            recommended_order.append("적격증빙 부인 범위 예규·심판례 재검토(H3, 미해소 충돌)")
+        recommended_order += [
+            "선택지 확정 및 고위험 가드레일 검토(H4)",
+            "검토패키지 사인오프·고객 전달본 생성(H5)",
+        ]
+        return exec_summary, conclusion, recommended_order
+
+    def _assemble_package(self, *, company, question, primary, materials, limits, risks,
                           opportunities, strategy: StrategyResult, issue_memos, citations,
                           source_objects, review_items, additional_requests, synthesis,
                           ) -> DraftPackageData:
-        exec_summary = (
-            f"{company.company_name} {company.fiscal_year} 법인세 검토 결과, "
-            f"기업업무추진비(접대비) 한도 초과 및 적격증빙 미수취분 손금불산입이 핵심 리스크다. "
-            f"3소스(①법령·②내부RAG·③웹)를 독립 회수해 권위 위계·시점으로 종합했으며, "
-            f"보수/중립/적극 선택지의 세부담·과세리스크·방어가능성을 비교 제시한다. 적격증빙 부인 "
-            f"범위는 예규·심판례 충돌이 미해소되어 회계사 검토(HITL)로 승격한다. 모든 법적 주장은 "
-            f"법령 원문(버전 객체) 인용을 동반하며, 결손 자료에는 자료한계 꼬리표를 부착했다."
-        )
-        conclusion = (
-            "접대비 한도 초과 손금불산입은 법령 원문으로 확정되나, 적격증빙 부인 범위와 업무용 "
-            "승용차 한도는 자료 보완·회계사 판단이 선행되어야 한다. 중립적 처리를 기준안으로 "
-            "제시하되 최종 선택지와 고객 전달본은 Reviewer 승인(H4·H5) 후 확정한다."
-        )
+        # 요약/결론/권고순서는 **실제 주쟁점에서 도출**한다(하드코딩된 접대비 서사를 모든
+        # 입력에 출력하던 오류 차단 — 비-데모 입력에 잘못된 법리 요약 금지).
+        exec_summary, conclusion, recommended_order = self._summary_texts(company, primary)
         return DraftPackageData(
             matter_id=company.matter_id, client_id=company.client_id,
             company_name=company.company_name, fiscal_year=company.fiscal_year,
@@ -710,13 +747,7 @@ class Orchestrator:
             strategy_options=list(strategy.options), issue_memos=issue_memos,
             citations=citations, additional_requests=additional_requests,
             review_items=review_items, conclusion=conclusion,
-            recommended_order=[
-                "운행기록부·증빙 매칭 자료 보완(결손 해소)",
-                "접대비·기부금 한도 계산 검산(H2)",
-                "적격증빙 부인 범위 예규·심판례 재검토(H3, 미해소 충돌)",
-                "선택지 확정 및 고위험 가드레일 검토(H4)",
-                "검토패키지 사인오프·고객 전달본 생성(H5)",
-            ],
+            recommended_order=recommended_order,
             data_limits=limits, synthesis=synthesis.synthesis, source_objects=source_objects,
         )
 

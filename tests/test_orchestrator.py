@@ -211,5 +211,45 @@ def test_replay_failclosed_on_fixture_failure(monkeypatch):
         _run()  # mode=replay → fail-closed (Invariant 5)
 
 
+# --------------------------------------------------------------------------- #
+# 비-데모 입력에 잘못된 법리 요약 금지 (codex stop-time 회귀)
+# --------------------------------------------------------------------------- #
+def test_summary_derives_from_primary_issue_not_hardcoded_meal():
+    """주쟁점이 기업업무추진비가 아니면 요약/결론/권고에 접대비 서사를 출력하지 않는다."""
+    from src.orchestrator import Orchestrator
+
+    company = _company()
+    # 비-데모 주쟁점(지급이자, 제28조)
+    primary = {
+        "issue_key": "지급이자", "article": "제28조",
+        "article_title": "지급이자의 손금불산입",
+        "title": "지급이자 손금불산입(가지급금 등)",
+    }
+    exec_summary, conclusion, order = Orchestrator._summary_texts(company, primary)
+    blob = exec_summary + " " + conclusion + " " + " ".join(order)
+    # 접대비 전용 서사가 새지 않음
+    for meal_token in ("기업업무추진비", "접대비", "적격증빙", "예규·심판례"):
+        assert meal_token not in blob, f"비-접대비 주쟁점인데 접대비 서사 누출: {meal_token!r}"
+    # 실제 주쟁점이 반영됨
+    assert "지급이자" in exec_summary and "제28조" in exec_summary
+    assert "지급이자" in conclusion
+
+
+def test_summary_for_meal_issue_keeps_specialized_clauses():
+    """주쟁점이 실제 기업업무추진비면 예규·심판례 심화 절을 포함한다(데모 경로)."""
+    from src.orchestrator import Orchestrator
+
+    company = _company()
+    primary = {
+        "issue_key": "기업업무추진비", "article": "제25조",
+        "article_title": "기업업무추진비의 손금불산입",
+        "title": "기업업무추진비(접대비) 한도·적격증빙",
+    }
+    exec_summary, conclusion, order = Orchestrator._summary_texts(company, primary)
+    assert "예규·심판례" in exec_summary
+    assert any("예규·심판례" in s for s in order)
+    assert "기업업무추진비(접대비) 한도·적격증빙" in exec_summary
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
