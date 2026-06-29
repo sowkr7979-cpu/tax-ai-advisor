@@ -225,14 +225,21 @@ def test_summary_derives_from_primary_issue_not_hardcoded_meal():
         "article_title": "지급이자의 손금불산입",
         "title": "지급이자 손금불산입(가지급금 등)",
     }
-    exec_summary, conclusion, order = Orchestrator._summary_texts(company, primary)
+    # 지급이자 주쟁점에서는 웹이 보류(①②만 응답) — 거짓 웹 회수 주장이 없어야 함
+    exec_summary, conclusion, order = Orchestrator._summary_texts(
+        company, primary, {"①", "②"})
     blob = exec_summary + " " + conclusion + " " + " ".join(order)
-    # 접대비 전용 서사가 새지 않음
-    for meal_token in ("기업업무추진비", "접대비", "적격증빙", "예규·심판례"):
-        assert meal_token not in blob, f"비-접대비 주쟁점인데 접대비 서사 누출: {meal_token!r}"
+    # 접대비/승용차 전용 서사가 새지 않음
+    for meal_token in ("기업업무추진비", "접대비", "적격증빙", "예규·심판례", "운행기록부"):
+        assert meal_token not in blob, f"비-접대비 주쟁점인데 접대비/승용차 서사 누출: {meal_token!r}"
     # 실제 주쟁점이 반영됨
     assert "지급이자" in exec_summary and "제28조" in exec_summary
     assert "지급이자" in conclusion
+    # 웹 미응답을 정직하게 기술(③웹 회수 주장 금지) — 회수 주장부(권위 위계 앞)에 웹 없음,
+    # 단 정직한 보류 고지는 포함.
+    retrieved_claim = exec_summary.split("권위 위계")[0]
+    assert "③공식웹" not in retrieved_claim and "③웹" not in retrieved_claim, "웹 보류인데 ③웹 회수 주장 누출"
+    assert "③공식웹은 적용 가능한 공식근거가 없어 보류" in exec_summary
 
 
 def test_summary_for_meal_issue_keeps_specialized_clauses():
@@ -245,10 +252,42 @@ def test_summary_for_meal_issue_keeps_specialized_clauses():
         "article_title": "기업업무추진비의 손금불산입",
         "title": "기업업무추진비(접대비) 한도·적격증빙",
     }
-    exec_summary, conclusion, order = Orchestrator._summary_texts(company, primary)
+    # 데모 경로: 3소스 모두 응답
+    exec_summary, conclusion, order = Orchestrator._summary_texts(
+        company, primary, {"①", "②", "③"})
     assert "예규·심판례" in exec_summary
     assert any("예규·심판례" in s for s in order)
     assert "기업업무추진비(접대비) 한도·적격증빙" in exec_summary
+    # 웹 응답 → ③공식웹 회수 명시, 보류 문구 없음
+    assert "③공식웹" in exec_summary and "보류" not in exec_summary
+
+
+def test_evidence_requests_match_detected_issues():
+    """추가 요청 자료는 식별된 쟁점에만 해당 — 무관 쟁점의 접대비/승용차 자료를 요구하지 않음."""
+    from src.orchestrator import Orchestrator
+
+    orch = Orchestrator(mode="replay")
+    issues = [{"issue_key": "지급이자", "article": "제28조",
+               "article_title": "지급이자의 손금불산입", "title": "지급이자 손금불산입(가지급금 등)"}]
+    reqs = orch._evidence_requests(issues, [])
+    blob = " ".join(reqs)
+    assert "지급이자" in blob and "가지급금" in blob
+    assert "접대비" not in blob and "운행기록부" not in blob and "기부금" not in blob
+    assert any("이사회의사록" in r for r in reqs)  # 공통 거버넌스 자료
+
+
+def test_spot_issues_promotes_question_named_issue():
+    """질문이 특정 쟁점을 명시하면 그 쟁점을 주쟁점으로(질문 무관 고정 차단)."""
+    from src.orchestrator import Orchestrator
+
+    orch = Orchestrator(mode="replay")
+    company = _company()  # TB 에 기업업무추진비 + 지급이자 등 포함
+    # 질문이 지급이자를 명시 → 주쟁점이 기업업무추진비가 아닌 지급이자
+    issues = orch._spot_issues(company, "지급이자 가지급금 인정이자 손금불산입 검토해줘")
+    assert issues[0]["issue_key"] == "지급이자"
+    # 질문이 기업업무추진비/접대비를 명시(데모 기본) → 주쟁점 기업업무추진비(기존 동작 유지)
+    issues2 = orch._spot_issues(company, company.default_question)
+    assert issues2[0]["issue_key"] == "기업업무추진비"
 
 
 if __name__ == "__main__":  # pragma: no cover

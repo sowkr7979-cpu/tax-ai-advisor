@@ -11,16 +11,23 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**전체 완료 + 라이브 엔드투엔드 앱 구동** — 6/6 vertical slice PASS + 프론트 목업 3화면 Playwright 렌더 통과 + DOCX Draft(11목차) + **오케스트레이터/CLI(`python -m tiw run`)로 "새 질문 → 검토패키지 DOCX"가 한 명령으로 구동**(라이브 1회 실행으로 실제 DOCX 산출 + replay 결정성 증명). PROMPT.md 완료조건 전부 충족. **pytest 208 passed**.
+**전체 완료 + 라이브 엔드투엔드 앱 구동** — 6/6 vertical slice PASS + 프론트 목업 3화면 Playwright 렌더 통과 + DOCX Draft(11목차) + **오케스트레이터/CLI(`python -m tiw run`)로 "새 질문 → 검토패키지 DOCX"가 한 명령으로 구동**(라이브 1회 실행으로 실제 DOCX 산출 + replay 결정성 증명). PROMPT.md 완료조건 전부 충족. **pytest 210 passed**.
 
 ### ★ 라이브 엔드투엔드 오케스트레이터 + CLI (이번 빌드 — 6 슬라이스 chaining)
 - **Strategy Agent(`src/strategy.py`)**: 종합의견+리스크+회수 조문 → 보수/중립/적극 3종 선택지(§3-5). 인용은 **회수된 버전객체에 한정**(`registry.require_citation` 선행, LLM이 id 주조 불가) · 적극 가드레일/검토경고 fail-closed 복구 · grounding 결정적 재검증(`verify_entailment`, self-report 비신뢰).
 - **오케스트레이터(`src/orchestrator.py`)**: §4-1 흐름 Intake→쟁점도출(TB→조문)→**3소스 Research**(①`legal_research`·②`internal_rag`(Chroma 테넌트격리·L3 외부LLM 미송신)·③`web_research`(공식소스 승격))→**Synthesis**(ConflictResolution)→Risk→**Strategy**→Evidence→**Draft 11목차 DOCX**. `live`/`replay` 토글. ①②③ 동일 gen 프롬프트를 `_MemoLLMClient`로 단일화 → 라이브=replay 결정성.
 - **CLI(`tiw/cli.py`+`tiw/__main__.py`)**: `python -m tiw run [--live|--replay] [--internal|--client] [--approve-demo] --company … --question … --out …`. `python -m tiw.eval` 독립 보존.
 - **데모(`tests/fixtures/company/A제조_2026.json`)**: 제조업 법인(TB 4계정·전기신고·자료 수집/없음/모름/결손·L3 사내메모).
-- **검증**: pytest 208 · 슬라이스 회귀 0(①90.5②97.3③96.8④93.5⑤92.3⑥100) · replay 결정성(라이브=replay doc.xml 내용 동일, sha `668efa`) · 신규 fixture secret 0 · **L3 메모 외부 LLM 송신 0(독립 스캔 확인)**.
+- **검증**: pytest 210 · 슬라이스 회귀 0(①90.5②97.3③96.8④93.5⑤92.3⑥100) · replay 결정성(라이브=replay doc.xml 내용 동일, sha `01775e`) · 신규 fixture secret 0 · **L3 메모 외부 LLM 송신 0(독립 스캔 확인)** · 비-데모 주쟁점(지급이자/기부금)에 접대비 서사 누출 0(독립 probe + 회귀테스트).
 - **codex 독립 리뷰(P0×3 + P1×3 전부 반영)**: **P0-1** `validate_draft_package`가 `_render`에서만 호출 → write_docx=False 우회 → **assemble 직후 무조건 호출**(OUT-003 항상 강제). **P0-2/3** `_run_internal_rag`/`_run_web`의 broad `except Exception`이 replay fixture·격리·인용 실패를 silent degrade로 은폐 → **replay 모드는 무조건 전파(fail-closed) + `_NEVER_SWALLOW`(IsolationError/CitationVerificationError/TenantBoundaryError)는 모든 모드 미삼킴**, live 운영성 실패만 degrade. **P1-1** web SILENT contribution `client_id="client_eval"` 하드코딩 → `company.client_id`(테넌트 일관). **P1-2** `_unresolved_conflicts` 무조건 하드코딩 충돌 주입 → **주쟁점이 실제 기업업무추진비일 때만 승격**(쟁점 범위 밖 무관 충돌 주입 차단). **P1-3** private `wf._build_release_proof` 직접 호출(감사 우회) → 공개 `wf.produce_client_deliverable`(교차테넌트 차단+미승인 재검증+`record_release` 의무감사) 경유 후 proof 반환. codex 종합: 인용 날조/grounding/L3 격리/HITL fail-closed **불변식 유지 확인**. 회귀테스트 3건(`test_out003_validation_runs_even_without_docx`·`test_replay_failclosed_on_isolation_error`·`test_replay_failclosed_on_fixture_failure`).
-- **codex stop-time 추가 적발(반영 완료)**: 오케스트레이터가 executive_summary/conclusion/recommended_order/stance 를 **접대비(기업업무추진비) 데모 서사로 하드코딩** → 주쟁점이 다른 비-데모 입력에 **잘못된 법리 요약** 출력 위험. **수정**: `_summary_texts(company, primary)` 로 추출해 **실제 주쟁점에서 도출**(접대비 전용 절 = 예규·심판례 미해소·증빙 부인 범위는 주쟁점이 실제 기업업무추진비일 때만 포함), stance 도 주쟁점 도출(데모 기업업무추진비는 녹화 fixture 키 보존 위해 동일 문자열 유지). 회귀테스트 2건(`test_summary_derives_from_primary_issue_not_hardcoded_meal`(지급이자/제28조 → 접대비 토큰 누출 0)·`test_summary_for_meal_issue_keeps_specialized_clauses`). pytest 208, 데모 결정성 유지(sha `668efa`).
+- **codex stop-time 추가 적발 — 잘못된 법리 요약 클래스(2라운드 반영 완료)**: 오케스트레이터가 데모(기업업무추진비/접대비) 서사를 **여러 곳에서 무조건 출력** → 주쟁점이 다른 비-데모 입력에 **잘못된/불일치 요약** 출력 위험. 1차+2차로 전부 제거:
+  - exec_summary/conclusion/recommended_order → `_summary_texts(company, primary, answered_channels)` 로 추출, **실제 주쟁점에서 도출**(접대비 전용 절=예규·심판례·증빙 부인 범위는 주쟁점이 기업업무추진비일 때만).
+  - **stance**·**`_risks` 과세논리 제목** → 주쟁점 도출(데모 기업업무추진비는 녹화 fixture 키/결정성 보존 위해 동일 문자열 유지).
+  - **거짓 웹 회수 주장 차단**: exec_summary 의 "3소스 독립 회수"가 웹 보류 시에도 ③웹을 주장 → **실제 응답 채널(answered_channels)만 정직 기술** + 미응답 시 "③공식웹은 적용 공식근거 없어 보류" 고지.
+  - **`_evidence_requests`** 고정 4항목(승용차·접대비 무조건) → **식별된 쟁점별 증빙 + 공통 거버넌스**로 빌드.
+  - **`_spot_issues`** 가 질문 무관하게 기업업무추진비 주쟁점 고정 → **질문이 명시한 쟁점을 주쟁점으로 승격**(`_ISSUE_QUERY_TERMS`; 데모 질문은 기업업무추진비 명시 → 동일).
+  - **지급이자 절세기회 템플릿** 추가(validate ≥1 opportunity 충족 → 지급이자 단독 matter 도 정상).
+  - 회귀테스트 5건(요약 누출0·심화절 유지·웹 정직·증빙 쟁점일치·질문→주쟁점). **codex 재검증 STILL-LEAKS 지적 전부 해소**. pytest **210**, 데모 결정성 유지(sha `01775e`), 슬라이스 회귀 0.
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |

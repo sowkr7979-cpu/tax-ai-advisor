@@ -100,6 +100,25 @@ _ARTICLE_BY_ISSUE: dict[str, tuple[str, str, str]] = {
     "지급이자": ("제28조", "지급이자의 손금불산입", "지급이자 손금불산입(가지급금 등)"),
 }
 _LAW_NAME = "법인세법"
+
+# 질문에서 주쟁점을 식별하는 키워드(쟁점별). 질문이 특정 쟁점을 명시하면 그 쟁점을 주쟁점으로
+# 승격하고, 명시가 없으면 최고위험(기업업무추진비) 우선(데모 정책). 잘못된 주쟁점 고정 방지.
+_ISSUE_QUERY_TERMS: dict[str, tuple[str, ...]] = {
+    "기업업무추진비": ("기업업무추진비", "접대비"),
+    "기부금": ("기부금",),
+    "업무용승용차": ("업무용승용차", "업무용 승용차", "승용차", "운행기록부"),
+    "지급이자": ("지급이자", "가지급금", "인정이자"),
+}
+
+# 쟁점별 추가 요청 자료(증빙) — 실제 식별된 쟁점에만 해당 항목을 요청한다(접대비/승용차
+# 자료를 무관한 쟁점에 무조건 요구하던 오류 차단). `_EVIDENCE_GENERIC`는 전 쟁점 공통.
+_EVIDENCE_BY_ISSUE: dict[str, str] = {
+    "기업업무추진비": "접대비 적격증빙(법인카드 전표·세금계산서) 및 원장 매칭 명세 — 손금 인정 요건 검토용",
+    "기부금": "기부금 영수증·기부처 적격성(법정/지정기부금) 확인 자료 — 한도·이월공제 검토용",
+    "업무용승용차": "업무용 승용차 운행기록부 — 업무사용비율·차량 관련비용 손금 한도 검토용",
+    "지급이자": "차입금 명세·가지급금 잔액 명세 — 지급이자 손금불산입 검토용",
+}
+_EVIDENCE_GENERIC = "이사회의사록·주요 계약서 — 거래 업무관련성 소명자료"
 # Web channel reuses the recorded 제25조 기업업무추진비 official-source fixture (as-of
 # 2024 so plan_queries(year=2024) matches the recorded Tavily query key).
 _WEB_AS_OF = date(2024, 1, 1)
@@ -288,8 +307,8 @@ class Orchestrator:
                   f"{sum(1 for m in materials if m.status=='수집')}/{len(materials)} 수집, "
                   f"결손/모름/없음 {len(deficits)}건 고지.")
 
-        # -- 쟁점 도출 (TB 계정 → 조문) ------------------------------------ #
-        issues = self._spot_issues(company)
+        # -- 쟁점 도출 (TB 계정 → 조문; 질문이 명시한 쟁점을 주쟁점으로) ----- #
+        issues = self._spot_issues(company, question)
         primary = issues[0]
         self._say(f"[쟁점 도출] {len(issues)}개 쟁점 — 주쟁점: {primary['title']} "
                   f"({_LAW_NAME} {primary['article']}).")
@@ -340,12 +359,16 @@ class Orchestrator:
         )
 
         # -- Draft (DraftPackageData → 11목차) ----------------------------- #
+        # 요약에 "어떤 출처가 실제로 응답했는지"를 정직하게 반영하기 위해 응답 채널 집합 전달
+        # (웹이 보류했는데 ③웹 회수를 주장하는 거짓 요약 차단).
+        answered_channels = {c.channel_label for c in contributions if c.answered}
         package = self._assemble_package(
             company=company, question=question, primary=primary, materials=materials,
             limits=limits, risks=risks, opportunities=opportunities, strategy=strategy,
             issue_memos=issue_memos, citations=citations, source_objects=source_objects,
-            review_items=review_items, additional_requests=self._evidence_requests(company, deficits),
-            synthesis=synthesis,
+            review_items=review_items,
+            additional_requests=self._evidence_requests(issues, deficits),
+            answered_channels=answered_channels, synthesis=synthesis,
         )
 
         # -- OUT-003 하드게이트 — 무인용 단정/날조 차단은 DOCX 출력 여부와 무관하게 항상
@@ -388,8 +411,10 @@ class Orchestrator:
         ]
         return materials, deficits, limits
 
-    def _spot_issues(self, company: CompanyProfile) -> list[dict]:
-        """TB 계정의 issue_key → 조문 매핑(deterministic). 주쟁점 우선."""
+    def _spot_issues(self, company: CompanyProfile, question: str = "") -> list[dict]:
+        """TB 계정의 issue_key → 조문 매핑(deterministic). 주쟁점은 **질문이 명시한 쟁점**을
+        우선하고, 명시가 없으면 최고위험(기업업무추진비)을 우선한다(질문과 무관한 주쟁점
+        고정 → 잘못된 요약 방지)."""
         issues: list[dict] = []
         for row in company.trial_balance:
             key = row.get("issue_key")
@@ -402,8 +427,17 @@ class Orchestrator:
                 })
         if not issues:
             raise ValueError("쟁점 도출 실패: 회사 자료에 매핑 가능한 손금 계정이 없음")
-        # 주쟁점 = 기업업무추진비(접대비)를 최우선(데모 질문의 핵심)으로
-        issues.sort(key=lambda i: (i["issue_key"] != "기업업무추진비",))
+        q = question or ""
+
+        def _named_in_question(key: str) -> bool:
+            return any(term in q for term in _ISSUE_QUERY_TERMS.get(key, (key,)))
+
+        # 1차 키: 질문이 명시한 쟁점(0) 우선, 2차 키: 최고위험(기업업무추진비, 0) 우선,
+        # 3차 키: 원래 TB 순서(stable). 데모 질문은 기업업무추진비/접대비를 명시 → 동일 순서.
+        issues.sort(key=lambda i: (
+            not _named_in_question(i["issue_key"]),
+            i["issue_key"] != "기업업무추진비",
+        ))
         return issues
 
     def _three_source_research(
@@ -658,6 +692,8 @@ class Orchestrator:
             "기부금": ("기부금 이월공제 활용", "당기 한도 초과 기부금의 이월공제로 차기 손금 산입 기회."),
             "업무용승용차": ("업무용 승용차 손금 한도 관리",
                         "운행기록부 작성으로 업무사용비율 인정·손금 한도 확대(자료 보완 전제)."),
+            "지급이자": ("가지급금 정리·지급이자 부인 최소화",
+                      "업무무관 가지급금 정리·약정이자 수령으로 지급이자 손금불산입·인정이자 익금 축소 여지."),
         }
         for issue in issues:
             t = templ.get(issue["issue_key"])
@@ -688,32 +724,46 @@ class Orchestrator:
                                    citation_ids=[cid], escalation=esc))
         return memos
 
-    def _evidence_requests(self, company, deficits) -> list[str]:
+    def _evidence_requests(self, issues, deficits) -> list[str]:
+        """식별된 쟁점에만 해당 증빙을 요청 + 전 쟁점 공통 거버넌스 자료(접대비/승용차 자료를
+        무관한 쟁점에 무조건 요구하던 오류 차단). 순서는 주쟁점 우선(issues 정렬을 따름)."""
         reqs = [
-            "업무용 승용차 운행기록부 — 차량 관련비용 손금 한도 검토용",
-            "접대비 적격증빙(법인카드 전표·세금계산서) 및 원장 매칭 명세",
-            "차입금 명세·가지급금 잔액 명세 — 지급이자 손금불산입 검토용",
-            "이사회의사록·주요 계약서 — 거래 업무관련성 소명자료",
+            _EVIDENCE_BY_ISSUE[i["issue_key"]]
+            for i in issues if i["issue_key"] in _EVIDENCE_BY_ISSUE
         ]
+        reqs.append(_EVIDENCE_GENERIC)
         return reqs
 
     @staticmethod
-    def _summary_texts(company: CompanyProfile, primary: dict) -> tuple[str, str, list[str]]:
+    def _summary_texts(
+        company: CompanyProfile, primary: dict,
+        answered_channels: Optional[set[str]] = None,
+    ) -> tuple[str, str, list[str]]:
         """주쟁점에서 도출한 (executive_summary, conclusion, recommended_order).
 
         접대비 전용 심화 절(예규·심판례 미해소·증빙 부인 범위)은 주쟁점이 **실제
-        기업업무추진비일 때만** 포함한다 — 다른 쟁점에 접대비 서사를 출력하지 않는다."""
+        기업업무추진비일 때만** 포함한다. 출처 기술은 **실제로 응답한 채널만** 정직하게
+        나열한다(웹이 보류했는데 ③웹 회수를 주장하지 않음)."""
         ptitle = primary["title"]
         is_meal = primary["issue_key"] == "기업업무추진비"
         meal_caveat = (
             " 적격증빙 부인 범위는 예규·심판례 충돌이 미해소되어 회계사 검토(HITL)로 승격한다."
             if is_meal else ""
         )
+        # 응답 채널만 정직하게 기술(미지정이면 보수적으로 ①②만 가정).
+        chans = answered_channels if answered_channels is not None else {"①", "②"}
+        labels = {"①": "①법령", "②": "②내부RAG", "③": "③공식웹"}
+        answered = [labels[c] for c in ("①", "②", "③") if c in chans]
+        src_phrase = (
+            f"{len(answered)}개 독립 출처({'·'.join(answered)})를 회수해"
+            if answered else "법령 원문을 회수해"
+        )
+        web_note = "" if "③" in chans else " ③공식웹은 적용 가능한 공식근거가 없어 보류했다."
         exec_summary = (
             f"{company.company_name} {company.fiscal_year} 법인세 검토 결과, "
             f"{ptitle}({_LAW_NAME} {primary['article']}) 관련 손금불산입이 핵심 리스크다. "
-            f"3소스(①법령·②내부RAG·③웹)를 독립 회수해 권위 위계·시점으로 종합했으며, "
-            f"보수/중립/적극 선택지의 세부담·과세리스크·방어가능성을 비교 제시한다.{meal_caveat} "
+            f"{src_phrase} 권위 위계·시점으로 종합했으며, 보수/중립/적극 선택지의 "
+            f"세부담·과세리스크·방어가능성을 비교 제시한다.{meal_caveat}{web_note} "
             f"모든 법적 주장은 법령 원문(버전 객체) 인용을 동반하며, 결손 자료에는 자료한계 "
             f"꼬리표를 부착했다."
         )
@@ -727,7 +777,7 @@ class Orchestrator:
             "Reviewer 승인(H4·H5) 후 확정한다."
         )
         recommended_order = [
-            "자료 결손(운행기록부·증빙 매칭 등) 보완(H1)",
+            "자료 결손 항목 보완(원장·증빙 등, H1)",
             f"{ptitle} 한도 계산 검산(H2)",
         ]
         if is_meal:
@@ -741,10 +791,12 @@ class Orchestrator:
     def _assemble_package(self, *, company, question, primary, materials, limits, risks,
                           opportunities, strategy: StrategyResult, issue_memos, citations,
                           source_objects, review_items, additional_requests, synthesis,
+                          answered_channels: Optional[set[str]] = None,
                           ) -> DraftPackageData:
-        # 요약/결론/권고순서는 **실제 주쟁점에서 도출**한다(하드코딩된 접대비 서사를 모든
-        # 입력에 출력하던 오류 차단 — 비-데모 입력에 잘못된 법리 요약 금지).
-        exec_summary, conclusion, recommended_order = self._summary_texts(company, primary)
+        # 요약/결론/권고순서는 **실제 주쟁점 + 실제 응답 출처에서 도출**한다(하드코딩된
+        # 접대비 서사·거짓 웹 회수 주장을 비-데모 입력에 출력하던 오류 차단).
+        exec_summary, conclusion, recommended_order = self._summary_texts(
+            company, primary, answered_channels)
         return DraftPackageData(
             matter_id=company.matter_id, client_id=company.client_id,
             company_name=company.company_name, fiscal_year=company.fiscal_year,
