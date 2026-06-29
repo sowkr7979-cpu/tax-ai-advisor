@@ -634,12 +634,19 @@ class Orchestrator:
                 description=f"{issue['account']} {self._won(issue.get('amount'))} — {desc}.",
                 citation_ids=[cid], severity=sev,
             ))
-        # 주쟁점에 생성기가 flag 한 리스크(과세논리) 1건을 추가 인용과 함께 표면화
+        # 주쟁점에 생성기가 flag 한 리스크(과세논리) 1건을 추가 인용과 함께 표면화.
+        # 제목은 주쟁점에서 도출(접대비 전용 제목을 다른 쟁점에 붙이지 않음 — 내용/제목 불일치 차단).
         if primary_research.risks:
+            primary_issue = issues[0]
+            risk_title = (
+                "적격증빙 미수취분 손금 부인(과세논리)"
+                if primary_issue["issue_key"] == "기업업무추진비"
+                else f"{primary_issue['title']} 과세 리스크(과세논리)"
+            )
             risks.insert(1, RiskItem(
-                title="적격증빙 미수취분 손금 부인(과세논리)",
+                title=risk_title,
                 description=primary_research.risks[0],
-                citation_ids=[by_issue[issues[0]["issue_key"]]], severity="HIGH",
+                citation_ids=[by_issue[primary_issue["issue_key"]]], severity="HIGH",
             ))
         return risks
 
