@@ -231,20 +231,25 @@ def test_builder_high_risk_attaches_warning():
 
 
 # --- 하버스 end-to-end (slice ①) ---------------------------------------- #
-def test_slice1_harness_deterministic_dims_pass_but_pending():
+def test_slice1_harness_judge_scored_and_passes():
+    # judge 연결 후: 판단 차원(법리20/쟁점10/리스크11/산출9) + citation entailment 가
+    # 채점되어 슬라이스가 완료(≥90)된다. fixture 재생(네트워크/키 0).
     report = run_slice(1)
     assert report.case_results
     assert report.hidden_count >= 1 and report.public_count >= 1
     assert not report.hard_gate_hit
-    assert report.score >= 90               # 결정적 소계
-    # 법리 등은 보류 → 슬라이스는 완료가 아니다(만점 처리 금지)
-    assert report.pending is True
-    assert not report.passed
-    assert "legal_reasoning" in report.pending_dimensions
+    assert report.pending is False           # 더 이상 보류 아님 — 판단 차원 채점됨
+    assert report.passed is True
+    assert report.score >= 90
+    assert report.completion_score == report.score
     for r in report.case_results:
         assert r.metrics["recall"] == 1.0
         assert r.metrics["reproducible"] is True
-        assert r.metrics["entailment"] == "PENDING_JUDGE"
+        assert r.metrics["judge_scored"] is True
+        assert r.metrics["entailment"] == "2/2"      # 인용 2건(앵커+결론) 모두 결정적 지지
+        # 4개 판단 차원이 실제 점수를 가진다(보류 아님, 만점 강제도 아님)
+        scored = {s.dimension for s in r.dimension_scores if s.applicable and s.score is not None}
+        assert {"legal_reasoning", "issue_spotting", "risk", "output"} <= scored
 
 
 # --- 정직성: 잘못된 시행일 버전 → TEMPORAL_ERROR ------------------------- #
@@ -333,18 +338,16 @@ def test_harness_fail_closed_on_missing_search():
     assert res.metrics["recall"] == 0.0
 
 
-# --- P2-B: pending headline 분리 (완료점수 vs 결정적 소계) ---------------- #
-def test_slice1_pending_separates_completion_from_subtotal():
+# --- P2-B: 완료점수 = headline (judge 채점 후 보류 해제) ------------------ #
+def test_slice1_completion_score_present_when_scored():
     report = run_slice(1)
-    assert report.pending is True
-    assert report.completion_score is None          # 완료점수 없음(보류)
-    assert report.deterministic_subtotal >= 90      # 결정적 소계만 노출
+    assert report.pending is False
+    assert report.completion_score == report.score   # 완료점수 = 결정적 소계 = headline
     assert report.deterministic_subtotal == report.score
     for r in report.case_results:
-        assert r.completion_score is None
-        assert r.deterministic_subtotal == r.total
+        assert r.completion_score == r.total
         dumped = r.model_dump(mode="json")
-        assert dumped["completion_score"] is None
+        assert dumped["completion_score"] == r.total
         assert dumped["deterministic_subtotal"] == r.total
 
 
@@ -374,3 +377,251 @@ def test_public_hidden_separate_and_slice_filtered():
     assert {c.case_id for c in pub} == {"S1-PUB-001", "S1-PUB-002"}
     assert {c.case_id for c in hid} == {"S1-HID-001"}
     assert all(c.slice == 1 for c in pub + hid)
+
+
+# --- LLM fixture 무결성: 변조(해시 불일치) → fail-closed ------------------ #
+def test_llm_fixture_hash_mismatch_fails_closed(tmp_path):
+    import json as _json
+
+    from src.ai.llm_client import LLMNotReproducible, LLMRequest, ReplayLLMTransport
+
+    req = LLMRequest(model="claude-opus-4-8", max_tokens=10, system="s", user="u", tag="t")
+    payload = {"text": "x", "model": "claude-opus-4-8",
+               "stop_reason": "end_turn", "usage": {"input_tokens": 1, "output_tokens": 1}}
+    (tmp_path / req.filename).write_text(
+        _json.dumps({"response": payload, "content_hash": "DEADBEEF"}), encoding="utf-8"
+    )
+    (tmp_path / "manifest.json").write_text(
+        _json.dumps({req.key: {"file": req.filename}}), encoding="utf-8"
+    )
+    with pytest.raises(LLMNotReproducible):     # 변조 스냅샷 재생 거부(만점 아님)
+        ReplayLLMTransport(tmp_path).complete(req)
+
+
+# --- judge fail-closed: 키/fixture 없으면 보류(만점 금지) ----------------- #
+def test_slice1_judge_fail_closed_when_unavailable(tmp_path):
+    # LLM fixture 가 없으면(녹화 안 됨/키 없음) 생성·judge 가 가동되지 않는다 →
+    # 판단 차원은 보류(PENDING), 슬라이스는 완료가 아니다(절대 만점 처리 금지).
+    from src.ai.llm_client import LLMClient, LLMConfig, ReplayLLMTransport
+
+    empty = LLMClient(config=LLMConfig.from_vendors(), transport=ReplayLLMTransport(tmp_path))
+    case = _public_case("S1-PUB-001")
+    res = run_case(case, llm_client=empty)          # 빈 fixtures → 생성 LLMUnavailable
+    assert res.metrics["judge_scored"] is False
+    assert res.metrics["entailment"] == "PENDING_JUDGE"
+    assert res.has_pending and "legal_reasoning" in res.pending_dimensions
+    assert res.completion_score is None             # 완료점수 없음(보류)
+    # 결정적 부분은 측정되지만(재현 가능) judge 미가동이라 미완료.
+    assert res.metrics["reproducible"] is True
+
+
+# --- entailment 거부: 비지지 인용 → FABRICATED_CITATION(HALU-003, cap60) -- #
+class _UnsupportedJudge:
+    """답변 품질은 만점이라 주장하되 인용 entailment 를 '비지지'로 판정하는 적대 judge."""
+
+    def score(self, **kwargs):
+        from src.judge import EntailmentCheck, JudgeVerdict
+
+        return JudgeVerdict(
+            fractions={"legal_reasoning": 1.0, "issue_spotting": 1.0, "risk": 1.0, "output": 1.0},
+            entailments=[EntailmentCheck(claim="법리 결론", supported=False, rationale="발췌 비지지")],
+        )
+
+
+def test_slice1_unsupported_entailment_trips_fabricated_gate():
+    # 생성은 정상 재생되되 judge 가 인용 비지지를 판정하면, 동일 채점 경로에서
+    # 인용이 거부되고 FABRICATED_CITATION(cap60) 게이트가 떠야 한다(점수 부풀림 차단).
+    case = _public_case("S1-PUB-001")
+    res = run_case(case, judge=_UnsupportedJudge())
+    assert res.metrics["fabricated_citation"] is True
+    assert any(f.code == "FABRICATED_CITATION" for f in res.failure_modes)
+    assert res.total <= 60                           # 판단 차원 만점이라도 cap60
+
+
+# --- anti-gaming: issue_spotting 은 독립 gold 쟁점으로 채점(자기채점 아님) - #
+def test_issue_spotting_scored_against_independent_gold():
+    # gold 기대쟁점은 모든 slice① 케이스에 존재하고(법령/사실관계에서 독립 도출),
+    # judge 프롬프트에 명시적으로 주입된다 → 생성된 답변의 self-issue 가 아니라
+    # 독립 gold 로 채점된다.
+    for c in load_public_cases(1) + load_hidden_cases(1):
+        assert len(c.law_queries[0].gold_issues) >= 4
+
+    from src.judge import build_judge_prompt
+    from src.legal_research import generate_research_answer
+
+    case = _public_case("S1-PUB-001")
+    q = case.law_queries[0]
+    src = default_law_source()
+    lookup = src.lookup_provision(q.law_name, q.article_label, q.as_of_date)
+    answer = generate_research_answer(           # 기본 replay 클라이언트(키 0)
+        lookup=lookup, question_text=q.question_text, client_id="c",
+        answer_run_id="ar", source_answer_id="sa_S1-PUB-001_S1-PUB-001-q1",
+        high_risk=False,
+    )
+    system, user = build_judge_prompt(
+        question_text=q.question_text, answer=answer,
+        provision_quote=lookup.provision_version.text, gold_issues=list(q.gold_issues),
+    )
+    # 독립 gold 쟁점이 채점 기준으로 프롬프트에 주입됨
+    assert q.gold_issues[0] in user
+    assert "issue_spotting" in system
+    # gold 는 답변과 별개의 객체(독립): 케이스 JSON 에서 로드된 gold 가 그대로 쓰인다.
+    assert q.gold_issues == _public_case("S1-PUB-001").law_queries[0].gold_issues
+
+
+# --- P1-1: entailment 는 결정적으로 검증된다(judge bool 맹신 아님) ----------- #
+def test_deterministic_entailment_catches_unsupported_citation():
+    # verify_entailment 는 LLM 없이 규칙 매칭만으로 '조문↔주장' 지지를 판정한다.
+    from src.judge import verify_entailment
+
+    src = default_law_source()
+    pv2024 = src.lookup_provision("법인세법", "제25조", date(2024, 1, 1)).provision_version
+    text = pv2024.text                       # 2024 버전: 제목 핵심어 '기업업무추진비'
+    grounded = text[:120]                     # 본문 prefix = verbatim 발췌(지지)
+
+    # 지지: claim 이 조문(제25조)·제목 핵심어(기업업무추진비)를 진술 + 발췌가 본문 부분문자열
+    ok = verify_entailment("법인세법 제25조(기업업무추진비의 손금불산입)에 근거한다.", grounded, text)
+    assert ok.supported is True and ok.deterministic is True
+
+    # 미지지 C3(세목/버전 불일치): '접대비'만 진술하고 본 버전 핵심어 '기업업무추진비' 누락
+    bad_subject = verify_entailment("법인세법 제25조의 2020 접대비 손금불산입 근거다.", grounded, text)
+    assert bad_subject.supported is False and bad_subject.deterministic is False
+    assert "기업업무추진비" in bad_subject.rationale
+
+    # 미지지 C2(조문 참조 날조): 본문에 없는 제999조를 인용
+    bad_article = verify_entailment("법인세법 제999조 기업업무추진비 가공 조문이다.", grounded, text)
+    assert bad_article.supported is False
+
+    # 미지지 C1(발췌 비근거): 본문에 없는 문장을 발췌로 제시
+    bad_quote = verify_entailment("법인세법 제25조(기업업무추진비의 손금불산입)", "본문에 없는 가짜 발췌문", text)
+    assert bad_quote.supported is False
+
+
+def test_judge_deterministic_overrides_generous_self_report():
+    # judge 가 '지지(true)'로 자가보고해도, 결정적 검증이 미지지면 최종 entailment 는
+    # 미지지여야 한다(보조 self-report 가 결정적 결과를 상향조정하지 못함).
+    from src.ai.llm_client import LLMResponse
+    from src.judge import Judge
+    from src.legal_research import generate_research_answer
+
+    case = _public_case("S1-PUB-001")
+    q = case.law_queries[0]
+    src = default_law_source()
+    lookup = src.lookup_provision(q.law_name, q.article_label, q.as_of_date)
+    answer = generate_research_answer(
+        lookup=lookup, question_text=q.question_text, client_id="c",
+        answer_run_id="ar", source_answer_id="sa_S1-PUB-001_S1-PUB-001-q1",
+        high_risk=False,
+    )
+    # 결론 claim 을 변조: 조문 제목 핵심어(기업업무추진비) 누락 → 결정적 미지지 유도
+    answer.conclusion_claim = answer.conclusion_claim.model_copy(
+        update={"proposition": "법인세법 제25조 관련 일반 결론(세목 명칭 누락)."}
+    )
+
+    class _GenerousJudge:
+        """모든 인용을 supported=true 로 자가보고하는 관대한 judge(자기채점)."""
+
+        def complete(self, *, system, user, tag, max_tokens=None):
+            text = (
+                '{"scores":{"legal_reasoning":100,"issue_spotting":100,"risk":100,"output":100},'
+                '"entailment":[{"claim":"a","supported":true},{"claim":"b","supported":true}],'
+                '"missed_issues":[],"unsupported_claims":[],"rationale":"all good"}'
+            )
+            return LLMResponse(text=text, model="fake", input_tokens=1, output_tokens=1,
+                               stop_reason="end_turn", origin="fixture")
+
+    verdict = Judge(_GenerousJudge()).score(
+        question_text=q.question_text, answer=answer,
+        provision_quote=lookup.provision_version.text,
+        gold_issues=list(q.gold_issues), tag="t",
+    )
+    assert verdict.all_supported is False                  # 결정적 미지지가 최종을 지배
+    assert any(e.deterministic is False for e in verdict.entailments)
+    assert all(e.judge_supported for e in verdict.entailments)  # judge 자가보고는 관대했음
+
+
+# --- P1-2: judge 점수 버킷 엄격화(범위 밖/오프버킷 → fail-closed) ----------- #
+def test_judge_rejects_off_bucket_and_out_of_range_scores():
+    from src.ai.llm_client import LLMResponse
+    from src.judge import Judge, JudgeError
+    from src.legal_research import generate_research_answer
+
+    case = _public_case("S1-PUB-001")
+    q = case.law_queries[0]
+    src = default_law_source()
+    lookup = src.lookup_provision(q.law_name, q.article_label, q.as_of_date)
+    answer = generate_research_answer(
+        lookup=lookup, question_text=q.question_text, client_id="c",
+        answer_run_id="ar", source_answer_id="sa_S1-PUB-001_S1-PUB-001-q1",
+        high_risk=False,
+    )
+
+    def _judge_with_score(lr_score):
+        class _C:
+            def complete(self, *, system, user, tag, max_tokens=None):
+                text = (
+                    '{"scores":{"legal_reasoning":%s,"issue_spotting":100,"risk":100,"output":100},'
+                    '"entailment":[{"claim":"a","supported":true}],'
+                    '"missed_issues":[],"unsupported_claims":[],"rationale":"r"}' % lr_score
+                )
+                return LLMResponse(text=text, model="fake", input_tokens=1, output_tokens=1,
+                                   stop_reason="end_turn", origin="fixture")
+        return Judge(_C())
+
+    # 범위 밖(101)·오프버킷(88) 모두 보정 없이 JudgeError(만점 스냅 금지)
+    for bad in ("101", "88"):
+        with pytest.raises(JudgeError):
+            _judge_with_score(bad).score(
+                question_text=q.question_text, answer=answer,
+                provision_quote=lookup.provision_version.text,
+                gold_issues=list(q.gold_issues), tag="t",
+            )
+    # 정확한 버킷(75)은 정상 채점
+    v = _judge_with_score("75").score(
+        question_text=q.question_text, answer=answer,
+        provision_quote=lookup.provision_version.text,
+        gold_issues=list(q.gold_issues), tag="t",
+    )
+    assert v.fractions["legal_reasoning"] == 0.75
+
+
+def test_slice1_off_bucket_judge_leaves_dimension_pending():
+    # 범위 밖 judge 출력 → JudgeError → 해당 쿼리 judge 미채점 → 차원 보류(만점 아님).
+    from src.ai.llm_client import LLMResponse
+    from src.judge import Judge
+
+    class _OffBucketJudge(Judge):
+        def __init__(self):
+            pass
+
+        def score(self, **kwargs):
+            from src.judge import JudgeError
+            raise JudgeError("off-bucket score 88 (test)")
+
+    case = _public_case("S1-PUB-001")
+    res = run_case(case, judge=_OffBucketJudge())
+    assert res.metrics["judge_scored"] is False
+    assert res.has_pending and "legal_reasoning" in res.pending_dimensions
+    assert res.completion_score is None             # 보류 → 완료점수 없음
+
+
+# --- P2-2: L3/L4 기밀 컨텍스트는 외부 LLM 송신 전에 차단된다 ---------------- #
+def test_generate_blocks_l3_l4_before_any_llm_send(tmp_path):
+    from contract.base import ConfidentialityLevel
+    from src.ai.llm_client import LLMClient, LLMConfig, ReplayLLMTransport
+    from src.legal_research import ConfidentialitySendError, generate_research_answer
+
+    src = default_law_source()
+    lookup = src.lookup_provision("법인세법", "제25조", date(2024, 1, 1))
+    # 빈 fixtures 클라이언트: guard 가 없다면 송신 시 LLMUnavailable 이 났을 것.
+    empty = LLMClient(config=LLMConfig.from_vendors(), transport=ReplayLLMTransport(tmp_path))
+
+    for lvl in (ConfidentialityLevel.L3_CLIENT, ConfidentialityLevel.L4_RESTRICTED):
+        with pytest.raises(ConfidentialitySendError):
+            generate_research_answer(
+                lookup=lookup, question_text="q", client_id="c",
+                answer_run_id="ar", source_answer_id="sa",
+                confidentiality_level=lvl, llm_client=empty,
+            )
+    # 기본값(L0 공개법령)은 기밀 guard 를 통과한다(차단 대상 아님).
+    assert ConfidentialityLevel.L0_PUBLIC.is_client_scoped is False

@@ -47,6 +47,15 @@ def _print_report(report: SliceReport) -> None:
     )
     if report.pending:
         print(f"  PENDING_JUDGE 차원(보류, 만점 아님): {', '.join(report.pending_dimensions)}")
+    # Scope transparency (codex P1-3): surface the renormalization denominator so a
+    # "100/100" headline is not read as full-rubric coverage when some dimensions
+    # are N/A for this slice (measured elsewhere).
+    scope_note = next(
+        (r.metrics.get("scope_note") for r in report.case_results if r.metrics.get("scope_note")),
+        None,
+    )
+    if scope_note:
+        print(f"  점수 메타(투명성): {scope_note}")
     print(f"  케이스: public={report.public_count} hidden={report.hidden_count}")
     for r in report.case_results:
         vis = "H" if r.visibility == Visibility.HIDDEN else "P"

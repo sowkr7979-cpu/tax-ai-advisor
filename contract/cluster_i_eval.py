@@ -140,6 +140,10 @@ class LawAnchorQuery(TIWModel):
     as_of_date: date                    # selects the 시행일 version (API-003)
     high_risk: bool = False             # if True, answer must carry a review warning
     gold: list[LawAnchorGoldCitation] = Field(default_factory=list)
+    # gold expected ISSUES for issue-spotting (docs/09 §3 dim 5). Derived
+    # INDEPENDENTLY from the law/사실관계 (NOT from any generated answer —
+    # anti-gaming). Empty = issue-spotting not gold-anchored for this query.
+    gold_issues: list[str] = Field(default_factory=list)
 
 
 class EvaluationCase(TIWModel):

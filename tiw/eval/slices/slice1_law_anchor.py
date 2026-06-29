@@ -1,34 +1,40 @@
 """tiw/eval/slices/slice1_law_anchor.py — slice ① harness (법령MCP 앵커 답변).
 
-Drives the DETERMINISTIC law-anchor core (src.ai.law_data_source +
-src.law_anchor + src.source_registry) against the gold law-queries and scores
-ONLY the judge-free dimensions:
+Drives the channel-① pipeline against the gold law-queries and scores it:
 
-  SCORED (deterministic):
+  DETERMINISTIC dimensions (always):
     - search (9)      : recall@k — gold 조문이 올바른 시행일 버전으로 회수됐는가
-    - citation (12)   : grounding의 결정적 부분 — 존재·버전·pinpoint·시점 일치
-                        (entailment 는 judge → PENDING)
+    - citation (12)   : grounding 결정적 부분(존재·버전·pinpoint·시점) + (judge 가동 시)
+                        **entailment** 를 더한 인용 채점
     - requirement (6) : 적용시점(applicable_basis) 확보 + 워크플로 매핑
     - ops (2)         : 재현성(SourceSnapshot/Provision 해시 복원) + 무오류 완료
 
-  PENDING_JUDGE (exercised, withheld until judge/CPA wired — NOT full, NOT N/A):
-    - legal_reasoning (20), issue_spotting (10), risk (11), output (9)
-    - (citation entailment 도 judge — citation 차원의 결정적 부분만 채점)
+  JUDGE dimensions (LLM-judge via prompts/judge.md + src/ai/llm_client.py):
+    - legal_reasoning (20) · issue_spotting (10) · risk (11) · output (9)
+    - + citation entailment(각 인용이 claim을 지지하는가; 미지지 → 거부, HALU-003 cap60)
 
-  N/A (not exercised by a single-source SHARED-knowledge lookup):
+  N/A (single-source SHARED-knowledge lookup):
     - conflict (7)    : cross-source 종합은 slice ④
     - security (14)   : 법령은 SHARED 공개 지식 — 테넌트/고객자료 표면 없음
 
+FAIL-CLOSED (PROMPT.md §4-5, docs/09 §6): the judge dimensions are moved from
+``pending_dimensions`` into ``dim_fractions`` ONLY when the LLM-judge actually
+ran for EVERY query AND the case is reproducibly ``measured``. If the judge is
+not wired (no key / missing fixture / malformed output) or the case is not
+measured, those dimensions STAY PENDING (never full marks) and the slice stays
+INCOMPLETE. The live generation/judge call is recorded ONCE
+(scripts/record_llm_fixtures.py); tests/CI replay fixtures (network/key = 0).
+
 Hard gates (deterministic, docs/09 §2):
   - NOT_REPRODUCIBLE (75) : 조회 실패·빈 결과·해시 불일치 → fail-closed (만점 금지)
-  - TEMPORAL_ERROR  (55) : 회수 버전의 시행일이 gold 와 불일치(잘못된 시행일 버전)
-  - FABRICATED_CITATION (60): 인용이 등록 소스객체로 해석 안 됨(존재/kind 불일치)
+  - TEMPORAL_ERROR  (55) : 회수 버전의 시행일이 gold 와 불일치
+  - FABRICATED_CITATION (60): 인용이 등록 소스객체로 해석 안 됨 OR judge entailment 미지지
   - MISSING_REVIEW_WARNING (60): high-risk 질의에 회계사 검토경고 누락
 
-`law_source` / `citation_tamper` are injectable ONLY so an adversarial test can
-feed a wrong-version source or a corrupted citation through this SAME scoring
-path and prove the harness CATCHES it (anti-gaming evidence, mirrors slice ⑥).
-Production code never overrides them.
+`law_source` / `citation_tamper` / `llm_client` / `judge` / `generator` are
+injectable ONLY so adversarial tests can feed a wrong-version source, a corrupted
+citation, an empty-fixture client, or a fake judge verdict through this SAME
+scoring path and prove the harness CATCHES it (anti-gaming evidence).
 """
 
 from __future__ import annotations
@@ -46,27 +52,27 @@ from src.ai.law_data_source import (
     ProvisionLookupResult,
     default_law_source,
 )
+from src.ai.llm_client import LLMClient, LLMError, default_llm_client
+from src.judge import Judge, JudgeError, JudgeVerdict, default_judge
 from src.law_anchor import build_law_source_answer
+from src.legal_research import (
+    ResearchGenerationError,
+    ResearchLiteAnswer,
+    generate_research_answer,
+)
 from src.source_registry import SourceRegistry
+from rules.hard_gates import DIMENSION_WEIGHTS
 from tiw.eval.scorer import build_rubric_result
 
 SLICE_NO = 1
 
-# judge/CPA dimensions a full ① answer exercises but that we deliberately withhold
+# judge/CPA dimensions a full ① answer exercises; moved scored↔pending per run.
 PENDING_DIMS = ["legal_reasoning", "issue_spotting", "risk", "output"]
-
-# TODO(judge wiring — NEXT STEP, needs ANTHROPIC_API_KEY):
-#   The LLM-judge (prompts/judge.md via src/ai/llm_client.py) scores PENDING_DIMS
-#   + citation entailment against the recorded ProvisionVersion quote. To wire it:
-#     1. add a `judge` param (default None) to run_case;
-#     2. when present, for each bundle call judge.score(answer, provision_quote,
-#        gold) → {legal_reasoning, issue_spotting, risk, output, entailment} in
-#        0..1, and pass the entailment-adjusted citation fraction here;
-#     3. move those names from `pending_dimensions=` into `dim_fractions=`.
-#   Until then they stay PENDING_JUDGE (never full marks — docs/09 §6).
 
 LawSourceFactory = Callable[[], object]
 CitationTamper = Callable[[Citation], Citation]
+# generator(**kwargs) -> ResearchLiteAnswer (default: src.legal_research)
+ResearchGenerator = Callable[..., ResearchLiteAnswer]
 
 
 def _safe_mean(values: list[float], default: float = 1.0) -> float:
@@ -77,9 +83,16 @@ def run_case(
     case: EvaluationCase,
     law_source: Optional[object] = None,
     citation_tamper: Optional[CitationTamper] = None,
+    llm_client: Optional[LLMClient] = None,
+    judge: Optional[Judge] = None,
+    generator: Optional[ResearchGenerator] = None,
 ) -> RubricResult:
     source = law_source or default_law_source()
     registry = SourceRegistry()
+    # Shared replay LLM client (no key/network). Generation + judge log usage here.
+    client = llm_client or default_llm_client()
+    jdg = judge or default_judge(client)
+    gen = generator or generate_research_answer
 
     queries: list[LawAnchorQuery] = list(case.law_queries)
     n = len(queries)
@@ -87,7 +100,6 @@ def run_case(
     recall_hits = recall_total = 0
     cit_passed = cit_total = 0
     basis_present = answer_produced = 0
-    entailment_pending = 0
     search_step_hits = 0
     resolved = 0
 
@@ -97,21 +109,28 @@ def run_case(
     missing_warning = False
     fallback_used: list[str] = []
 
+    # -- judge accumulators (only filled when the LLM-judge runs per query) --- #
+    judge_ran = 0                       # queries for which gen+judge succeeded
+    judge_fracs: dict[str, list[float]] = {d: [] for d in PENDING_DIMS}
+    # codex P1-1: count entailment PER CITATION (deterministic verdict), not a
+    # per-query rollup, so a single unsupported citation is visible and penalized.
+    entail_pass = 0                     # citations deterministically entailed
+    entail_total = 0                    # citations evaluated
+    llm_input_tokens = llm_output_tokens = 0
+    llm_cost = 0.0
+    judge_model = "n/a"
+
     for q in queries:
         try:
             lookup: ProvisionLookupResult = source.lookup_provision(
                 q.law_name, q.article_label, q.as_of_date
             )
         except LawSourceError:
-            # fail-closed: an unresolved query means isolation of reproducibility
-            # cannot be proven for this case (handled via `measured` below).
             continue
         resolved += 1
         fallback_used = lookup.fallback_chain or [lookup.backend]
         pv = lookup.provision_version
 
-        # reproducibility (API-004): the recorded snapshot hash was already
-        # re-verified on replay; here we re-check the provision text hash.
         if sha256(pv.text.encode("utf-8")).hexdigest() != pv.hash:
             reproducible = False
         if lookup.search_found:
@@ -139,9 +158,8 @@ def run_case(
 
         basis_present += int(bundle.applicable_basis is not None)
         answer_produced += int(bool(bundle.source_answer.answer_text))
-        entailment_pending += 1
 
-        # -- recall@k (search) vs gold provision -------------------------- #
+        # -- recall@k (search) vs gold provision --------------------------- #
         for g in q.gold:
             recall_total += 1
             title = lookup.article_title or ""
@@ -152,13 +170,12 @@ def run_case(
                 and (g.title_contains in title or g.title_contains in text)
             )
             recall_hits += int(match)
-            # -- TEMPORAL_ERROR: wrong 시행일 버전 -------------------------- #
             if pv.effective_from != g.expected_effective_from or g.title_contains not in (
                 title + text
             ):
                 temporal_error = True
 
-        # -- citation grounding deterministic sub-checks (4) -------------- #
+        # -- citation grounding deterministic sub-checks (4) --------------- #
         existence = verification.ok
         registered = registry.get(citation.source_kind, citation.source_object_id)
         version_ok = (
@@ -174,15 +191,64 @@ def run_case(
         cit_total += 4
         cit_passed += int(existence) + int(version_ok) + int(pinpoint_ok) + int(temporal_ok)
 
-    # FAIL-CLOSED (docs/09 §2): every gold query must (a) RESOLVE, (b) replay its
-    # recorded snapshot/version hash AND (c) complete the lawSearch step. A
-    # missing/empty/tampered search fixture only sets search_found=False (the
-    # efbody call can still pin the version); without making the search step a
-    # REQUIRED reproducibility condition here, a silent search failure would still
-    # score ~94 and pass. So search recall is fail-closed too (mirrors slice ⑥
-    # retrieval_measured) — search failure is NOT a silent passthrough.
+        # -- JUDGE layer (LLM, fail-closed) -------------------------------- #
+        # Generation + judge run on the recorded fixtures. ANY failure (missing
+        # fixture, malformed output, no key) leaves this query's judge dims
+        # unscored — the case then stays PENDING (never full marks).
+        try:
+            answer: ResearchLiteAnswer = gen(
+                lookup=lookup,
+                question_text=q.question_text,
+                client_id="client_eval",
+                answer_run_id=f"ar_{case.case_id}_{q.query_id}",
+                source_answer_id=f"sa_{case.case_id}_{q.query_id}",
+                source_type_label=gold_source_type,
+                high_risk=q.high_risk,
+                llm_client=client,
+            )
+            verdict: JudgeVerdict = jdg.score(
+                question_text=q.question_text,
+                answer=answer,
+                provision_quote=pv.text,
+                gold_issues=list(q.gold_issues),
+                tag=f"judge_{case.case_id}_{q.query_id}",
+            )
+            for d in PENDING_DIMS:
+                judge_fracs[d].append(verdict.fractions[d])
+            entail_pass += sum(1 for e in verdict.entailments if e.supported)
+            entail_total += len(verdict.entailments)
+            judge_ran += 1
+            if answer.llm:
+                llm_input_tokens += answer.llm.input_tokens
+                llm_output_tokens += answer.llm.output_tokens
+                llm_cost += answer.llm.cost_usd
+            if verdict.llm:
+                llm_input_tokens += verdict.llm.input_tokens
+                llm_output_tokens += verdict.llm.output_tokens
+                llm_cost += verdict.llm.cost_usd
+                judge_model = verdict.llm.model
+        except (LLMError, ResearchGenerationError, JudgeError):
+            # fail-closed: keep judge dims pending for this case
+            pass
+
+    # FAIL-CLOSED reproducibility (docs/09 §2): every gold query must RESOLVE,
+    # replay its hash AND complete the lawSearch step.
     search_complete = search_step_hits == n
     measured = n > 0 and resolved == n and reproducible and search_complete
+
+    # judge is SCORED only if it ran for every query AND the case is measured.
+    judge_scored = judge_ran == n and n > 0 and measured
+
+    # entailment → citation fraction + FABRICATED gate (HALU-003).
+    # entail_pass/total are PER-CITATION deterministic verdicts (codex P1-1):
+    # any citation whose provision excerpt fails to support its claim trips the
+    # FABRICATED_CITATION gate (cap 60), regardless of the judge's self-report.
+    entailment_unsupported = False
+    if judge_scored:
+        cit_passed += entail_pass
+        cit_total += entail_total
+        if entail_pass < entail_total:
+            entailment_unsupported = True
 
     # -- dimension fractions (0..1) --------------------------------------- #
     search_frac = (recall_hits / recall_total) if recall_total else 0.0
@@ -199,23 +265,55 @@ def run_case(
     if not measured:
         search_frac = citation_frac = requirement_frac = 0.0
 
+    dim_fractions = {
+        "requirement": requirement_frac,
+        "search": search_frac,
+        "citation": citation_frac,
+        "ops": ops_frac,
+    }
+    pending = list(PENDING_DIMS)
+    judge_buckets: dict[str, int] = {}
+    if judge_scored:
+        for d in PENDING_DIMS:
+            dim_fractions[d] = _safe_mean(judge_fracs[d], default=0.0)
+            judge_buckets[d] = round(dim_fractions[d] * 100)
+        pending = []
+
     # -- hard gates ------------------------------------------------------- #
     hard_gate_codes: list[str] = []
     if not measured:
         hard_gate_codes.append("NOT_REPRODUCIBLE")          # cap 75
     if temporal_error:
         hard_gate_codes.append("TEMPORAL_ERROR")            # cap 55
-    if fabricated:
-        hard_gate_codes.append("FABRICATED_CITATION")       # cap 60
+    if fabricated or entailment_unsupported:
+        hard_gate_codes.append("FABRICATED_CITATION")       # cap 60 (HALU-003)
     if missing_warning:
         hard_gate_codes.append("MISSING_REVIEW_WARNING")    # cap 60
+
+    entailment_metric = (
+        f"{entail_pass}/{entail_total}" if judge_scored else "PENDING_JUDGE"
+    )
+
+    # -- scope transparency (codex P1-3): this slice scores only the dimensions it
+    # actually exercises; conflict(7)/security(14) are N/A here (measured in
+    # slice④/⑥). The headline is the WEIGHTED mean RENORMALIZED over the applicable
+    # denominator — so a "100/100" is 100% of the APPLICABLE 79 points, NOT全 100점
+    # coverage. The scoring math is unchanged; this only makes the denominator
+    # explicit so the number is not mistaken for full-rubric coverage.
+    na_dims = [d for d in ("conflict", "security")]
+    applicable_denominator = 100 - sum(DIMENSION_WEIGHTS[d] for d in na_dims)
+    scope_note = (
+        f"점수는 적용 차원 재정규화(분모 {applicable_denominator}점)입니다 — "
+        f"conflict({DIMENSION_WEIGHTS['conflict']})·security({DIMENSION_WEIGHTS['security']})는 "
+        f"이 slice에서 N/A(분모 제외)이며 slice④(충돌)·slice⑥(보안)에서 측정됩니다."
+    )
 
     metrics = {
         "recall": round(search_frac, 3),
         "citation_grounding": f"{cit_passed}/{cit_total}",
-        "entailment": "PENDING_JUDGE",
+        "entailment": entailment_metric,
         "temporal_error": temporal_error,
-        "fabricated_citation": fabricated,
+        "fabricated_citation": fabricated or entailment_unsupported,
         "missing_review_warning": missing_warning,
         "reproducible": reproducible,
         "search_complete": search_complete,
@@ -223,7 +321,16 @@ def run_case(
         "resolved_queries": f"{resolved}/{n}",
         "search_found": f"{search_step_hits}/{n}",
         "backend_chain": fallback_used,
-        "pending_judge_dims": PENDING_DIMS + ["citation:entailment"],
+        "judge_scored": judge_scored,
+        "judge_ran": f"{judge_ran}/{n}",
+        "judge_scores": judge_buckets,
+        "judge_model": judge_model,
+        "llm_tokens": f"{llm_input_tokens}in/{llm_output_tokens}out",
+        "llm_cost_usd": round(llm_cost, 6),
+        "pending_judge_dims": pending or "none(scored)",
+        "na_dimensions": na_dims,
+        "applicable_denominator": applicable_denominator,
+        "scope_note": scope_note,
     }
 
     return build_rubric_result(
@@ -232,24 +339,27 @@ def run_case(
         target_id=case.case_id,
         visibility=case.visibility,
         target_kind=TargetKind.SLICE,
-        dim_fractions={
-            "requirement": requirement_frac,
-            "search": search_frac,
-            "citation": citation_frac,
-            "ops": ops_frac,
-        },
+        dim_fractions=dim_fractions,
         dim_details={
             "requirement": f"basis={basis_present}/{n} answer={answer_produced}/{n} "
             f"search_found={search_step_hits}/{n}",
             "search": f"recall={search_frac:.2f} ({recall_hits}/{recall_total})",
-            "citation": f"existence/version/pinpoint/temporal={cit_passed}/{cit_total} "
-            f"(entailment=PENDING_JUDGE)",
+            "citation": f"grounding+entailment={cit_passed}/{cit_total} "
+            f"(entailment={entailment_metric})",
             "ops": f"measured={measured} reproducible={reproducible} "
             f"search_complete={search_complete} ({search_step_hits}/{n})",
+            "legal_reasoning": f"judge bucket={judge_buckets.get('legal_reasoning')}"
+            if judge_scored else "PENDING_JUDGE — judge/CPA 미연결 (보류)",
+            "issue_spotting": f"judge bucket={judge_buckets.get('issue_spotting')}"
+            if judge_scored else "PENDING_JUDGE — judge/CPA 미연결 (보류)",
+            "risk": f"judge bucket={judge_buckets.get('risk')}"
+            if judge_scored else "PENDING_JUDGE — judge/CPA 미연결 (보류)",
+            "output": f"judge bucket={judge_buckets.get('output')}"
+            if judge_scored else "PENDING_JUDGE — judge/CPA 미연결 (보류)",
         },
         hard_gate_codes=hard_gate_codes,
         metrics=metrics,
-        pending_dimensions=PENDING_DIMS,
+        pending_dimensions=pending,
     )
 
 
@@ -257,5 +367,14 @@ def run_cases(
     cases: list[EvaluationCase],
     law_source: Optional[object] = None,
     citation_tamper: Optional[CitationTamper] = None,
+    llm_client: Optional[LLMClient] = None,
+    judge: Optional[Judge] = None,
+    generator: Optional[ResearchGenerator] = None,
 ) -> list[RubricResult]:
-    return [run_case(c, law_source=law_source, citation_tamper=citation_tamper) for c in cases]
+    return [
+        run_case(
+            c, law_source=law_source, citation_tamper=citation_tamper,
+            llm_client=llm_client, judge=judge, generator=generator,
+        )
+        for c in cases
+    ]

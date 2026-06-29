@@ -11,13 +11,13 @@
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
 ## 현재 단계
-**scaffold + 평가 하버스 골격 + slice ⑥ 결정적 구현 완료** (autonomous 루프 진입 전 수동 검증 단계 — "통제된 시작"). 미커밋(워킹트리).
+**scaffold + 평가 하버스 + slice ⑥ + slice ① (judge 연결까지) 완료** (autonomous 루프 진입 전 수동 검증 단계). 미커밋(워킹트리).
 
 ## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
 | # | Slice | 점수 | 하드게이트 | 상태 |
 |---|---|---:|---|---|
 | ⑥ | 테넌트 격리 | **100** (min over 4 cases) | 누수0 (TENANT_LEAK 미발생) | **통과 (≥90)** |
-| ① | 법령MCP 앵커 답변 | **결정적 소계 100** (3 cases) | 0 (TEMPORAL/FABRICATED/NOT_REPRO 미발생) | **PENDING_JUDGE (미완료)** — 법리(20)·쟁점·리스크·산출·인용entailment 보류 → judge 연결 전까지 ≥90 불가 |
+| ① | 법령MCP 앵커 답변 | **90.5** (min: PUB-001=100·PUB-002=96.8·HID-001=90.5) | 0 (TEMPORAL/FABRICATED/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — judge 연결 + codex 하드닝(결정적 entailment·추상 프롬프트). 분모 79(conflict/security는 ④/⑥) |
 | ② | citation 검증 RAG | — | — | 미착수 |
 | ③ | 공식소스 Web run | — | — | 미착수 |
 | ④ | 충돌 케이스(3소스 종합) | — | — | 미착수 |
@@ -34,13 +34,22 @@
 
 - slice ⑥ 채점 대상 차원(인프라): 보안14·검색9·요구6·운영2 만 행사, 나머지(법리/쟁점/리스크/충돌/인용/산출)는 **N/A**(scorer가 미행사 차원에 점수 안 줌). leak=0·recall=1.0·shared_recall=1.0·null_rej 정상.
 - 정직성 증거: `test_harness_catches_leakage_with_broken_store` — 일부러 격리필터를 깬 store를 **동일 채점 경로**에 넣으면 leak>0 → TENANT_LEAK → total 0 으로 적발됨.
-- pytest: **61 passed** (DeprecationWarning 0). `python -m tiw.eval`: slice⑥=PASS(100), slice① 결정적 소계 100 + PENDING_JUDGE(미완료). 요약 1/2 완료게이트.
+- pytest: **70 passed**. `python -m tiw.eval`: slice⑥=PASS(100), slice①=PASS(90.5, judge 연결). 요약 2/2 완료게이트(구현된 슬라이스).
 - fail-closed 증명: throwing/empty store → `NOT_REPRODUCIBLE`(cap75) + total<90 실패 (`측정 못 함 = 만점` 불가).
 
 프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기): 미착수(백엔드 슬라이스 선행).
 
+### slice ① judge 레이어 (이번 빌드 — 실연동 완료)
+- **LLM 어댑터 실연동**(`src/ai/llm_client.py`): Anthropic Messages API(claude-opus-4-8). **temperature 미전송**(Opus 4.6+ 는 sampling param 400) — 결정성은 fixture 재생으로. RECORD/REPLAY 트랜스포트(law_data_source 패턴 재사용) + ModelVersion·토큰·비용 로깅(docs/07). zero-retention/L3·L4 게이팅 주석(slice①은 L0 공개 법령만 송신).
+- **답변 생성기**(`src/legal_research.py` + `prompts/generate_research.md`): 질문+회수 ProvisionVersion → 조문에 grounding된 법리 답변(Claim+Citation, 회수 밖 인용·날조 불가, support_quote 는 본문 verbatim substring 검증). 적극/불확실 결론에 회계사 검토경고(HALU-009).
+- **Judge**(`src/judge.py` + `prompts/judge.md`): 법리20·쟁점10·리스크11·산출9(0/25/50/75/100) + **citation entailment**(미지지→거부, HALU-003 cap60). gold 기대쟁점으로 issue_spotting 채점(자기채점 아님). 엄격(구현됨=만점 금지).
+- **gold 보강**: 각 slice① 케이스에 `gold_issues`(법령/사실관계에서 독립 도출 — anti-gaming). hidden(제24조 기부금)은 public(제25조 기업업무추진비)과 다른 케이스 유지.
+- **결정성**: 생성·judge 응답을 `tests/fixtures/llm/` 에 녹화(`scripts/record_llm_fixtures.py`, 라이브 1회) → 테스트/CI 재생(네트워크/키 0). fixture 부재/불일치 = fail-closed(LLMUnavailable → 보류, 만점 아님).
+- **pending→scored**: judge 가동(전 query 성공 + measured)이면 4 판단 차원을 `dim_fractions` 로 이동·entailment 를 citation 에 반영; 미가동이면 여전히 PENDING(보류).
+- **실측 점수(하드닝 후, 정직)**: PUB-001 100·PUB-002 96.8·HID-001 90.5 → slice① **90.5 PASS**. overfit 힌트 제거(생성 프롬프트 추상화)로 **96.8→90.5 하락(정직한 효과)**. entailment 2/2 **결정적 검증**(judge self-report 비의존). 라이브 녹화 2회 합 ~$1.
+
 ## 다음 타겟
-1. **slice ① judge 연결**(법리20·쟁점·리스크·산출·인용entailment) — `prompts/judge.md` + `src/ai/llm_client.py`(ANTHROPIC_API_KEY). wiring 지점: `tiw/eval/slices/slice1_law_anchor.py`의 `PENDING_DIMS` TODO 주석 — judge.score(answer, provision_quote, gold)→0..1 을 `dim_fractions=`로 이동, `pending_dimensions=`에서 제거. judge 연결 후에야 slice① ≥90 가능.
+1. (선택) slice① 여유 확보: HID-001 lr/is=75 → 생성기의 *일반* 사실판단 쟁점 추출력 개선(overfit 재도입·채점 변경 금지). 이미 90.5 통과.
 2. slice ② citation 검증 RAG(RAG-002/017·HALU-003) — 실 임베더(`RealEmbeddingClient`) wiring + tenant별 collection 격리.
 3. korean-law-mcp 백엔드 실 wiring(`KoreanLawMCPSource` TODO) — 현재 fallback으로 법제처가 응답.
 
@@ -51,6 +60,7 @@
   - P1-4 hidden freeze set repo 평문 노출 → 수용 한계(로컬 솔로). 완화: PROMPT.md `tests/golden/hidden/` 열람 금지 규칙. 향후 CI 비밀 artifact 외부화 검토.
   - P2-1 Chroma 운영 백엔드 격리 미구현 → **slice ②** 에서 실 wiring + tenant별 collection 격리 테스트.
 - **slice ① 법령 코어 codex 리뷰** (P0 없음): **반영 완료** — P1-A 검색실패 fail-closed(`search_complete` 재현성 조건) · P1-B source registry를 citation 경계에서 필수화 · P2-B pending headline 분리(`completion_score`/`deterministic_subtotal`). **수용 한계** — P2-A manifest 서명 부재(로컬 솔로). **견고 확인** — as-of 시행일 버전 고정·OC redaction(해시 전)·fixture 재생 무결성·FABRICATED+PENDING 게이트.
+- **slice ① judge 레이어 codex 리뷰** (P0 없음): **반영 완료** — P1-1 entailment를 **결정적 검증**(judge self-report 비의존, citation별 C1 verbatim·C2 조문참조 실재·C3 제목핵심어) · P1-2 judge 버킷 {0,25,50,75,100} 외 → `JudgeError` · P1-3 점수 투명성(분모 79, conflict/security는 ④/⑥ 측정) · P2-1 생성 프롬프트 추상화(세목/조문 선주입 제거 → **96.8→90.5 정직 하락**) · P2-2 L3/L4 외부 LLM 송신 차단 guard. codex 종합판정: "rubric 내 수학적으로 정직."
 
 ## 빌드 환경 메모
 - 스택: Python 3.11+ (검증: 3.14.4). 핵심 deps = `pydantic>=2.7`+`pyyaml`(결정적 경로). 어댑터(fastapi/anthropic/chromadb/python-docx)는 `[adapters]`/`[api]` extra — slice⑥ 테스트는 실키·heavy wheel 없이 통과.
