@@ -126,6 +126,61 @@ def save_scenario_flowchart(scenario, out_path: str | Path) -> Path:
     return out_path
 
 
+def save_burden_bar(scenario, out_path: str | Path) -> Path:
+    """Tax Plan 대안별 추가세부담(억) 비교 막대 — 권고 대안 강조(가정 금액)."""
+    _setup_font()
+    alts = list(scenario.alternatives)
+    if not alts:
+        raise ValueError(f"[{scenario.key}] 대안(alternatives)이 없어 비교 막대를 그릴 수 없습니다.")
+    labels = [f"{a.key}\n{a.label}" for a in alts]
+    vals = [a.burden_eok for a in alts]
+    colors = [_GREEN if a.recommended else _BLUE for a in alts]
+    fig, ax = plt.subplots(figsize=(8.6, 4.0))
+    bars = ax.bar(labels, vals, color=colors, width=0.55)
+    for b, a in zip(bars, alts):
+        ax.text(b.get_x() + b.get_width() / 2, b.get_height() + max(vals) * 0.02,
+                f"{a.burden_eok:,.0f}억" + ("  ◀ 권고" if a.recommended else ""),
+                ha="center", va="bottom", fontsize=10,
+                fontweight="bold" if a.recommended else "normal",
+                color=_GREEN if a.recommended else "#202124")
+    ax.set_ylabel("추가 세부담(억원, 가정)", fontsize=10.5)
+    ax.set_title(f"[{scenario.key}] 대안별 추가 세부담 비교 (절세 대안)", fontsize=12.5,
+                 fontweight="bold", color="#202124", pad=8)
+    ax.set_ylim(0, max(max(vals) * 1.3, 1.0))   # 전부 0이어도 y축 붕괴 방지(codex note)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    ax.grid(axis="y", linestyle=":", alpha=0.4)
+    fig.tight_layout()
+    out_path = Path(out_path); out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight"); plt.close(fig)
+    return out_path
+
+
+def save_plan_timeline(scenario, out_path: str | Path) -> Path:
+    """실행 타임라인(시점 최적화) — 단계별 시점·행위·세무효과 세로 도식."""
+    _setup_font()
+    steps = list(scenario.plan)
+    n = len(steps)
+    if n == 0:
+        raise ValueError(f"[{scenario.key}] 실행계획(plan)이 없어 타임라인을 그릴 수 없습니다.")
+    fig, ax = plt.subplots(figsize=(9.6, 0.98 * n + 1.1))
+    ax.set_xlim(0, 10); ax.set_ylim(0, n + 0.5); ax.axis("off")
+    ax.plot([1.0, 1.0], [0.4, n + 0.1], color=_BLUE, lw=2.2, zorder=1)
+    for idx, st in enumerate(steps):
+        y = n - idx
+        ax.scatter([1.0], [y], s=130, color=_BLUE, zorder=3)
+        ax.text(1.0, y, str(idx + 1), color="white", ha="center", va="center",
+                fontsize=9, fontweight="bold", zorder=4)
+        ax.text(1.5, y + 0.17, f"{st.when}  ·  {st.what}", fontsize=10.3,
+                fontweight="bold", color="#202124", va="center")
+        ax.text(1.5, y - 0.2, f"→ {st.effect}", fontsize=9.2, color=_GREY, va="center")
+    ax.set_title(f"[{scenario.key}] 실행 타임라인 (시점 최적화)", fontsize=12.5,
+                 fontweight="bold", color="#202124", loc="left", pad=6)
+    fig.tight_layout()
+    out_path = Path(out_path); out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight"); plt.close(fig)
+    return out_path
+
+
 def save_case_matrix(scenario, out_path: str | Path) -> Path:
     """경우의 수 × (위험등급·세무리스크·관리) 매트릭스를 색상 표 이미지로."""
     _setup_font()

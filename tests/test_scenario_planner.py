@@ -110,12 +110,12 @@ def test_build_scenario_docx(tmp_path):
 
     out = build_scenario_docx(
         sp.demo_scenarios(), tmp_path / "scn.docx",
-        with_rag=False, with_charts=True, charts_dir=tmp_path / "_charts",
+        with_rag=False, with_law=False, with_charts=True, charts_dir=tmp_path / "_charts",
     )
     assert out.exists()
     d = Document(str(out))
-    # 플로우차트3 + 매트릭스3 = 인라인 이미지 6
-    assert len(d.inline_shapes) == 6
+    # 3 시나리오 × (플로우차트·매트릭스·추가세부담막대·실행타임라인) = 12 이미지
+    assert len(d.inline_shapes) == 12
     heads = [p.text for p in d.paragraphs
              if p.style.name.startswith("Heading") or p.style.name == "Title"]
     # 방법론 + 시나리오3 + 분개장/원장 부록 + 종합유의
@@ -133,8 +133,42 @@ def test_build_scenario_docx_no_charts(tmp_path):
 
     out = build_scenario_docx(
         sp.demo_scenarios(), tmp_path / "scn2.docx",
-        with_rag=False, with_charts=False,
+        with_rag=False, with_law=False, with_charts=False,
     )
     d = Document(str(out))
     assert len(d.inline_shapes) == 0       # 그림 생략
-    assert len(d.tables) >= 3              # 표(경우의 수·실행계획·분개 등)는 유지
+    assert len(d.tables) >= 3              # 표(경우의 수·Tax Plan·실행계획·분개 등)는 유지
+
+
+def test_scenario_has_tax_plan_alternatives():
+    # 강제: 각 시나리오에 Tax Plan 대안(요지·추가세부담·장단점)이 있고 권고 1건.
+    for s in sp.demo_scenarios():
+        assert len(s.alternatives) >= 2
+        assert sum(1 for a in s.alternatives if a.recommended) == 1
+        for a in s.alternatives:
+            assert a.summary and a.burden and a.pros
+
+
+def test_recommended_alt_is_not_pricier():
+    # 권고 대안의 추가세부담 ≤ 다른 모든 대안(권고 근거 명확).
+    for s in sp.demo_scenarios():
+        rec = next(a for a in s.alternatives if a.recommended)
+        others = [a.burden_eok for a in s.alternatives if not a.recommended]
+        assert rec.burden_eok <= min(others)
+
+
+def test_validate_rejects_two_recommended_alts():
+    s = _base()
+    alts = tuple(dataclasses.replace(a, recommended=True) for a in s.alternatives)
+    with pytest.raises(ValueError):
+        dataclasses.replace(s, alternatives=alts).validate()
+
+
+def test_validate_rejects_recommending_highest_burden():
+    s = _base()
+    # 모든 recommended 해제 후, 최고 추가세부담 대안을 권고로 → reject
+    cleared = [dataclasses.replace(a, recommended=False) for a in s.alternatives]
+    hi = max(range(len(cleared)), key=lambda i: cleared[i].burden_eok)
+    cleared[hi] = dataclasses.replace(cleared[hi], recommended=True)
+    with pytest.raises(ValueError):
+        dataclasses.replace(s, alternatives=tuple(cleared)).validate()

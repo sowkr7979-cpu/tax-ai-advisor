@@ -16,6 +16,7 @@
 """
 from __future__ import annotations
 
+import re
 import urllib.parse
 from pathlib import Path
 from typing import Optional
@@ -47,21 +48,75 @@ def _won(v: float) -> str:
     return f"{v:,.0f}"
 
 
-def _rag_evidence(query: str, *, top_k: int = 2) -> list[tuple[str, str]]:
-    """내부 RAG DB 인덱스에서 관련 근거 passage 회수(있으면). 미가용 시 빈 목록(degrade·날조0)."""
+_STOP = {"세무", "리스크", "절세", "관리", "검토", "경우", "관련", "대한", "있는", "또는", "위한", "취득", "지급"}
+
+
+def _terms(text: str) -> set[str]:
+    """한글 2글자 이상 토큰 집합(불용어 일부 제외) — 회수 사유·일치 검토용."""
+    return {t for t in re.findall(r"[가-힣]{2,}", text or "") if t not in _STOP}
+
+
+def _scenario_key_terms(s) -> set[str]:
+    """시나리오의 핵심 개념어 — 제목+요지+경우별 세무리스크에서 추출(일치 검토 기준)."""
+    bag = s.title + " " + s.summary + " " + " ".join(lf.tax_risk for lf in s.leaves)
+    bag += " " + " ".join(c.split("(")[0] for c in s.citations)
+    return _terms(bag)
+
+
+def _rag_evidence(query: str, *, top_k: int = 2, key_terms: Optional[set] = None) -> list[dict]:
+    """내부 RAG DB 회수 + **회수 사유(매칭 질의어·코사인 점수)** + **일치 검토(핵심어 겹침)**.
+
+    각 passage 에 대해 (a) 왜 회수됐는지(질의어 매칭·유사도), (b) 본 쟁점 핵심어와 어디가
+    겹치는지를 함께 반환한다. 미가용 시 빈 목록(fail-closed·날조 0, 실패는 stderr 고지)."""
+    key_terms = key_terms or set()
+    qterms = _terms(query)
     try:
         import src.rag_db_index as ragdb
 
         index = ragdb.load_index()
         res = ragdb.query_rag_db(index, query, top_k=top_k)
-        return [(p.source, p.text.strip().replace("\n", " ")[:180]) for p in res.passages]
+        out: list[dict] = []
+        for p in res.passages:
+            ptext = p.text
+            matched = sorted(t for t in qterms if t in ptext)[:6]
+            overlap = sorted(t for t in key_terms if t in ptext)[:8]
+            # 단일 키워드 겹침으로 '직접 관련'을 단정하지 않는다(과대평가 차단·codex MEDIUM):
+            # 2개 이상 핵심어가 겹쳐야 '직접 관련', 1개면 '일부 일치', 없으면 '참고만'.
+            if len(overlap) >= 2:
+                verdict = "본 쟁점과 직접 관련(핵심어 다수 일치)"
+            elif overlap:
+                verdict = "핵심어 일부 일치(부분 관련 — 배경 참고)"
+            elif matched:
+                verdict = "질의어만 겹침(직접 일치 약함 — 배경 참고)"
+            else:
+                verdict = "유사도 기반 회수(핵심어 일치 없음 — 참고만)"
+            out.append({
+                "source": p.source, "score": p.score,
+                "excerpt": ptext.strip().replace("\n", " ")[:220],
+                "matched": matched, "overlap": overlap, "verdict": verdict,
+            })
+        return out
     except Exception as exc:  # noqa: BLE001 - 인덱스 미가용은 정상 degrade(날조 금지)
-        # fail-closed([]는 유지)하되 실패를 침묵하지 않고 운영자에게 알린다(codex 적발).
         import sys
 
         print(f"  ⚠ 내부 RAG DB 회수 불가({type(exc).__name__}) — 내부자료 근거 생략: {query[:40]}",
               file=sys.stderr)
         return []
+
+
+def _law_precedents(query: str, *, per_target: int = 2, use_cache: bool = True) -> dict:
+    """법제처 국가법령정보 실시간 조회 — 판례·법령해석례·법령(예규/판례/질의해석 검토).
+
+    미가용(오프라인·키 없음) 시 빈 결과 + 오류 사유(상위에서 '조회 불가' 정직 표기)."""
+    try:
+        import src.law_open_api as lo
+
+        return lo.research_issue(query, per_target=per_target, use_cache=use_cache)
+    except Exception as exc:  # noqa: BLE001
+        import sys
+
+        print(f"  ⚠ 법제처 판례·해석례 조회 불가({type(exc).__name__}): {query[:40]}", file=sys.stderr)
+        return {"판례": [], "법령해석례": [], "법령": [], "_errors": [str(exc)]}
 
 
 # --------------------------------------------------------------------------- #
@@ -102,18 +157,18 @@ def _label_para(doc, label: str, text: str):
 # --------------------------------------------------------------------------- #
 # 시나리오 1건 렌더(두 빌더 공유) — [사실관계]로 라벨
 # --------------------------------------------------------------------------- #
-def _render_scenario(doc, n: int, s, flow_path, mtx_path, *, with_rag: bool) -> None:
+def _render_scenario(doc, n: int, s, ch, *, with_rag: bool, with_law: bool) -> None:
     _H(doc, f"{n}. {s.title}")
     _label_para(doc, "[사실관계]", s.facts or s.trigger)
     _label_para(doc, "[추론 요지]", s.summary)
 
     # (1) 플로우차트
     _H(doc, f"{n}-1. 경우의 수 의사결정 플로우차트", level=2)
-    _add_img(doc, flow_path, 6.9)
+    _add_img(doc, ch["flow"].get(s.key), 6.9)
 
     # (2) 경우의 수별 결론 — 매트릭스 그림 + 표
     _H(doc, f"{n}-2. 경우의 수별 결론 (세무리스크 · 절세전략)", level=2)
-    _add_img(doc, mtx_path, 6.9)
+    _add_img(doc, ch["mtx"].get(s.key), 6.9)
     tbl = doc.add_table(rows=1, cols=5); tbl.style = "Table Grid"
     for i, h in enumerate(["경우의 수", "위험", "세무리스크", "절세전략·리스크관리", "근거"]):
         _cell(tbl.rows[0].cells[i], h, header=True, size=9.5)
@@ -145,13 +200,33 @@ def _render_scenario(doc, n: int, s, flow_path, mtx_path, *, with_rag: bool) -> 
                       size=10.5, bold=True, rgb=_RISK_RGB.get(rec.risk_level, _HEADING_RGB))
         _body(doc, f"{rec.management} 이 경로를 따르면 {s.safe_title}.")
 
-    # (4) 사후관리 · 필요조치 · 실행계획
-    _H(doc, f"{n}-4. 사후관리 · 필요조치 · 실행계획", level=2)
+    # (4) Tax Plan — 대안별 요지·추가세부담·장단점 비교(+막대)
+    if s.alternatives:
+        _H(doc, f"{n}-4. 절세 대안 비교 (요지·추가세부담·장단점)", level=2)
+        _body(doc, "목표(예: 잉여금 환원·보상·정리)를 달성하는 대안들을 요지·추가세부담(가정)·"
+                   "장단점으로 비교합니다. 추가세부담 금액은 추론용 가상 수치입니다.", size=9.5, rgb=_GREY)
+        at = doc.add_table(rows=1, cols=5); at.style = "Table Grid"
+        for i, h in enumerate(["대안", "요지", "추가 세부담(가정)", "장점", "단점"]):
+            _cell(at.rows[0].cells[i], h, header=True, size=9.3)
+        for a in s.alternatives:
+            r = at.add_row().cells
+            mark = "　◀ 권고" if a.recommended else ""
+            _cell(r[0], f"{a.key}. {a.label}{mark}", size=8.8, bold=a.recommended)
+            if a.recommended:
+                for c in r:
+                    _shade(c, "E6F4EA")
+            _cell(r[1], _ko(a.summary), size=8.6); _cell(r[2], _ko(a.burden), size=8.6)
+            _cell(r[3], _ko(a.pros), size=8.6); _cell(r[4], _ko(a.cons), size=8.6)
+        _add_img(doc, ch["burden"].get(s.key), 6.2)
+
+    # (5) 사후관리 · 필요조치 · 실행계획(실행 타임라인 — 시점 최적화)
+    _H(doc, f"{n}-5. 사후관리 · 필요조치 · 실행계획", level=2)
     _body(doc, "[사후관리] 거래 종결 후 지속 점검 사항", size=10, bold=True, rgb=_HEADING_RGB)
     _bullets(doc, s.aftercare, size=10)
     _body(doc, "[필요조치] 지금 즉시 해야 할 일", size=10, bold=True, rgb=_HEADING_RGB)
     _bullets(doc, s.actions, size=10)
-    _body(doc, "[실행계획] 시점별 실행 로드맵 (미래 plan)", size=10, bold=True, rgb=_HEADING_RGB)
+    _body(doc, "[실행계획] 실행 타임라인 (시점 최적화)", size=10, bold=True, rgb=_HEADING_RGB)
+    _add_img(doc, ch["tl"].get(s.key), 6.8)
     pt = doc.add_table(rows=1, cols=3); pt.style = "Table Grid"
     for i, h in enumerate(["시점", "행위", "세무 효과·목적"]):
         _cell(pt.rows[0].cells[i], h, header=True, size=9.5)
@@ -160,9 +235,9 @@ def _render_scenario(doc, n: int, s, flow_path, mtx_path, *, with_rag: bool) -> 
         _cell(r[0], st.when, size=9.3, bold=True); _cell(r[1], _ko(st.what), size=9.3)
         _cell(r[2], _ko(st.effect), size=9.3)
 
-    # (5) 회계처리 분개 예시
+    # (6) 회계처리 분개 예시
     if s.journal:
-        _H(doc, f"{n}-5. 회계처리 분개 예시 (권고 경로)", level=2)
+        _H(doc, f"{n}-6. 회계처리 분개 예시 (권고 경로)", level=2)
         _body(doc, s.journal.title, size=10, bold=True)
         _body(doc, s.journal.note, size=9.3, rgb=_GREY)
         jt = doc.add_table(rows=1, cols=3); jt.style = "Table Grid"
@@ -174,20 +249,60 @@ def _render_scenario(doc, n: int, s, flow_path, mtx_path, *, with_rag: bool) -> 
             _cell(r[1], _won(ln.debit) if ln.debit else "", size=9.3)
             _cell(r[2], _won(ln.credit) if ln.credit else "", size=9.3)
 
-    # (6) 내부 자료(RAG DB) 근거
+    # (7) 내부 자료(RAG DB) 근거 — 회수 사유 + 일치 검토
     if with_rag:
-        ev = _rag_evidence(s.rag_query or f"{s.title} 세무 리스크 절세", top_k=2)
+        ev = _rag_evidence(s.rag_query or f"{s.title} 세무 리스크 절세", top_k=2,
+                           key_terms=_scenario_key_terms(s))
         if ev:
-            _H(doc, f"{n}-6. 내부 자료 근거 (실무 가이드 회수)", level=2)
-            _body(doc, "내부 실무자료 임베딩 색인에서 회수한 관련 근거입니다(출처·발췌).",
+            _H(doc, f"{n}-7. 내부 자료 근거 (실무 가이드 회수 — 사유·일치 검토)", level=2)
+            _body(doc, "내부 실무자료 임베딩 색인(코사인 유사도)에서 회수한 근거입니다. 각 발췌마다 "
+                       "‘왜 회수됐는지(질의어 매칭·유사도)’와 ‘본 쟁점과 일치하는 부분’을 함께 검토합니다.",
                   size=9.3, rgb=_GREY)
-            for src_loc, excerpt in ev:
-                bp = doc.add_paragraph(style="List Bullet")
-                _set_run_font(bp.add_run(f"[{src_loc}] "), size=9, bold=True, rgb=_GREY)
-                _set_run_font(bp.add_run(_ko(excerpt) + " …"), size=9)
+            for e in ev:
+                p = doc.add_paragraph(style="List Bullet")
+                _set_run_font(p.add_run(f"[{e['source']}] (유사도 {e['score']:.2f}) "),
+                              size=9, bold=True, rgb=_HEADING_RGB)
+                _set_run_font(p.add_run("“" + _ko(e["excerpt"]) + " …”"), size=9)
+                # 회수 사유
+                rp = doc.add_paragraph()
+                reason = ("회수 사유: 질의어 " + ", ".join(e["matched"]) + " 가 본문에 출현"
+                          ) if e["matched"] else "회수 사유: 임베딩 유사도 상위(질의어 직접 매칭은 약함)"
+                _set_run_font(rp.add_run("　" + reason), size=8.6, rgb=_GREY)
+                # 일치 검토
+                vp = doc.add_paragraph()
+                vtxt = "　일치 검토: " + e["verdict"]
+                if e["overlap"]:
+                    vtxt += " — 겹치는 핵심어: " + ", ".join(e["overlap"])
+                vtxt += " (※ 키워드 기반 1차 판정 — 원문 의미 일치는 회계사 확인 필요)"
+                _set_run_font(vp.add_run(vtxt), size=8.6, rgb=(0xB0, 0x60, 0x00))
 
-    # (7) 근거 법령
-    _H(doc, f"{n}-7. 근거 법령 (클릭하면 검색)", level=2)
+    # (8) 관련 판례·해석례·법령 (법제처 국가법령정보 실시간 조회)
+    if with_law:
+        res = _law_precedents(s.law_query or s.title, per_target=2)
+        _H(doc, f"{n}-8. 관련 판례·해석례·법령 (법제처 실시간 조회)", level=2)
+        _body(doc, "법령 검색에 그치지 않고 국가법령정보(법제처/국세법령정보)에서 본 쟁점의 "
+                   "최신 판례·법령해석례를 함께 조회한 결과입니다(실제 회수만 표시).", size=9.3, rgb=_GREY)
+        any_hit = False
+        for cat in ("판례", "법령해석례", "법령"):
+            hits = res.get(cat) or []
+            if not hits:
+                continue
+            any_hit = True
+            _body(doc, f"〔{cat}〕", size=9.6, bold=True, rgb=_HEADING_RGB)
+            for h in hits:
+                bp = doc.add_paragraph(style="List Bullet")
+                meta = " · ".join(x for x in [h.ident, h.date, h.source] if x)
+                _add_hyperlink(bp, h.url or _law_search_url(h.title), _ko(h.title)[:80], size=9)
+                if meta:
+                    _set_run_font(bp.add_run(f"　({meta})"), size=8.4, rgb=_GREY)
+        if not any_hit:
+            note = "법제처 실시간 조회 결과가 없거나 조회가 불가했습니다(오프라인/키 미설정 가능)."
+            if res.get("_errors"):
+                note = "법제처 실시간 조회 불가(네트워크/키): 회계사가 직접 판례·예규를 확인하세요."
+            _body(doc, note, size=9.3, rgb=(0xB0, 0x60, 0x00))
+
+    # (9) 근거 법령
+    _H(doc, f"{n}-9. 근거 법령 (클릭하면 검색)", level=2)
     for c in s.citations:
         bp = doc.add_paragraph(style="List Bullet")
         _add_hyperlink(bp, _law_search_url(c), c, size=10)
@@ -207,15 +322,18 @@ def _new_doc():
 
 
 def _render_charts(scenarios, charts_dir, with_charts):
-    flow_paths: dict[str, Path] = {}
-    mtx_paths: dict[str, Path] = {}
+    ch: dict[str, dict] = {"flow": {}, "mtx": {}, "burden": {}, "tl": {}}
     if with_charts:
         from src import scenario_flowchart as sfc
 
         for s in scenarios:
-            flow_paths[s.key] = sfc.save_scenario_flowchart(s, charts_dir / f"flow_{s.key}.png")
-            mtx_paths[s.key] = sfc.save_case_matrix(s, charts_dir / f"matrix_{s.key}.png")
-    return flow_paths, mtx_paths
+            ch["flow"][s.key] = sfc.save_scenario_flowchart(s, charts_dir / f"flow_{s.key}.png")
+            ch["mtx"][s.key] = sfc.save_case_matrix(s, charts_dir / f"matrix_{s.key}.png")
+            if s.alternatives:
+                ch["burden"][s.key] = sfc.save_burden_bar(s, charts_dir / f"burden_{s.key}.png")
+            if s.plan:
+                ch["tl"][s.key] = sfc.save_plan_timeline(s, charts_dir / f"tl_{s.key}.png")
+    return ch
 
 
 def build_scenario_docx(
@@ -227,15 +345,16 @@ def build_scenario_docx(
     charts_dir: Optional[str | Path] = None,
     with_charts: bool = True,
     with_rag: bool = True,
+    with_law: bool = True,
 ) -> Path:
-    """경우의 수 의사결정 보고서 DOCX(플로우차트·매트릭스·사후관리/조치/계획·분개 dummy)."""
+    """경우의 수 의사결정 보고서 DOCX(플로우차트·매트릭스·Tax Plan·실행 타임라인·분개 dummy)."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
 
     for s in scenarios:
         s.validate()
     out_path = Path(out_path)
     charts_dir = Path(charts_dir) if charts_dir else out_path.parent / "_charts_scn"
-    flow_paths, mtx_paths = _render_charts(scenarios, charts_dir, with_charts)
+    ch = _render_charts(scenarios, charts_dir, with_charts)
 
     doc = _new_doc()
     t = doc.add_heading("경우의 수 기반 절세전략·세무리스크 의사결정 보고서", level=0)
@@ -246,7 +365,7 @@ def build_scenario_docx(
     _render_method_note(doc)
 
     for n, s in enumerate(scenarios, start=1):
-        _render_scenario(doc, n, s, flow_paths.get(s.key), mtx_paths.get(s.key), with_rag=with_rag)
+        _render_scenario(doc, n, s, ch, with_rag=with_rag, with_law=with_law)
 
     _append_books(doc, scenarios)
     _render_closing(doc)
@@ -269,6 +388,7 @@ def build_company_case_docx(
     charts_dir: Optional[str | Path] = None,
     with_charts: bool = True,
     with_rag: bool = True,
+    with_law: bool = True,
 ) -> Path:
     """DART 실재무 그라운딩 회사 케이스 보고서 — 회사개요 + **종합세무검토** + 시나리오 + 분개장/원장/증빙 dummy."""
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -277,7 +397,7 @@ def build_company_case_docx(
         s.validate()
     out_path = Path(out_path)
     charts_dir = Path(charts_dir) if charts_dir else out_path.parent / "_charts_case"
-    flow_paths, mtx_paths = _render_charts(scenarios, charts_dir, with_charts)
+    ch = _render_charts(scenarios, charts_dir, with_charts)
 
     doc = _new_doc()
     t = doc.add_heading(f"{company} 종합세무검토 및 경우의 수 절세전략·세무리스크 의사결정 보고서", level=0)
@@ -317,7 +437,7 @@ def build_company_case_docx(
 
     # 3..N. 시나리오별 의사결정
     for n, s in enumerate(scenarios, start=3):
-        _render_scenario(doc, n, s, flow_paths.get(s.key), mtx_paths.get(s.key), with_rag=with_rag)
+        _render_scenario(doc, n, s, ch, with_rag=with_rag, with_law=with_law)
 
     # 부록 분개장·원장 + 증빙
     _append_books(doc, scenarios)

@@ -54,6 +54,19 @@ class PlanStep:
 
 
 @dataclass(frozen=True)
+class PlanAlt:
+    """Tax Plan 대안 1건 — 요지·추가세부담·장단점(한맥 시나리오 비교 수준). 금액은 가상."""
+    key: str            # "대안 A"
+    label: str          # "자기주식 취득(소각)"
+    summary: str        # 요지
+    burden: str         # 추가세부담 설명(가정 금액)
+    burden_eok: float   # 추가세부담(억) — 비교 막대용. 절세(공제)는 음수 가능
+    pros: str
+    cons: str
+    recommended: bool = False
+
+
+@dataclass(frozen=True)
 class JournalLine:
     account: str
     debit: float
@@ -87,6 +100,8 @@ class Scenario:
     review_required: bool = True    # 회계사 검토 전제(HITL)
     rag_query: str = ""             # 내부 RAG DB 근거 회수용 질의(없으면 title 사용)
     facts: str = ""                 # [사실관계] — 회사 그라운딩 사실관계(합성). 없으면 trigger 사용
+    alternatives: tuple = ()        # Tax Plan 대안 비교(PlanAlt) — 요지·추가세부담·장단점
+    law_query: str = ""             # 법제처 판례·해석례 조회용 질의(없으면 title 사용)
 
     def validate(self) -> None:
         """구조 무결성 — 게이트≥2, 경우의 수≥2, 위험등급 허용값, 근거 비어있지 않음."""
@@ -106,6 +121,17 @@ class Scenario:
                 raise ValueError(f"{self.key}/{lf.case_label}: 근거(basis)가 비었거나 공백입니다(날조 방지 — 근거 필수).")
         if not self.citations or not all(str(c).strip() for c in self.citations):
             raise ValueError(f"{self.key}: 시나리오 근거 법령이 비었거나 공백입니다.")
+        # Tax Plan 대안: 권고는 정확히 1건이고, **최고 추가세부담을 권고하지 않는다**(권고 근거
+        # 명확성 — codex 적발). 권고 대안의 추가세부담 ≤ 다른 모든 대안.
+        if self.alternatives:
+            recs = [a for a in self.alternatives if a.recommended]
+            if len(recs) != 1:
+                raise ValueError(f"{self.key}: 절세 대안 권고는 정확히 1건이어야 합니다(현재 {len(recs)}).")
+            others = [a.burden_eok for a in self.alternatives if not a.recommended]
+            if others and recs[0].burden_eok > min(others):
+                raise ValueError(
+                    f"{self.key}: 권고 대안의 추가세부담({recs[0].burden_eok})이 더 낮은 대안보다 큽니다 "
+                    "— 권고 근거 불명확.")
 
 
 # --------------------------------------------------------------------------- #
@@ -177,6 +203,19 @@ def _scn_treasury_stock() -> Scenario:
             PlanStep("익년 5월", "주주 종합소득세 신고 반영", "누진 영향 최종 정산"),
         ),
         rag_query="자기주식 취득 자본거래 의제배당 부당행위계산부인 비상장주식 평가",
+        law_query="자기주식 의제배당",
+        alternatives=(
+            PlanAlt("대안 A", "자기주식 취득·소각", "최대주주 주식을 시가·균등 취득 후 소각",
+                    "의제배당 배당소득세(가정 약 6억) — 소각목적·시점분산 최적", 6.0,
+                    "즉시 현금화·지분정리 동시, 부당행위·증여 리스크 낮음, 시점분산 가능",
+                    "의제배당 누진·배당가능이익 필요", True),
+            PlanAlt("대안 B", "현금배당", "잉여금을 배당으로 환원",
+                    "배당소득 종합과세(가정 약 11억)", 11.0,
+                    "절차 단순·요건 명확", "최고세율 누진 부담 최대, 지분정리 효과 없음"),
+            PlanAlt("대안 C", "유상감자", "자본 감소로 주주에 환급",
+                    "의제배당(감자대가−취득가, 가정 약 8억)", 8.0,
+                    "세부담 분산 설계 여지", "절차 복잡·채권자보호·평가 쟁점"),
+        ),
         journal=JournalIllustration(
             title="자기주식 취득 회계처리(권고 경우 ① — 소각목적, 취득가 5억)",
             note="자기주식은 자본의 차감항목. 소각 시 액면 초과액은 감자차손/이익잉여금과 상계.",
@@ -253,6 +292,18 @@ def _scn_executive_pay() -> Scenario:
             PlanStep("결산", "한도 점검·충당금 정산", "초과 손금부인 예방"),
         ),
         rag_query="임원 보수 상여금 퇴직금 손금불산입 지급규정 한도 정관 주주총회",
+        law_query="임원 퇴직금 손금불산입",
+        alternatives=(
+            PlanAlt("대안 A", "규정 내 보수+퇴직금 적립", "지급규정·주총 한도 내 보수·퇴직급여충당",
+                    "근로/퇴직소득세(가정 약 9억) — 전액 손금", 9.0,
+                    "손금 인정·예측가능", "규정 정비 선행 필요", True),
+            PlanAlt("대안 B", "성과상여 확대", "이익 연동 상여 비중 확대",
+                    "근로소득 종합과세(가정 약 12억)", 12.0,
+                    "성과 보상 유연", "이익처분상여 시 손금부인·누진"),
+            PlanAlt("대안 C", "배당으로 보상", "보수 대신 배당 확대",
+                    "배당소득 종합과세(가정 약 10억)", 10.0,
+                    "절차 단순", "손금 불산입(이중과세)·지분비례 제약"),
+        ),
         journal=JournalIllustration(
             title="임원 퇴직금 지급 회계처리(권고 경우 ① — 규정 내 3억)",
             note="설정해 둔 퇴직급여충당금과 우선 상계, 부족분은 당기비용.",
@@ -331,6 +382,18 @@ def _scn_provisional_payment() -> Scenario:
             PlanStep("퇴직 전", "잔액 0 확인", "대손 불인정·상여처분 회피"),
         ),
         rag_query="업무무관 가지급금 인정이자 지급이자 손금불산입 대표이사 대여금",
+        law_query="가지급금 인정이자",
+        alternatives=(
+            PlanAlt("대안 A", "약정이자 수령+분할상환", "당좌대출이자율 약정·수령 후 계획 상환",
+                    "인정이자 익금 최소화(가정 추가 약 1억)", 1.0,
+                    "익금·손금부인·상여처분 모두 최소", "상환재원·기간 필요", True),
+            PlanAlt("대안 B", "급여·상여로 정리", "보수/상여 지급으로 잔액 상계",
+                    "근로소득세(가정 약 4억)", 4.0,
+                    "단기 정리 가능", "근로소득 누진·손금 한도"),
+            PlanAlt("대안 C", "배당으로 정리", "배당금으로 잔액 상환",
+                    "배당소득 종합과세(가정 약 5억)", 5.0,
+                    "지분비례 환원", "누진 부담·지분비례 제약"),
+        ),
         journal=JournalIllustration(
             title="가지급금 인정이자·상환 회계처리(권고 경우 ① — 잔액 2억, 이자 920만)",
             note="인정이자는 미수수익으로 익금 계상, 상환 시 가지급금 감소.",
