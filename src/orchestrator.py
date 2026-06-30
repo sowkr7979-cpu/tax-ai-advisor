@@ -53,7 +53,11 @@ from contract.base import (
 from contract.cluster_a_tenancy import RoleAssignment, RoleName
 from contract.cluster_f_qa import Citation, SourceAnswer
 from contract.cluster_h_review import GateType, ReleaseAuthorization
-from rules.tax_law_mapping import article_by_issue  # ORCH-015 다세목 매핑 레지스트리(변경①)
+from rules.tax_law_mapping import (  # ORCH-015 다세목 매핑 레지스트리(변경①)
+    article_by_issue,
+    law_name_for,
+    tax_type_for,
+)
 from src.ai.law_data_source import LawSourceError, default_law_source
 from src.ai.llm_client import LLMClient, LLMConfig, default_llm_client
 from src.chunking import chunk_client_doc, chunk_provision
@@ -281,8 +285,10 @@ class Orchestrator:
         self.log.append(line)
 
     # -- lookups ---------------------------------------------------------- #
-    def _lookup(self, article: str, as_of: date):
-        lk = self.law.lookup_provision(_LAW_NAME, article, _LOOKUP_DATE)
+    def _lookup(self, law_name: str, article: str, as_of: date):
+        # ORCH-015(변경①): 법령명을 쟁점별로 받는다(하드코딩 _LAW_NAME 제거) — 소득세 등
+        # 비-법인세 쟁점은 자기 세법으로 조회한다. 미녹화 세법은 law source 가 fail-closed.
+        lk = self.law.lookup_provision(law_name, article, _LOOKUP_DATE)
         return replace(lk, as_of_date=as_of)
 
     # ------------------------------------------------------------------ #
@@ -312,10 +318,10 @@ class Orchestrator:
         issues = self._spot_issues(company, question)
         primary = issues[0]
         self._say(f"[쟁점 도출] {len(issues)}개 쟁점 — 주쟁점: {primary['title']} "
-                  f"({_LAW_NAME} {primary['article']}).")
+                  f"({primary['law_name']} {primary['article']}).")
 
         # -- 3소스 Research (각각 독립 SourceAnswer) ----------------------- #
-        primary_lookup = self._lookup(primary["article"], as_of)
+        primary_lookup = self._lookup(primary["law_name"], primary["article"], as_of)
         contributions, primary_research, web_answer = self._three_source_research(
             company=company, question=question, primary=primary,
             primary_lookup=primary_lookup, as_of=as_of, registry=registry,
@@ -425,6 +431,11 @@ class Orchestrator:
                     "issue_key": key, "article": article, "article_title": art_title,
                     "title": title, "account": row.get("account", ""),
                     "amount": row.get("amount"), "note": row.get("note", ""),
+                    # ORCH-015(변경①): 세목별 법령명·세목을 레지스트리에서 주입 →
+                    # 하드코딩 _LAW_NAME 대신 이 값으로 조회(소득세 쟁점이 법인세법으로
+                    # 잘못 조회되는 것을 방지; codex 적발). 법인세 쟁점은 법인세법/법인세 동일.
+                    "law_name": law_name_for(key) or _LAW_NAME,
+                    "tax_type": tax_type_for(key) or "법인세",
                 })
         if not issues:
             raise ValueError("쟁점 도출 실패: 회사 자료에 매핑 가능한 손금 계정이 없음")
@@ -468,7 +479,7 @@ class Orchestrator:
             primary_research, channel="①", source_type=SourceType.LAW_MCP,
             authority="법률", topic=topic, stance=stance, is_primary=True,
         ))
-        self._say(f"[Research ①法令] {_LAW_NAME} {primary['article']} 앵커 + 법리(인용 "
+        self._say(f"[Research ①法令] {primary['law_name']} {primary['article']} 앵커 + 법리(인용 "
                   f"{len(primary_research.citations)}건, 검토경고={'O' if primary_research.review_warnings else 'X'}).")
 
         # ② internal_rag (channel ②, INTERNAL_RAG) — 테넌트 격리 회수 + 인용근거 답변
@@ -509,8 +520,8 @@ class Orchestrator:
             from src.ai.chroma_backend import ChromaVectorStore
             store = ChromaVectorStore(embedder=self.embedder)
             index = InternalRagIndex(store=store)
-            law_set = chunk_provision(_LAW_NAME, primary["article"], _LOOKUP_DATE.year,
-                                      tax_type="법인세")
+            law_set = chunk_provision(primary["law_name"], primary["article"],
+                                      _LOOKUP_DATE.year, tax_type=primary["tax_type"])
             memo = company.internal_memo
             memo_chunk = chunk_client_doc(
                 doc_id=memo.get("doc_id", f"memo_{company.client_id}"),
@@ -548,9 +559,9 @@ class Orchestrator:
             return None  # only the 제25조 official-source fixture is available
         try:
             return self.web.run(
-                question_text=question, law_name=_LAW_NAME,
+                question_text=question, law_name=primary["law_name"],
                 article_label=primary["article"], as_of_date=_WEB_AS_OF,
-                issue=primary["issue_key"], tax_type="법인세", high_risk=company.high_risk,
+                issue=primary["issue_key"], tax_type=primary["tax_type"], high_risk=company.high_risk,
                 source_answer_id=f"sa_{company.matter_id}_web", answer_run_id=ar,
                 llm_client=self.llm,
             )
@@ -630,16 +641,17 @@ class Orchestrator:
         articles: dict[str, str] = {}
         by_issue: dict[str, str] = {}
         source_objects: list[object] = []
-        seen_articles: set[str] = set()
+        # dedup 은 (법령명, 조문) 키로 — 다세목에서 조문번호가 같아도(예: 법인세법 제22조
+        # vs 소득세법 제22조) 다른 법이면 별개 인용(ORCH-015; 조문라벨 단독 dedup 오결합 차단).
+        seen: dict[tuple[str, str], str] = {}
         for issue in issues:
+            law_name = issue["law_name"]
             art = issue["article"]
-            if art in seen_articles:
-                by_issue[issue["issue_key"]] = next(
-                    cid for cid, a in articles.items() if a == art
-                )
+            key = (law_name, art)
+            if key in seen:
+                by_issue[issue["issue_key"]] = seen[key]
                 continue
-            seen_articles.add(art)
-            lookup = self._lookup(art, as_of)
+            lookup = self._lookup(law_name, art, as_of)
             bundle = build_law_source_answer(
                 lookup=lookup, client_id=company.client_id,
                 answer_run_id=f"ar_{company.matter_id}",
@@ -652,6 +664,7 @@ class Orchestrator:
             titles[cit.citation_id] = lookup.article_title
             articles[cit.citation_id] = art
             by_issue[issue["issue_key"]] = cit.citation_id
+            seen[key] = cit.citation_id
         return citations, titles, articles, by_issue, source_objects
 
     def _cmap(self, citations: list[Citation]) -> dict[str, Citation]:
@@ -708,7 +721,7 @@ class Orchestrator:
             cid = by_issue[issue["issue_key"]]
             if issue["issue_key"] == "기업업무추진비":
                 analysis = (
-                    f"{_LAW_NAME} {issue['article']}는 한도 초과액과 적격증빙 미수취분을 손금불산입한다. "
+                    f"{issue['law_name']} {issue['article']}는 한도 초과액과 적격증빙 미수취분을 손금불산입한다. "
                     "증빙 매칭 자료가 미확인('모름')이라 부인 범위 정량화가 제한되며, 예규(과세)와 "
                     "심판례(납세자) 충돌이 미해소되어 단정하지 않고 회계사 검토로 승격한다."
                 )
@@ -760,9 +773,13 @@ class Orchestrator:
             if answered else "법령 원문을 회수해"
         )
         web_note = "" if "③" in chans else " ③공식웹은 적용 가능한 공식근거가 없어 보류했다."
+        # primary 는 _spot_issues 가 tax_type/law_name 을 주입하지만, 단위호출 호환을 위해
+        # 누락 시 법인세 기본값으로 폴백(실제 흐름은 항상 키 보유 → 동일 출력).
+        _tt = primary.get("tax_type", "법인세")
+        _ln = primary.get("law_name", _LAW_NAME)
         exec_summary = (
-            f"{company.company_name} {company.fiscal_year} 법인세 검토 결과, "
-            f"{ptitle}({_LAW_NAME} {primary['article']}) 관련 손금불산입이 핵심 리스크다. "
+            f"{company.company_name} {company.fiscal_year} {_tt} 검토 결과, "
+            f"{ptitle}({_ln} {primary['article']}) 관련 손금불산입이 핵심 리스크다. "
             f"{src_phrase} 권위 위계·시점으로 종합했으며, 보수/중립/적극 선택지의 "
             f"세부담·과세리스크·방어가능성을 비교 제시한다.{meal_caveat}{web_note} "
             f"모든 법적 주장은 법령 원문(버전 객체) 인용을 동반하며, 결손 자료에는 자료한계 "

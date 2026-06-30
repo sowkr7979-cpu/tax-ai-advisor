@@ -19,11 +19,13 @@ official web content, 법령 본문). A missing fixture is fail-closed (the run 
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
 
 from docx import Document
 
+from src.ai.law_data_source import LawSourceError
 from src.draft import REQUIRED_SECTIONS, validate_draft_package
 from src.orchestrator import (
     DEFAULT_COMPANY_FIXTURE,
@@ -72,6 +74,57 @@ def test_orchestrator_builds_11section_package():
     # 검토항목(HALU-008) — 고위험 검토경고 포함
     from src.review_items import has_high_risk_warning
     assert pkg.review_items and has_high_risk_warning(pkg.review_items)
+
+
+# --------------------------------------------------------------------------- #
+# ORCH-015 다세목 라우팅 (변경① — codex 적발 회귀:
+#   "non-corporate mapped issues can run against the wrong law")
+# --------------------------------------------------------------------------- #
+def _income_tax_company() -> CompanyProfile:
+    """소득세(퇴직소득) 쟁점을 가진 회사 — 레지스트리 등록 세목(법인세 아님)."""
+    return CompanyProfile(
+        client_id="client_inc", matter_id="matter_inc_2026",
+        company_name="B법인(주)", fiscal_year="2026 사업연도",
+        as_of_date=date(2026, 1, 1), high_risk=True,
+        review_scope="임원 퇴직위로금 소득구분 검토",
+        industry="제조업", default_question="퇴직소득 vs 근로소득 구분을 검토해줘",
+        trial_balance=[{"account": "퇴직위로금", "amount": 500000000,
+                        "note": "한도초과분 근로소득 검토", "issue_key": "퇴직소득구분"}],
+        prior_year={},
+        materials=[{"name": "임원 퇴직급여 규정", "status": "수집", "confidentiality": "L2"}],
+        internal_memo={},
+    )
+
+
+def test_orch015_income_tax_issue_tagged_with_income_tax_law():
+    """소득세 쟁점은 소득세법/소득세로 태깅된다(법인세 하드코딩 아님)."""
+    orch = Orchestrator(mode="replay")
+    issues = orch._spot_issues(_income_tax_company(), "퇴직소득 구분 검토")
+    primary = issues[0]
+    assert primary["issue_key"] == "퇴직소득구분"
+    assert primary["law_name"] == "소득세법"
+    assert primary["tax_type"] == "소득세"
+
+
+def test_orch015_income_tax_issue_routes_lookup_to_income_tax_law():
+    """codex 적발 회귀: 소득세 쟁점의 주법령 조회가 *소득세법* 으로 가야 한다 —
+    법인세법으로 silent 오조회 ✕. fixture 미녹화이므로 소득세법 조회는 fail-closed 되며,
+    그 fail 의 대상이 소득세법(법인세법 아님)임을 spy 로 증명한다."""
+    orch = Orchestrator(mode="replay")
+    company = _income_tax_company()
+    seen: dict = {}
+
+    def _spy(law_name, article, as_of):
+        seen["law_name"] = law_name
+        seen["article"] = article
+        raise LawSourceError(f"녹화 fixture 없음: {law_name} {article} (fail-closed 기대)")
+
+    orch.law.lookup_provision = _spy  # type: ignore[assignment]
+    with pytest.raises(LawSourceError):
+        orch.run(company=company, question=company.default_question, write_docx=False)
+    # 라우팅 정확성: 법인세법이 아니라 소득세법으로 조회 시도(엉뚱한 법 조회 차단)
+    assert seen.get("law_name") == "소득세법"
+    assert seen.get("article") == "제22조"
 
 
 def test_three_source_synthesis_agree_lineage_intact():

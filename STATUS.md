@@ -15,7 +15,13 @@
 
 ### iter1 (a753dd6 이후) — ORCH-015 레지스트리 외부화
 - **변경①(부분)**: `rules/tax_law_mapping.yaml`(세목→쟁점→법령 매핑 데이터) + `rules/tax_law_mapping.py`(로더, `IssueMapping`/`article_by_issue`/`law_name_for`) 신설. orchestrator `_ARTICLE_BY_ISSUE` = `article_by_issue()` 로 전환(하드코딩 제거). **법인세 4항목 문자 단위 동일 → 회귀 0**(`pytest 215 passed`). 소득세/퇴직소득(소득세법 제22조) 레지스트리 등록(데이터; end-to-end 는 fixture 녹화 선행).
-- **남은 일(다음 iter)**: (a) `_lookup`/`_build_citations`/research 로그의 `_LAW_NAME` 하드코딩을 쟁점별 `law_name_for()` 로 threading(소득세 실제 조회 경로) · (b) 소득세/퇴직소득 law·LLM fixture 녹화(--live) + gold · (c) `draft.py` "법인세" 제목 하드코딩 제거 · (d) slice7 하버스로 측정.
+- **남은 일(다음 iter)**: (a) ~~law_name threading~~ **[iter2 완료]** · (b) 소득세/퇴직소득 law·LLM fixture 녹화(--live) + gold · (c) `draft.py` "법인세" 제목 하드코딩 제거 · (d) slice7 하버스로 측정 · (e) OUT-007/008.
+
+### iter2 (0a0cfaa 이후) — ORCH-015 law_name 쟁점별 threading (codex 적발 수정)
+- **codex stop-time 적발**: "non-corporate mapped issues can run against the wrong law" — iter1에서 소득세를 레지스트리 등록했으나 orchestrator `_lookup`/research/citations 가 여전히 하드코딩 `_LAW_NAME="법인세법"` → 소득세 쟁점이 **법인세법 제22조**로 silent 오조회 위험.
+- **수정**: `_spot_issues`가 issue dict에 `law_name`/`tax_type`를 레지스트리에서 주입 → `_lookup(law_name, …)`·`_build_citations`·`_run_internal_rag`(chunk_provision)·`_run_web`·research 로그·exec_summary 전부 **쟁점별 law_name/tax_type** 로 전환. `_build_citations` dedup 키를 (법령명, 조문)으로 교정(동일 조문번호 다른 법 오결합 차단). `_summary_texts`는 `.get` 폴백(단위호출 호환).
+- **측정**: **pytest 217 passed**(기존 215 + 신규 회귀 2: 소득세 쟁점 태깅 + lookup이 소득세법으로 라우팅됨을 spy로 증명). 법인세 경로 byte-동일 → 기존 slice ①~⑥ 회귀 0. `_LAW_NAME`은 이제 fallback 기본값으로만 잔존.
+- **codex 미해결 → 해소**: "wrong law" 적발 반영 완료.
 
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
