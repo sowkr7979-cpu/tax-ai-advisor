@@ -4,7 +4,7 @@
 > 점수는 **STATUS 자기보고가 아니라** 같은 iteration의 `pytest -q` + `python -m tiw.eval` 산출 `RubricResult`로만 증명된다(완료 판정 기준).
 
 ## ★ 미션 v1.1 (변경①②③) — slice ⑦ 진행 중 (완료 게이트 미충족)
-> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **7-slice 게이트 미충족**(slice⑦ 미착수) → `<promise>` 금지, 계속 개선.
+> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **rubric 7-slice 게이트 충족**(7/7 ≥90 + 하드게이트 0, `python -m tiw.eval` 산출) — 단 **완료 promise 는 아직**: §5 의 3번째 조건 **목업 3화면 Playwright 렌더(§8/§10 포함)** 미검증 → `<promise>` 금지, 프론트 완료까지 계속.
 - **Rubric Freeze v1.1** (사용자 승인 확장) — 완료 게이트 6→**7 slice ≥90** + per-FR 예시 H/I/J + DOCX 11→13목차. 기존 가중치·하드게이트·6 slice 합격조건 **불변**(회귀 0).
 - **slice ⑦ 3 기능 (스펙: 정본 §3-4·§4-2-1·§4-3·§4-4 + docs/03·08·09)**:
   - **변경① `ORCH-015`** 세목·쟁점→법령 레지스트리(법인세 하드코딩 제거) — 소득세/퇴직소득 케이스 동일 파이프라인 13목차 산출 + 미등록 세목 fail-closed.
@@ -72,6 +72,14 @@
 - **측정**: **pytest 227**(226 + 신규 1: stale non-empty locator→reject). 실제 trace locator 는 정확 매칭 → 통과(회귀 0).
 - **codex 미해결 → 해소**(누적 5건: 오법조회·부분커버리지·날조trace·빈locator우회·stale-locator).
 
+### iter11 (4673b42 이후) — slice7 하버스 추가 + 7/7 슬라이스 ≥90 측정
+- **slice7 하버스**(`tiw/eval/slices/slice7_multitax_transparency.py`): gold 파일 없이 *자체 결정적 케이스* 로 3 기능 채점 — **requirement**(ORCH-015 다세목 라우팅: 법인세→법인세법·소득세→소득세법·미등록→None + 13목차) · **citation**(§10 trace 전부 backed=날조/stale 0) · **output**(§8 채널 ①②③ + §10 도식 + 13목차) · **ops**(완주). 분모 29, 판단차원 N/A(①~⑥ 행사).
+- **runner/__main__ 등록**: `_REGISTRY[7]` + 글리프 ⑦ + 7-slice 요약.
+- **적대적 정직성**(`tests/test_slice7_harness.py`, slice⑥ leaky-store 패턴): `package_factory` 주입점으로 날조 trace→**FABRICATED_CITATION(cap60)** · 날조 step 인용→FABRICATED · 산출실패→**NOT_REPRODUCIBLE(cap75)** 를 *같은 채점 경로* 로 적발('측정 못 함=만점' 금지).
+- **측정**: `python -m tiw.eval` → **7/7 슬라이스 완료게이트 통과**(①90.5②97.3③96.8④93.5⑤92.3⑥100⑦100, 하드게이트 0). 기존 ①~⑥ 회귀 0. **pytest 231**(227+4).
+- **정직성 고지**: slice⑦ 100 은 *결정적 구조 채점*(scope_note 명시) — hidden freeze CPA 케이스는 docs/09 §10 절차상 사용자(회계사) 시드 필요(미시드). 판단 품질은 별도.
+- **남은 promise 조건**: §5 의 **목업 3화면 Playwright 렌더(§8/§10 프론트)** 미검증 → promise 보류. 다음 iter = 프론트 §8/§10 + Playwright.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**
@@ -111,7 +119,7 @@
 | ③ | 공식소스 Web run | **96.8** (min: PUB-001=100·PUB-002=97.2·HID-001=96.8) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — Tavily 실 wiring(공식도메인 발견·RECORD/REPLAY) + Source Policy(사전/사후) + 승격(WEB-011, 법령 원문 대조) + WEB-012(최신성⟂적용시점 분리) + slice① 생성기 재사용(채널③/WEB). 분모 79(conflict는 ④·웹은 공유 L0 보안은 ⑥) |
 | ④ | 충돌 케이스(3소스 종합) | **93.5** (min: PUB-001=93.5·PUB-002=100·HID-001=96.4·HID-002=100) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 결정테이블(권위·시점·사실·채널 tie-break) + claim 단위 정합 + 인용 상속(신규 0) + lineage 100%. conflict(7) 차원 측정(①②③에서 N/A였던 차원)=100. 분모 77(search per-source·security는 ⑥) |
 | ⑤ | CPA HITL 워크플로 | **92.3** (min: PUB-001=100·PUB-002=92.3·HID-001=95.2) | 0 (UNAPPROVED_RELEASE/MISSING_WARNING/TENANT_LEAK 미발생) | **통과 (≥90)** — H1~H5 게이트·승인 전 FinalMemo/고객본 차단(contract proof + 감사로그 이중)·검토항목 자동·graceful degrade·ReviewHistory 해시체인 |
-| ⑦ | 다세목·투명성(`ORCH-015`·`OUT-007`·`OUT-008`/`HALU-015`) | **미구현(<90)** | — (하버스 slice7 미작성) | **미충족** ★v1.1 신규 — 세목 레지스트리 + 채널별 독립표시 + 추론·법령추적 도식. 이번 미션 타겟. |
+| ⑦ | 다세목·투명성(`ORCH-015`·`OUT-007`·`OUT-008`/`HALU-015`) | **100.0** (결정적 구조) | 0 (FABRICATED/NOT_REPRO 미발생) | **통과 (≥90)** ★v1.1 — slice7 하버스 측정(requirement·citation·output·ops). 적대적 적발: 날조trace→FABRICATED_CITATION(cap60)·산출실패→NOT_REPRODUCIBLE(cap75). **hidden CPA 케이스 미시드(docs/09 §10) → 결정적 소계로 해석.** |
 
 ### slice ① 법령 코어 (이번 빌드 — judge 제외 결정적 부분만)
 - **LawDataSource 추상화**(`src/ai/law_data_source.py`, API-002): `MOLEGLawDataSource`(법제처 DRF = 동작 primary) + `KoreanLawMCPSource`(by-design 채널①, **UNWIRED TODO**) + `FallbackLawDataSource`(MCP→법제처, API-003). 채점 차원 진입: 검색9·인용12(결정적)·요구6·운영2.

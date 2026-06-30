@@ -22,7 +22,7 @@ def _fmt_dims(result) -> str:
     return " ".join(parts)
 
 
-_CIRCLED = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥"}
+_CIRCLED = {1: "①", 2: "②", 3: "③", 4: "④", 5: "⑤", 6: "⑥", 7: "⑦"}
 
 
 def _fmt_pending(result) -> str:
@@ -129,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         passed = sum(r.passed for r in reports)
         print(
             f"\n요약: {passed}/{len(reports)} 슬라이스 완료게이트 통과 "
-            f"(구현된 슬라이스만 평가; 전체 6 중 {len(implemented_slices())} 구현)."
+            f"(구현된 슬라이스만 평가; 완료게이트 7 슬라이스 중 {len(implemented_slices())} 구현)."
         )
 
     if args.strict and not all(r.passed for r in reports):

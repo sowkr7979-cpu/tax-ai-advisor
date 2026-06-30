@@ -20,6 +20,7 @@ from tiw.eval.slices import (
     slice4_synthesis,
     slice5_hitl,
     slice6_isolation,
+    slice7_multitax_transparency,
 )
 
 
@@ -81,6 +82,7 @@ _REGISTRY = {
     4: ("충돌 케이스(3소스 종합)", slice4_synthesis.run_cases),
     5: ("CPA HITL 워크플로", slice5_hitl.run_cases),
     6: ("테넌트 격리", slice6_isolation.run_cases),
+    7: ("다세목·투명성", slice7_multitax_transparency.run_cases),
 }
 
 
