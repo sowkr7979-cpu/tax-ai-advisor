@@ -60,6 +60,12 @@
 - **측정**: **pytest 225**(223 + 신규 2: 날조 law_trace→reject / 날조 step 인용→reject). orchestrator/데모 trace 는 실제 Citation 에서 빌드 → 통과(회귀 0).
 - **codex 미해결 → 해소**: 날조/stale trace 적발 반영 완료. (HALU-015 "사후 서사 금지" 검증으로 강제.)
 
+### iter9 (0ce851f 이후) — §10 law-trace 빈 locator 우회 차단 (HALU-015 codex 후속)
+- **codex 적발**: "§10 law-trace validation still allows unbacked rows with empty locator" — 빈 locator 행이 `if e.locator` 가드로 검사 skip → 미backed 날조행 통과.
+- **수정**: 모든 law_trace 행이 **locator(pinpoint) 또는 (법령명,조문) 쌍**으로 backed 되도록 강제(빈 locator skip 제거). `_known_pairs`(citation source_locator 파싱)로 (법령,조문) 매칭.
+- **측정**: **pytest 226**(225 + 신규 1: 빈 locator 소득세법 제22조 날조행→reject). 실제 trace 는 locator 보유 → 통과(회귀 0).
+- **codex 미해결 → 해소**(누적 codex 적발 4건 전부 반영: 오법조회·부분커버리지·날조trace·빈locator우회).
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

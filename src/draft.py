@@ -399,11 +399,23 @@ def validate_draft_package(data: DraftPackageData) -> None:
         _actual_loc = {c.source_locator for c in data.citations if c.source_locator}
         _channel_loc = {loc for cr in data.channel_results for loc in cr.citation_locators}
         _known_loc = _actual_loc | _channel_loc
+        # (법령명, 조문) 쌍 — locator 가 비어 있어도 실제 인용과 매칭할 수 있게(source_locator
+        # 예: "법인세법 제25조" → ("법인세법","제25조")). 빈 locator 의 미backed 날조행 차단(codex).
+        _known_pairs = set()
+        for c in data.citations:
+            toks = (c.source_locator or "").split()
+            if len(toks) >= 2:
+                _known_pairs.add((toks[0], toks[-1]))
         for e in rt.law_trace:
-            if e.locator and e.locator not in _known_loc:
+            # 모든 law_trace 행은 locator(pinpoint) *또는* (법령명,조문) 으로 실제 인용에
+            # backed 되어야 한다 — 빈 locator 라고 통과시키지 않는다.
+            backed = (bool(e.locator) and e.locator in _known_loc) \
+                or ((e.law_name, e.article) in _known_pairs)
+            if not backed:
                 raise DraftValidationError(
-                    f"HALU-015 §10 law-tracing 날조/stale: 쟁점 '{e.issue}' 의 인용 "
-                    f"{e.locator!r} 가 패키지 실제 인용에 없음(사후 서사 차단)"
+                    f"HALU-015 §10 law-tracing 미backed(날조/stale): 쟁점 '{e.issue}' 의 인용 "
+                    f"({e.law_name} {e.article} / locator={e.locator!r}) 가 패키지 실제 인용에 "
+                    f"없음(사후 서사 차단)"
                 )
         for s in rt.steps:
             for loc in s.citation_locators:

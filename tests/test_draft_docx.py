@@ -166,6 +166,23 @@ def test_out008_fabricated_step_citation_is_rejected():
         validate_draft_package(bad)
 
 
+def test_out008_empty_locator_unbacked_law_trace_is_rejected():
+    """HALU-015(codex 후속): locator 가 비어 있어도 (법령명,조문)이 패키지 인용과 매칭 안 되면
+    거부 — 빈 locator 로 검증을 우회하던 미backed 날조행 차단."""
+    from src.draft import LawTraceEntry, ReasoningTrace
+    data, _, _ = build_demo_draft_package()
+    rt = data.reasoning_trace
+    fake_empty = LawTraceEntry(
+        issue="빈 locator 날조", law_name="소득세법", article="제22조", as_of="2026-01-01",
+        basis_kind="사업연도", locator="", quote_excerpt="패키지에 없는 소득세법 인용(빈 locator)",
+    )
+    bad = dataclasses.replace(
+        data, reasoning_trace=ReasoningTrace(steps=rt.steps, law_trace=rt.law_trace + [fake_empty]),
+    )
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(bad)
+
+
 # --------------------------------------------------------------------------- #
 # OUT-003 — 무인용 단정 금지
 # --------------------------------------------------------------------------- #
