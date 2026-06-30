@@ -175,6 +175,22 @@ class InputMaterial:
     confidentiality: str = "L1"
 
 
+@dataclass(frozen=True)
+class ChannelResult:
+    """OUT-007(변경②): 종합 *전* 의 한 소스 채널(①법령MCP·②내부RAG·③웹) 독립 결과.
+
+    종합의견(synthesis)으로 합치기 전의 각 채널 ``SourceAnswer`` 를 그대로 보여주기 위한
+    display 모델. 내부 RAG 코퍼스 부재 등으로 답하지 못한 채널은 status=SILENT 로 정직하게
+    남긴다(없는 자료 합성 ✕, RAG-014). 채널 원본 ⟂ 종합(EVAL-002)."""
+
+    channel: str                  # ① ② ③
+    source_label: str             # ①법령MCP · ②내부RAG(실무서) · ③공식웹
+    status: str                   # SourceAnswerStatus value (ANSWERED|SILENT|ERROR|BLOCKED)
+    answered: bool
+    answer_excerpt: str           # 채널 답변 요지(또는 SILENT 커버리지 갭 사유)
+    citation_locators: list[str] = field(default_factory=list)  # 이 채널이 든 인용 pinpoint
+
+
 @dataclass
 class DraftPackageData:
     """The Draft Agent input — slice ①~④ 분석결과 + 선택지 + 검토항목."""
@@ -227,6 +243,10 @@ class DraftPackageData:
     # OUT-003: 인용된 Citation 이 실제 등록 소스객체로 해소되는지 SourceRegistry 로
     # 검증해 날조/댕글링 인용을 거부한다(require_citation 재사용).
     source_objects: list[object] = field(default_factory=list)
+
+    # OUT-007(변경②): 종합 *전* 의 채널별 독립 결과(①법령MCP·②내부RAG·③웹). 검토패키지
+    # §8 에 병렬 표시(종합의견과 분리). 비어 있으면 §8 렌더는 생략된다(점진 도입).
+    channel_results: list[ChannelResult] = field(default_factory=list)
 
     # -- helpers --------------------------------------------------------- #
     @property
@@ -660,4 +680,14 @@ def draft_package_to_fixture(
         "conclusion": data.conclusion,
         "recommended_order": list(data.recommended_order),
         "synthesis_opinion": data.synthesis.opinion_text if data.synthesis else "",
+        # OUT-007(변경②): 채널별 독립 결과(①②③) — 프론트 §8 렌더용
+        "channel_results": [
+            {
+                "channel": cr.channel, "source_label": cr.source_label,
+                "status": cr.status, "answered": cr.answered,
+                "answer_excerpt": cr.answer_excerpt,
+                "citation_locators": list(cr.citation_locators),
+            }
+            for cr in data.channel_results
+        ],
     }

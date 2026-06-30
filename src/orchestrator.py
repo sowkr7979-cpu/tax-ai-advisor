@@ -62,6 +62,7 @@ from src.ai.law_data_source import LawSourceError, default_law_source
 from src.ai.llm_client import LLMClient, LLMConfig, default_llm_client
 from src.chunking import chunk_client_doc, chunk_provision
 from src.draft import (
+    ChannelResult,
     DraftPackageData,
     InputMaterial,
     IssueMemo,
@@ -127,6 +128,11 @@ _EVIDENCE_GENERIC = "이사회의사록·주요 계약서 — 거래 업무관�
 # Web channel reuses the recorded 제25조 기업업무추진비 official-source fixture (as-of
 # 2024 so plan_queries(year=2024) matches the recorded Tavily query key).
 _WEB_AS_OF = date(2024, 1, 1)
+
+# OUT-007(변경②): 채널 라벨 → 표시용 소스명(검토패키지 §8 채널별 독립 결과).
+_CHANNEL_SOURCE_LABEL: dict[str, str] = {
+    "①": "①법령MCP", "②": "②내부RAG(실무서)", "③": "③공식웹",
+}
 
 # Invariant-critical failures that must NEVER be swallowed by a graceful-degrade
 # branch (in ANY mode): a tenant isolation breach, a fabricated/unverifiable
@@ -376,6 +382,7 @@ class Orchestrator:
             review_items=review_items,
             additional_requests=self._evidence_requests(issues, deficits),
             answered_channels=answered_channels, synthesis=synthesis,
+            channel_results=self._channel_results(contributions),  # OUT-007(변경②)
         )
 
         # -- OUT-003 하드게이트 — 무인용 단정/날조 차단은 DOCX 출력 여부와 무관하게 항상
@@ -806,9 +813,33 @@ class Orchestrator:
         ]
         return exec_summary, conclusion, recommended_order
 
+    def _channel_results(self, contributions: list[SourceContribution]) -> list[ChannelResult]:
+        """OUT-007(변경②): 종합 *전* 의 채널별 독립 결과(①②③)를 display 모델로.
+
+        각 채널의 SourceAnswer 를 그대로 — answered 면 답변 발췌 + 인용 pinpoint, SILENT 면
+        커버리지 갭 사유를 정직하게 남긴다(합성 ✕). 채널 순서(①②③)는 입력 순서를 따른다."""
+        results: list[ChannelResult] = []
+        for c in contributions:
+            text = (c.source_answer.answer_text or "").strip() if c.source_answer else ""
+            excerpt = text[:200] + ("…" if len(text) > 200 else "")
+            locators = [
+                cit.source_locator
+                for cit in (getattr(c, "citations", None) or [])
+                if getattr(cit, "source_locator", None)
+            ]
+            status = c.status.value if hasattr(c.status, "value") else str(c.status)
+            results.append(ChannelResult(
+                channel=c.channel_label,
+                source_label=_CHANNEL_SOURCE_LABEL.get(c.channel_label, c.channel_label),
+                status=status, answered=bool(c.answered), answer_excerpt=excerpt,
+                citation_locators=locators,
+            ))
+        return results
+
     def _assemble_package(self, *, company, question, primary, materials, limits, risks,
                           opportunities, strategy: StrategyResult, issue_memos, citations,
                           source_objects, review_items, additional_requests, synthesis,
+                          channel_results: Optional[list[ChannelResult]] = None,
                           answered_channels: Optional[set[str]] = None,
                           ) -> DraftPackageData:
         # 요약/결론/권고순서는 **실제 주쟁점 + 실제 응답 출처에서 도출**한다(하드코딩된
@@ -826,6 +857,7 @@ class Orchestrator:
             review_items=review_items, conclusion=conclusion,
             recommended_order=recommended_order,
             data_limits=limits, synthesis=synthesis.synthesis, source_objects=source_objects,
+            channel_results=list(channel_results or []),  # OUT-007(변경②) 채널별 독립 결과
         )
 
     # -- render ----------------------------------------------------------- #

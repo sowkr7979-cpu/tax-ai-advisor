@@ -23,6 +23,12 @@
 - **측정**: **pytest 217 passed**(기존 215 + 신규 회귀 2: 소득세 쟁점 태깅 + lookup이 소득세법으로 라우팅됨을 spy로 증명). 법인세 경로 byte-동일 → 기존 slice ①~⑥ 회귀 0. `_LAW_NAME`은 이제 fallback 기본값으로만 잔존.
 - **codex 미해결 → 해소**: "wrong law" 적발 반영 완료.
 
+### iter3 (6952d96 이후) — OUT-007 part1: 채널별 결과 데이터 모델 + 배선
+- **변경②(part1)**: `draft.py` `ChannelResult`(채널·소스라벨·status·answered·발췌·인용 pinpoint) + `DraftPackageData.channel_results` 필드 + `draft_package_to_fixture` 직렬화. orchestrator `_channel_results(contributions)` → 종합 *전* 의 ①②③ 독립 결과를 패키지에 적재(`_assemble_package`/`run` 배선).
+- **최소 blast radius**: `REQUIRED_SECTIONS`(11) **미변경** — §8 DOCX 렌더/12→13목차 renumber 는 다음 iter. 기존 11목차 테스트 무영향(회귀 0).
+- **측정**: **pytest 219 passed**(217 + 신규 2: 패키지가 ①②③ channel_results 보유 + fixture 직렬화). 데모 3소스 전부 ANSWERED 표면화 확인.
+- **다음(우선순위)**: §8 DOCX 렌더 + `REQUIRED_SECTIONS` 12목차(validate/renderer/내부전용) → §10 OUT-008(ReasoningTrace) 13목차 → 프론트 §8/§10 + Playwright → slice7 하버스 측정.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

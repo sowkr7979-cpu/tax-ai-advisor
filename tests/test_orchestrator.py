@@ -127,6 +127,35 @@ def test_orch015_income_tax_issue_routes_lookup_to_income_tax_law():
     assert seen.get("article") == "제22조"
 
 
+# --------------------------------------------------------------------------- #
+# OUT-007 채널별 독립 결과 (변경② — 종합 전 ①②③ 병렬 보존)
+# --------------------------------------------------------------------------- #
+def test_out007_package_carries_per_channel_results():
+    """패키지가 종합 *전* 의 채널별 독립 결과(①법령·②내부RAG·③웹)를 보유한다."""
+    result = _run()
+    crs = result.package.channel_results
+    assert {cr.channel for cr in crs} == {"①", "②", "③"}   # 3소스 모두 표면화
+    by = {cr.channel: cr for cr in crs}
+    assert by["①"].source_label == "①법령MCP"
+    # 데모(A제조)는 3소스 모두 응답(3/3 AGREE) → ①법령은 ANSWERED + 인용 pinpoint 보유
+    assert by["①"].status == "ANSWERED" and by["①"].answered
+    assert by["①"].citation_locators
+    # 모든 채널 상태는 공식 SourceAnswerStatus enum 값
+    assert all(cr.status in {"ANSWERED", "SILENT", "ERROR", "BLOCKED"} for cr in crs)
+    # 채널 원본 ⟂ 종합(EVAL-002): 종합의견은 별도 보존
+    assert result.package.synthesis is not None
+
+
+def test_out007_fixture_serializes_channel_results():
+    """프론트 §8 렌더용 fixture 에 channel_results 가 직렬화된다."""
+    from src.draft import draft_package_to_fixture
+    result = _run()
+    fx = draft_package_to_fixture(result.package, titles=result.titles, articles=result.articles)
+    assert "channel_results" in fx
+    assert {c["channel"] for c in fx["channel_results"]} == {"①", "②", "③"}
+    assert all("status" in c and "answered" in c for c in fx["channel_results"])
+
+
 def test_three_source_synthesis_agree_lineage_intact():
     result = _run()
     syn = result.synthesis
