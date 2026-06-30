@@ -58,33 +58,53 @@ test("화면② 선택지 비교표 — 보수/중립/적극 행 + 세부담 값
   await page.screenshot({ path: `${SHOTS}/screen2-strategy.png`, fullPage: true });
 });
 
-test("화면③ DOCX 검토패키지 미리보기 — 11목차 섹션명 + 근거링크 href", async ({ page }) => {
+test("화면③ DOCX 검토패키지 미리보기 — 13목차 + §8 채널별 + §10 추론도식 + 근거링크", async ({
+  page,
+}) => {
   await page.goto("/#/draft");
   await expect(page.getByTestId("screen-draft")).toBeVisible();
 
-  // 11목차 TOC 항목 수 = 11
+  // 13목차 TOC 항목 수 = 13 (OUT-007 §8 채널별 + OUT-008 §10 추론도식 신설)
   const tocItems = page.getByTestId("draft-toc").locator("li");
-  await expect(tocItems).toHaveCount(11);
+  await expect(tocItems).toHaveCount(13);
 
-  // 핵심 섹션명이 본문 <h2>로 렌더
+  // 핵심 섹션명이 본문 <h2>로 렌더 (renumber 반영)
   const sections = [
     "1. Executive Summary",
     "6. 선택지별 세부담·리스크 비교표",
-    "8. 관련 법령·근거 자료",
-    "10. 회계사 검토 필요사항",
-    "11. 결론 초안·추천 검토 순서",
+    "8. 출처 채널별 독립 결과",
+    "9. 관련 법령·근거 자료",
+    "10. 법령 추적 경로 + 추론 과정 도식",
+    "12. 회계사 검토 필요사항",
+    "13. 결론 초안·추천 검토 순서",
   ];
   for (const s of sections) {
     await expect(page.getByRole("heading", { name: s })).toBeVisible();
   }
 
-  // 8. 근거: 법령 인용 링크 href (law.go.kr) + 제25조 라벨
+  // §8 채널별 독립 결과: ①②③ 3채널 모두 표시(OUT-007)
+  const channels = page.getByTestId("draft-channels");
+  for (const ch of ["①", "②", "③"]) {
+    await expect(page.getByTestId(`channel-${ch}`)).toBeVisible();
+  }
+  await expect(channels).toContainText("법령MCP");
+  await expect(channels).toContainText("내부RAG");
+
+  // §9 근거: 법령 인용 링크 href (law.go.kr) + 제25조 라벨
   const citeList = page.getByTestId("draft-citations");
   const firstCite = citeList.getByRole("link").first();
   await expect(firstCite).toHaveAttribute("href", /law\.go\.kr\/.+제25조/);
   await expect(citeList).toContainText("기업업무추진비");
 
-  // 10. 검토항목: slice⑤ review_items + 고위험 검토경고(⚠)
+  // §10 추론도식: Mermaid flowchart 정의 + 추론단계 표 + 법령추적 표(OUT-008/HALU-015)
+  const mermaid = page.getByTestId("reasoning-mermaid");
+  await expect(mermaid).toContainText("flowchart");
+  await expect(mermaid).toContainText("SYNTHESIS");
+  await expect(page.getByTestId("reasoning-steps")).toContainText("INTAKE");
+  const lawTrace = page.getByTestId("law-trace");
+  await expect(lawTrace).toContainText("법인세법 제25조");
+
+  // §12 검토항목: slice⑤ review_items + 고위험 검토경고(⚠)
   const items = page.getByTestId("draft-review-items");
   await expect(items.getByText("⚠검토경고").first()).toBeVisible();
 

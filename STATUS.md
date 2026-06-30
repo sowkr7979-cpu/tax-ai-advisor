@@ -4,7 +4,7 @@
 > 점수는 **STATUS 자기보고가 아니라** 같은 iteration의 `pytest -q` + `python -m tiw.eval` 산출 `RubricResult`로만 증명된다(완료 판정 기준).
 
 ## ★ 미션 v1.1 (변경①②③) — slice ⑦ 진행 중 (완료 게이트 미충족)
-> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **현재 `python -m tiw.eval` = 6/7**(①~⑥ PASS, **⑦ PENDING**). slice⑦ 미충족 사유(정직): 비-법인세(소득세) 파이프라인이 *소득세법으로 정확히 라우팅* 하나 **소득세 fixture 미녹화(`--live`/키 선행)** 로 패키지 미산출 → requirement PENDING(registry 만으로 false-pass 금지, codex). **완료 promise 2대 미충족**: ① slice⑦ requirement(소득세 fixture 녹화 필요 — 사용자 키) ② §5 목업 3화면 Playwright(§8/§10 프론트). → `<promise>` 금지.
+> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **현재 `python -m tiw.eval` = 6/7**(①~⑥ PASS, **⑦ PENDING**). **완료 promise 3대 조건 중 2개 충족**: ✅ pytest 231 clean · ✅ **목업 3화면 Playwright 3/3**(iter13 — §8 채널별·§10 Mermaid 도식 렌더) · ❌ **slice⑦ ≥90**. **유일 잔여 블로커 = slice⑦ requirement(PENDING)**: 비-법인세(소득세) 파이프라인이 *소득세법으로 정확히 라우팅* 하나 **소득세 end-to-end fixture 미녹화** 로 패키지 미산출. **이건 `--live` 녹화 = API 키(LAW_OC·ANTHROPIC·TAVILY) 필요 → 사용자 작업.** 키 제공 전까지 `<promise>` 금지(정직).
 - **Rubric Freeze v1.1** (사용자 승인 확장) — 완료 게이트 6→**7 slice ≥90** + per-FR 예시 H/I/J + DOCX 11→13목차. 기존 가중치·하드게이트·6 slice 합격조건 **불변**(회귀 0).
 - **slice ⑦ 3 기능 (스펙: 정본 §3-4·§4-2-1·§4-3·§4-4 + docs/03·08·09)**:
   - **변경① `ORCH-015`** 세목·쟁점→법령 레지스트리(법인세 하드코딩 제거) — 소득세/퇴직소득 케이스 동일 파이프라인 13목차 산출 + 미등록 세목 fail-closed.
@@ -86,6 +86,13 @@
 - **현 상태**: 소득세 fixture 미녹화 → `ROUTING_ONLY` → slice⑦ **PENDING**. `python -m tiw.eval` = **6/7**(①~⑥ PASS). **iter11의 7/7 보고를 정직 정정**(false-pass 였음).
 - **측정**: pytest 231(slice7 테스트를 PENDING 정합으로 갱신 + 적대적 적발 유지). 회귀 0.
 - **codex 미해결 → 해소**(누적 6건). slice⑦ ≥90 은 **소득세 law/LLM fixture(`--live`/키) 녹화** 후 가능(사용자 키 작업).
+
+### iter13 (19a0906 이후) — 프론트 §8/§10 + Playwright 3화면 (promise 조건 ② 충족)
+- **프론트 13목차 정렬**: `DraftScreen.tsx` 가 백엔드 11목차 하드코딩 → **13목차**로 갱신. **§8 출처 채널별 독립 결과**(channel_results 표, ①②③ + SILENT) 신설 · **§10 법령 추적+추론 도식**(10-1 Mermaid flowchart `mermaidFlow()` + 추론단계 표 / 10-2 law-tracing 표) 신설 · §9~§13 renumber.
+- **types.ts**: `ChannelResult`/`ReasoningStep`/`LawTraceEntry`/`ReasoningTrace` + `Draft.channel_results`/`reasoning_trace`. **fixture 재생성**(`build_frontend_fixture` → 13섹션·채널 3·trace 8단계·법령추적 4).
+- **Playwright**(`mockup.spec.ts`): 화면③ 13목차 TOC=13 + §8 채널 ①②③ + §10 Mermaid(`flowchart`/`SYNTHESIS`)·추론단계(INTAKE)·법령추적(법인세법 제25조) 단언 추가. **`npx playwright test` → 3/3 passed**(스크린샷+데이터 단언).
+- **측정**: tsc --noEmit 0 · **Playwright 3/3** · **pytest 231**(백엔드 무변, 회귀 0).
+- **promise 진행**: ✅pytest ✅Playwright 3화면 — **유일 잔여 = slice⑦ requirement(소득세 fixture, 사용자 키)**.
 
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).

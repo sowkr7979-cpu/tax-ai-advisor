@@ -75,6 +75,40 @@ export interface ReviewItem {
   requires_warning: boolean;
 }
 
+// OUT-007(변경②): 종합 전 채널별 독립 결과(①법령MCP·②내부RAG·③웹).
+export interface ChannelResult {
+  channel: string; // ① ② ③
+  source_label: string;
+  status: string; // ANSWERED | SILENT | ERROR | BLOCKED
+  answered: boolean;
+  answer_excerpt: string;
+  citation_locators: string[];
+}
+
+// OUT-008/HALU-015(변경③): 추론 트레이스 + 법령 추적(§10 Mermaid 도식 자료원).
+export interface ReasoningStep {
+  seq: number;
+  stage: string; // INTAKE | ISSUE_SPOTTING | RESEARCH_CH1_LAW | ... | SYNTHESIS | STRATEGY | DRAFT
+  decision: string;
+  citation_locators: string[];
+  refs: Record<string, string>;
+}
+
+export interface LawTraceEntry {
+  issue: string;
+  law_name: string;
+  article: string;
+  as_of: string;
+  basis_kind: string;
+  locator: string;
+  quote_excerpt: string;
+}
+
+export interface ReasoningTrace {
+  steps: ReasoningStep[];
+  law_trace: LawTraceEntry[];
+}
+
 export interface Draft {
   matter_id: string;
   client_id: string;
@@ -97,6 +131,8 @@ export interface Draft {
   conclusion: string;
   recommended_order: string[];
   synthesis_opinion: string;
+  channel_results: ChannelResult[]; // OUT-007(변경②) §8
+  reasoning_trace: ReasoningTrace | null; // OUT-008(변경③) §10
 }
 
 export interface Fixture {
