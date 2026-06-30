@@ -48,6 +48,12 @@
 - **측정**: **pytest 223**(221 + 신규 2: trace 단계 커버리지+법적단계 인용+synthesis_id 참조 / fixture 직렬화).
 - **다음**: §10 DOCX 네이티브 도식 + law-tracing 표 → **13목차** → 프론트 §8/§10(Mermaid) + Playwright → slice7 하버스.
 
+### iter7 (51b0eac 이후) — OUT-008 §10 DOCX 렌더 + 13목차 (변경③ DOCX 백엔드 완성)
+- **변경③(DOCX)**: `REQUIRED_SECTIONS` 12→**13**(§10 "법령 추적 경로 + 추론 과정 도식", **내부 전용**). 렌더러 §10: **10-1** law-tracing 표(쟁점→법령·조문·적용시점·pinpoint·발췌) + **10-2** ReasoningTrace 네이티브 흐름 도식(`[단계]→[단계]`) + 단계 표(#·단계·판단/근거·인용). `validate` §10(`reasoning_trace.steps≥1` + `law_trace≥1`). `_INTERNAL_ONLY`={7,8,10,12}. `draft_demo` 대표 trace(8단계+법령추적 4). 후속 §11~§13 인덱스 갱신.
+- **측정**: **pytest 223**(섹션 13 갱신, 회귀 0) + **라이브 CLI DOCX 13섹션·§10(10-1/10-2) 실물 렌더 확인**.
+- **★ 3개 변경 DOCX 백엔드 전부 완료**: 변경① 레지스트리·변경② §8 채널별·변경③ §10 추론도식. 검토패키지 13목차 완성(내부 전용 4: 7·8·10·12).
+- **남은 큰 덩어리**: ① 프론트 §8/§10(Mermaid 도식) + Playwright 갱신 · ② **slice7 하버스**(`tiw.eval`) → slice⑦ 측정(현재 미측정) · ③ 소득세 end-to-end fixture(`--live`, 키 대기).
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

@@ -61,13 +61,13 @@ def _docx_content(path) -> list[str]:
 # --------------------------------------------------------------------------- #
 # Package shape (§4-1 산출)
 # --------------------------------------------------------------------------- #
-def test_orchestrator_builds_12section_package():
+def test_orchestrator_builds_13section_package():
     result = _run()
     pkg = result.package
-    # 12목차(OUT-007 §8 채널별 결과 신설) — validate enforces every required section +
-    # 무인용 단정 금지(SourceRegistry).
+    # 13목차(OUT-007 §8 채널별 + OUT-008 §10 추론도식 신설) — validate enforces every
+    # required section + 무인용 단정 금지(SourceRegistry).
     validate_draft_package(pkg)  # must not raise (인용 검증 통과 = 날조 차단)
-    assert len(REQUIRED_SECTIONS) == 12
+    assert len(REQUIRED_SECTIONS) == 13
     # 4 version-object 인용 (제25/24/27의2/28조)
     assert len(pkg.citations) == 4
     # 보수/중립/적극 3 선택지

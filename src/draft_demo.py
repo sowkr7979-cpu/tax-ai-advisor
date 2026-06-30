@@ -27,7 +27,10 @@ from src.draft import (
     DraftPackageData,
     InputMaterial,
     IssueMemo,
+    LawTraceEntry,
     OpportunityItem,
+    ReasoningStep,
+    ReasoningTrace,
     RiskItem,
     StrategyOption,
     draft_package_to_fixture,
@@ -358,6 +361,39 @@ def build_demo_draft_package() -> tuple[DraftPackageData, dict[str, str], dict[s
         "이사회의사록·주요 계약서 — 거래 업무관련성 소명자료",
     ]
 
+    # OUT-008/HALU-015(변경③): 법령 추적 + 추론 트레이스 — 실제 회수 Citation 에서 도출.
+    law_trace = []
+    for cit in citations:
+        basis = cit.applicable_basis
+        art = articles[cit.citation_id]
+        law_trace.append(LawTraceEntry(
+            issue=f"법인세법 {art}({titles[cit.citation_id]})", law_name="법인세법", article=art,
+            as_of=basis.as_of_date.strftime("%Y-%m-%d") if basis and basis.as_of_date else "",
+            basis_kind=basis.basis_kind.value if basis and basis.basis_kind else "",
+            locator=cit.source_locator or "", quote_excerpt=(cit.quote or "").strip()[:120]))
+    _ploc = [law_trace[0].locator] if law_trace and law_trace[0].locator else []
+    reasoning_trace = ReasoningTrace(
+        steps=[
+            ReasoningStep(1, "INTAKE", "자료 4/7 수집 · 결손/모름/없음 3건 고지(자료한계 꼬리표).", []),
+            ReasoningStep(2, "ISSUE_SPOTTING",
+                "4개 쟁점 도출 — 주쟁점 '기업업무추진비(접대비) 한도·적격증빙'(법인세법 제25조) 선정.", _ploc),
+            ReasoningStep(3, "RESEARCH_CH1_LAW", "①법령MCP ANSWERED — 제25조 앵커 법리(인용).",
+                _ploc, refs={"source_answer_id": f"sa_{_MATTER}_law"}),
+            ReasoningStep(4, "RESEARCH_CH2_RAG",
+                "②내부RAG(실무서) ANSWERED — 사내 실무기준 grounding(L3 외부 미송신).",
+                _ploc, refs={"source_answer_id": f"sa_{_MATTER}_rag"}),
+            ReasoningStep(5, "RESEARCH_CH3_WEB", "③공식웹 ANSWERED — 공식소스 승격(법령 원문 대조).",
+                _ploc, refs={"source_answer_id": f"sa_{_MATTER}_web"}),
+            ReasoningStep(6, "SYNTHESIS",
+                "응답 소스 3/3 → 합의(AGREE); 권위 위계·시점 정합, 신규 인용 0(소스 인용 상속).",
+                _ploc, refs={"synthesis_id": f"syn_{_MATTER}"}),
+            ReasoningStep(7, "STRATEGY", "보수/중립/적극 3종 선택지 — 인용=회수 버전객체(검증).", _ploc),
+            ReasoningStep(8, "DRAFT",
+                "검토패키지 조립 — 무인용 단정 0 검증(OUT-003) · 필수섹션 강제(OUT-006).", []),
+        ],
+        law_trace=law_trace,
+    )
+
     data = DraftPackageData(
         matter_id=_MATTER,
         client_id=_CLIENT,
@@ -428,6 +464,7 @@ def build_demo_draft_package() -> tuple[DraftPackageData, dict[str, str], dict[s
                 citation_locators=["법인세법 제25조"],
             ),
         ],
+        reasoning_trace=reasoning_trace,  # OUT-008/HALU-015(변경③) 추론·법령추적 도식
     )
     return data, titles, articles
 

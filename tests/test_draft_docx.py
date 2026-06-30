@@ -77,16 +77,17 @@ def _approved_proof(client_id: str, matter_id: str, *, high_risk: bool) -> Relea
 # --------------------------------------------------------------------------- #
 # OUT-002/006 — 12목차 필수섹션
 # --------------------------------------------------------------------------- #
-def test_review_package_has_all_12_sections(tmp_path):
+def test_review_package_has_all_13_sections(tmp_path):
     data, titles, articles = build_demo_draft_package()
     out = build_review_package_docx(
         data, tmp_path / "pkg.docx", titles=titles, articles=articles
     )
     assert out.exists() and out.stat().st_size > 0
     headings = _docx_headings(out)
-    assert headings == REQUIRED_SECTIONS  # 12 섹션, 정확한 순서
-    assert len(REQUIRED_SECTIONS) == 12
-    assert "8. 출처 채널별 독립 결과" in headings  # OUT-007 §8 신설
+    assert headings == REQUIRED_SECTIONS  # 13 섹션, 정확한 순서
+    assert len(REQUIRED_SECTIONS) == 13
+    assert "8. 출처 채널별 독립 결과" in headings           # OUT-007 §8
+    assert "10. 법령 추적 경로 + 추론 과정 도식" in headings  # OUT-008 §10
 
 
 def test_missing_section_data_fails_closed():
@@ -226,10 +227,11 @@ def test_client_deliverable_with_proof_excludes_internal_sections(tmp_path):
         titles=titles, articles=articles,
     )
     headings = _docx_headings(out)
-    # 내부 전용 섹션(7 쟁점메모·8 채널별 원본·11 검토항목)은 고객본에서 제외(OUT-004)
+    # 내부 전용 섹션(7 쟁점메모·8 채널별 원본·10 추론도식·12 검토항목)은 고객본 제외(OUT-004)
     assert "7. 쟁점별 검토 메모" not in headings
     assert "8. 출처 채널별 독립 결과" not in headings
-    assert "11. 회계사 검토 필요사항" not in headings
+    assert "10. 법령 추적 경로 + 추론 과정 도식" not in headings
+    assert "12. 회계사 검토 필요사항" not in headings
     # 그 외 9개 섹션은 유지
     assert "6. 선택지별 세부담·리스크 비교표" in headings
     assert "9. 관련 법령·근거 자료" in headings

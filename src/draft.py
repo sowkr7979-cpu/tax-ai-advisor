@@ -45,7 +45,7 @@ _DETERMINISTIC_TS = datetime(2024, 1, 1, 0, 0, 0)
 # --------------------------------------------------------------------------- #
 # 11목차 필수 섹션 (OUT-006, docs/03 §117·§123 / 설계서 §4-3)
 # --------------------------------------------------------------------------- #
-# 12목차(변경② OUT-007 §8 신설; 변경③ OUT-008 §10 추론도식은 다음 iter 에 추가 → 13목차).
+# 13목차(변경② OUT-007 §8 채널별 + 변경③ OUT-008 §10 추론·법령추적 도식 신설).
 REQUIRED_SECTIONS: list[str] = [
     "1. Executive Summary",
     "2. 회사 개요·검토 범위",
@@ -56,16 +56,18 @@ REQUIRED_SECTIONS: list[str] = [
     "7. 쟁점별 검토 메모",
     "8. 출처 채널별 독립 결과",          # OUT-007(변경②) — 종합 전 ①②③ 병렬(내부 전용)
     "9. 관련 법령·근거 자료",
-    "10. 추가 요청 자료",
-    "11. 회계사 검토 필요사항",
-    "12. 결론 초안·추천 검토 순서",
+    "10. 법령 추적 경로 + 추론 과정 도식",  # OUT-008/HALU-015(변경③) — 내부 전용(전체 트레이스)
+    "11. 추가 요청 자료",
+    "12. 회계사 검토 필요사항",
+    "13. 결론 초안·추천 검토 순서",
 ]
 
-# 고객 전달본에서 제외되는 내부 전용 섹션 (OUT-004: 전략리스크·채널 원본 내부용 한정)
+# 고객 전달본에서 제외되는 내부 전용 섹션 (OUT-004: 전략리스크·채널 원본·추론도식 내부 한정)
 _INTERNAL_ONLY_SECTIONS = {
     "7. 쟁점별 검토 메모",
-    "8. 출처 채널별 독립 결과",   # 채널 원본(종합 전)은 내부 검토본 전용
-    "11. 회계사 검토 필요사항",
+    "8. 출처 채널별 독립 결과",          # 채널 원본(종합 전)은 내부 검토본 전용
+    "10. 법령 추적 경로 + 추론 과정 도식",  # 전체 추론 트레이스는 내부 전용(고객본은 향후 축약 수록)
+    "12. 회계사 검토 필요사항",
 }
 
 # OUT-007(변경②): §8 은 3소스 채널(①법령MCP·②내부RAG·③웹)을 **모두** 표시해야 한다.
@@ -385,10 +387,14 @@ def validate_draft_package(data: DraftPackageData) -> None:
          "8. 출처 채널별 독립 결과는 3채널(①②③) 모두 표시 필수(누락 채널은 SILENT 로 표기, "
          f"OUT-007) — 누락 채널: {sorted(_OUT007_REQUIRED_CHANNELS - _present_channels)}")
     need(bool(data.citations), "9. 관련 법령·근거 자료(≥1 버전객체 인용)")
-    need(bool(data.additional_requests), "10. 추가 요청 자료(≥1)")
-    need(bool(data.review_items), "11. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
+    # OUT-008/HALU-015: §10 은 추론 트레이스(단계) + 법령 추적(쟁점→법령) 을 모두 가져야 한다.
+    need(data.reasoning_trace is not None
+         and bool(data.reasoning_trace.steps) and bool(data.reasoning_trace.law_trace),
+         "10. 법령 추적 경로 + 추론 과정 도식(ReasoningTrace.steps ≥1 + law_trace ≥1, OUT-008)")
+    need(bool(data.additional_requests), "11. 추가 요청 자료(≥1)")
+    need(bool(data.review_items), "12. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
     need(bool(data.conclusion.strip()) and bool(data.recommended_order),
-         "12. 결론 초안·추천 검토 순서")
+         "13. 결론 초안·추천 검토 순서")
 
     # P1-1: 리스트가 비어있지 않아도 내부 핵심 문자열은 strip 기반 non-empty 강제
     for m in data.input_materials:
@@ -591,32 +597,65 @@ def _render_package_docx(
         )
     rendered.append(REQUIRED_SECTIONS[8])
 
-    # 10. 추가 요청 자료
-    doc.add_heading(REQUIRED_SECTIONS[9], level=1)
+    # 10. 법령 추적 경로 + 추론 과정 도식 (내부 전용 — OUT-008/HALU-015 변경③)
+    if internal:
+        doc.add_heading(REQUIRED_SECTIONS[9], level=1)
+        rt = data.reasoning_trace
+        # (a) 법령 추적(law-tracing): 쟁점 → 법령·조문·시행시점·pinpoint·인용
+        doc.add_heading("10-1. 법령 추적 경로 (law-tracing)", level=2)
+        t10a = doc.add_table(rows=1, cols=5)
+        t10a.style = "Table Grid"
+        for i, txt in enumerate(["쟁점", "법령·조문", "적용시점", "pinpoint", "인용 발췌"]):
+            t10a.rows[0].cells[i].text = txt
+        for e in (rt.law_trace if rt else []):
+            r = t10a.add_row().cells
+            r[0].text = e.issue
+            r[1].text = f"{e.law_name} {e.article}"
+            r[2].text = f"{e.as_of}({e.basis_kind})" if e.as_of else e.basis_kind
+            r[3].text = e.locator
+            r[4].text = e.quote_excerpt
+        # (b) 추론 과정 도식(ReasoningTrace) — DOCX 네이티브 단계 흐름 + 트레이스 표
+        doc.add_heading("10-2. 추론 과정 (ReasoningTrace)", level=2)
+        if rt and rt.steps:
+            doc.add_paragraph(" → ".join(f"[{s.stage}]" for s in rt.steps))  # 네이티브 흐름 도식
+            t10b = doc.add_table(rows=1, cols=4)
+            t10b.style = "Table Grid"
+            for i, txt in enumerate(["#", "단계", "판단·근거", "인용"]):
+                t10b.rows[0].cells[i].text = txt
+            for s in rt.steps:
+                r = t10b.add_row().cells
+                r[0].text = str(s.seq)
+                r[1].text = s.stage
+                r[2].text = s.decision
+                r[3].text = "; ".join(s.citation_locators)
+        rendered.append(REQUIRED_SECTIONS[9])
+
+    # 11. 추가 요청 자료
+    doc.add_heading(REQUIRED_SECTIONS[10], level=1)
     for req in data.additional_requests:
         doc.add_paragraph(req, style="List Bullet")
-    rendered.append(REQUIRED_SECTIONS[9])
+    rendered.append(REQUIRED_SECTIONS[10])
 
-    # 11. 회계사 검토 필요사항 (내부 전용 — slice⑤ review_items)
+    # 12. 회계사 검토 필요사항 (내부 전용 — slice⑤ review_items)
     if internal:
-        doc.add_heading(REQUIRED_SECTIONS[10], level=1)
+        doc.add_heading(REQUIRED_SECTIONS[11], level=1)
         for it in data.review_items:
             mark = " ⚠검토경고" if it.requires_warning else ""
             doc.add_paragraph(
                 f"[{it.gate or '-'}/{it.category.value}/{it.severity}]{mark} {it.description}",
                 style="List Bullet",
             )
-        rendered.append(REQUIRED_SECTIONS[10])
+        rendered.append(REQUIRED_SECTIONS[11])
 
-    # 12. 결론 초안·추천 검토 순서
-    doc.add_heading(REQUIRED_SECTIONS[11], level=1)
+    # 13. 결론 초안·추천 검토 순서
+    doc.add_heading(REQUIRED_SECTIONS[12], level=1)
     doc.add_paragraph(data.conclusion)
     doc.add_paragraph("추천 검토 순서:")
     for i, step in enumerate(data.recommended_order, start=1):
         doc.add_paragraph(f"{i}. {step}", style="List Number")
-    rendered.append(REQUIRED_SECTIONS[11])
+    rendered.append(REQUIRED_SECTIONS[12])
 
-    # OUT-006: 내부본은 12섹션 모두, 고객본은 내부 전용 3섹션(7·8·11) 제외가 의도된 누락
+    # OUT-006: 내부본은 13섹션 모두, 고객본은 내부 전용 4섹션(7·8·10·12) 제외가 의도된 누락
     expected = REQUIRED_SECTIONS if internal else [
         s for s in REQUIRED_SECTIONS if s not in _INTERNAL_ONLY_SECTIONS
     ]
