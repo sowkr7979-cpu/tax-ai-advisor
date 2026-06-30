@@ -21,6 +21,17 @@
     "recorded_at": "2026-06-30T04:10:58.123560+00:00",
     "url_redacted": "https://www.law.go.kr/DRF/lawSearch.do?target=law&query=소득세법&type=XML&OC=***"
   },
+  "lawSearch__query=조세특례제한법__target=law": {
+    "bytes": 2716,
+    "content_hash": "23bb24c7e5a63af71477fd0c7f5d0ce56f37834f783d603fe9a5574d6279722e",
+    "file": "lawSearch_search_0f13976521.xml",
+    "params": {
+      "query": "조세특례제한법",
+      "target": "law"
+    },
+    "recorded_at": "2026-06-30T05:58:50.263305+00:00",
+    "url_redacted": "https://www.law.go.kr/DRF/lawSearch.do?target=law&query=조세특례제한법&type=XML&OC=***"
+  },
   "lawService__LM=법인세법__efYd=20200101__target=eflaw": {
     "bytes": 917999,
     "content_hash": "5d9bb8b807288926d45755c240abd618fd9d847d5a797be37ede6e7bc9b76850",
@@ -56,5 +67,17 @@
     },
     "recorded_at": "2026-06-30T04:10:59.379530+00:00",
     "url_redacted": "https://www.law.go.kr/DRF/lawService.do?target=eflaw&LM=소득세법&efYd=20240101&type=XML&OC=***"
+  },
+  "lawService__LM=조세특례제한법__efYd=20240101__target=eflaw": {
+    "bytes": 2564725,
+    "content_hash": "da17dafca07445a70faffe873c77b9db5b41d298bcf28352aaeb1e92f2320e30",
+    "file": "lawService_ef20240101_9613e5769e.xml",
+    "params": {
+      "LM": "조세특례제한법",
+      "efYd": "20240101",
+      "target": "eflaw"
+    },
+    "recorded_at": "2026-06-30T05:58:51.897297+00:00",
+    "url_redacted": "https://www.law.go.kr/DRF/lawService.do?target=eflaw&LM=조세특례제한법&efYd=20240101&type=XML&OC=***"
   }
 }
