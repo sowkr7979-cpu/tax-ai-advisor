@@ -66,6 +66,7 @@ erDiagram
 - **격리**: `Client`가 최상위 격리 소유. `TaxWorkspace`·`TaxIssue`·`DraftPackage` 등은 `client_id`(+`matter_id`) 전파.
 - **권한**: `User`는 `RoleAssignment`(Matter/Engagement 범위)로만 접근. 전역 Role ✕(`SEC-012`). **scope 규약(Codex)**: `RoleAssignment`는 `scope_type`(MATTER|ENGAGEMENT) + `scope_id` 로 **정확히 하나의 범위**에 묶인다(둘 다 필수 ✕ — 위 다이어그램의 두 관계는 *택일*).
 - **분석 체인**: `TaxIssue → (RiskItem | StrategyOption) → EvidenceLink`. 선택지별 비교표(`OUT-`)는 `StrategyOption` 집합에서 생성.
+- **시나리오 Tax Plan 산출물(`OUT-009`)은 새 엔티티가 아니라 `DraftPackage`의 특화 *뷰*** — 기존 엔티티를 투영한다: 재무제표 쟁점행=`FinancialStatement`+`TaxIssue`(쟁점 라벨·강조), 시나리오=`StrategyOption`(세부담·세액계산), 근거=`Citation`→`ProvisionVersion`(시행일 버전, raw URL ✕). 회계사 자연어·하이퍼링크·도표(`OUT-010`)는 *렌더링 계층* 관심사로 데이터 모델 불변.
 
 ---
 

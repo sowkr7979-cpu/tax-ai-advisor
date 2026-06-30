@@ -26,8 +26,8 @@
 | **Tavily** | 웹 검색(1순위) | include_domains·time_range·credits | `06_웹` |
 | **Brave Search** | 웹 검색(보조) | freshness·연산자·LLM context | `06_웹` |
 | **공식소스 커넥터** | 국세청·법제처·조세심판원 등 | 라이선스·로봇정책 준수, 캐시 | `06_웹` |
-| **OCR** | 스캔 PDF·**HWP** 텍스트화 | 한국어·표 인식 품질 | `05_RAG` ingestion |
-| **DART** | 공시·재무 데이터 | 회사 식별·기간 | `Risk`·`Evidence` |
+| **OCR** | 스캔 PDF·**HWP** 텍스트화 | 한국어·표 인식 품질. **HWP5는 OLE 복합문서 직접 추출 경로 검증**(`olefile`+zlib BodyText 디플레이트, PARA_TEXT 레코드) | `05_RAG` ingestion |
+| **DART(OpenDART)** | 공시·재무 데이터 | 회사 식별·기간. **실연동 검증**: `corpCode.xml`→corp_code, `fnlttSinglAcntAll`(reprt_code·fs_div OFS/CFS)로 실제 재무 인출 | `Risk`·`Evidence`(+시나리오 Tax Plan 현실성 보정) |
 | **DOCX 생성** | 검토패키지 출력 | 템플릿·인용 삽입 | `Draft`(`OUT-`) |
 
 ---

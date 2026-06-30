@@ -1,7 +1,7 @@
 # Tax Intelligence Workspace (TIW) — 설계 문서 세트
 
 > **목적**: 신현우님 리뷰 + Codex 2라운드 리뷰를 반영해, 서사형 설계서(`md 파일/법인세_세무AI_설계서_통합.md` — 정본; `Claude/`에 동일 사본)를 **실행 가능한 명세(章 분리 + RFP + ERD + 채점표)** 로 내려쓴 문서 세트.
-> **상태**: **v1.0 구현 완료**(slice ①~⑥ rubric ≥90 + 라이브 엔드투엔드 `python -m tiw run` + 프론트 목업 3화면) → **v1.1 진행 중**(slice⑦ 다세목·투명성, 변경①②③ — `STATUS.md` 상단). Ralph loop 자동 반복 개선 중.
+> **상태**: **v1.0 구현 완료**(slice ①~⑥ rubric ≥90 + 라이브 엔드투엔드 `python -m tiw run` + 프론트 목업 3화면) → **v1.1 진행 중**(slice⑦ 다세목·투명성, 변경①②③ — `STATUS.md` 상단). Ralph loop 자동 반복 개선 중. **추가 산출물**: 회계사 자연어 보고서(`src/cpa_report.py`)와 **시나리오 Tax Plan(실행계획) 생성기**(`src/tax_plan*.py` — 재무제표 쟁점 강조·그림 4종·근거 하이퍼링크·영어 0·인용 날조 차단, `OUT-009/010`) 구현(정본 §3-4-1).
 > **언어**: 한국어. **독자**: 회계사(비개발자) + 개발/AI 검토자 + 채용 면접관.
 > **감사 대상 spec 표면(정본)**: `md 파일/법인세_세무AI_설계서_통합.md`(+`Claude/` 동일 사본) + `docs/01~09`(`.md`) 만 Ralph가 구현 기준으로 삼는다. **`docs/_build/`**(쉬운설명 PDF·`body_*.html`)는 **Edge-headless PDF 파이프라인(`docs/_build/build_pdf.py`)이 생성하는 파생 설명 아티팩트**로 spec이 아니며 감사 대상에서 **제외**한다(정본 변경 후 별도 재생성 — 일시적으로 구버전 문구가 남을 수 있음).
 
