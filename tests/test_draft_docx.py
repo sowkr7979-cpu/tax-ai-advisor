@@ -135,6 +135,37 @@ def test_out007_silent_channel_is_accepted():
     validate_draft_package(with_silent)  # must not raise (③ 가 SILENT 로 present)
 
 
+def test_out008_fabricated_law_trace_is_rejected():
+    """HALU-015(codex): §10 law-tracing 이 패키지에 없는 인용(조문/pinpoint)을 들면 —
+    사후 서사·날조/stale — fail-closed. 존재만으로는 부족(실제 인용 정합 필수)."""
+    from src.draft import LawTraceEntry, ReasoningTrace
+    data, _, _ = build_demo_draft_package()
+    rt = data.reasoning_trace
+    fake = LawTraceEntry(
+        issue="날조 쟁점", law_name="법인세법", article="제999조", as_of="2026-01-01",
+        basis_kind="사업연도", locator="법인세법 제999조(존재하지 않음)", quote_excerpt="날조 인용",
+    )
+    bad = dataclasses.replace(
+        data, reasoning_trace=ReasoningTrace(steps=rt.steps, law_trace=rt.law_trace + [fake]),
+    )
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(bad)
+
+
+def test_out008_fabricated_step_citation_is_rejected():
+    """추론 단계가 패키지에 없는 인용 pinpoint 를 들면 fail-closed(날조 차단)."""
+    from src.draft import ReasoningStep, ReasoningTrace
+    data, _, _ = build_demo_draft_package()
+    rt = data.reasoning_trace
+    bad_step = ReasoningStep(99, "SYNTHESIS", "날조 종합 단계",
+                             citation_locators=["법인세법 제777조(없음)"])
+    bad = dataclasses.replace(
+        data, reasoning_trace=ReasoningTrace(steps=rt.steps + [bad_step], law_trace=rt.law_trace),
+    )
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(bad)
+
+
 # --------------------------------------------------------------------------- #
 # OUT-003 — 무인용 단정 금지
 # --------------------------------------------------------------------------- #

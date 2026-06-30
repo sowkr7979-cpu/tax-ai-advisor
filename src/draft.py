@@ -391,6 +391,27 @@ def validate_draft_package(data: DraftPackageData) -> None:
     need(data.reasoning_trace is not None
          and bool(data.reasoning_trace.steps) and bool(data.reasoning_trace.law_trace),
          "10. 법령 추적 경로 + 추론 과정 도식(ReasoningTrace.steps ≥1 + law_trace ≥1, OUT-008)")
+    # HALU-015(codex): §10 trace 는 실제 산출과 정합해야 한다 — 존재만으로는 부족(사후 서사·
+    # 날조/stale 차단). law_trace·추론단계가 *드는 인용*은 실제 패키지 인용(또는 채널 결과가
+    # 든 인용)으로 backed 되어야 하며, 패키지에 없는 조문/pinpoint 를 들면 표시 차단(fail-closed).
+    rt = data.reasoning_trace
+    if rt is not None:
+        _actual_loc = {c.source_locator for c in data.citations if c.source_locator}
+        _channel_loc = {loc for cr in data.channel_results for loc in cr.citation_locators}
+        _known_loc = _actual_loc | _channel_loc
+        for e in rt.law_trace:
+            if e.locator and e.locator not in _known_loc:
+                raise DraftValidationError(
+                    f"HALU-015 §10 law-tracing 날조/stale: 쟁점 '{e.issue}' 의 인용 "
+                    f"{e.locator!r} 가 패키지 실제 인용에 없음(사후 서사 차단)"
+                )
+        for s in rt.steps:
+            for loc in s.citation_locators:
+                if loc not in _known_loc:
+                    raise DraftValidationError(
+                        f"HALU-015 §10 추론단계 날조 인용: 단계 {s.seq}({s.stage}) 의 "
+                        f"{loc!r} 가 패키지 실제 인용에 없음(사후 서사 차단)"
+                    )
     need(bool(data.additional_requests), "11. 추가 요청 자료(≥1)")
     need(bool(data.review_items), "12. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
     need(bool(data.conclusion.strip()) and bool(data.recommended_order),

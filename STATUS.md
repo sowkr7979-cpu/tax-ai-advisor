@@ -54,6 +54,12 @@
 - **★ 3개 변경 DOCX 백엔드 전부 완료**: 변경① 레지스트리·변경② §8 채널별·변경③ §10 추론도식. 검토패키지 13목차 완성(내부 전용 4: 7·8·10·12).
 - **남은 큰 덩어리**: ① 프론트 §8/§10(Mermaid 도식) + Playwright 갱신 · ② **slice7 하버스**(`tiw.eval`) → slice⑦ 측정(현재 미측정) · ③ 소득세 end-to-end fixture(`--live`, 키 대기).
 
+### iter8 (f469ec4 이후) — §10 trace 정합 검증 강화 (HALU-015, codex 적발)
+- **codex stop-time 적발**: "§10 trace validation accepts fabricated/stale trace data" — §10 검증이 `steps≥1 + law_trace≥1`(존재)만 확인 → 패키지에 없는 조문/pinpoint 를 든 **날조/stale trace 도 통과**(사후 서사 = HALU-015 위반).
+- **수정**: `validate_draft_package` §10 에 **정합 검증** 추가 — law_trace 항목·추론단계가 *드는 인용(locator)* 이 실제 패키지 인용(`data.citations`) ∪ 채널 결과 인용으로 **backed** 되어야 함. 미backed → `DraftValidationError`(표시 차단, fail-closed).
+- **측정**: **pytest 225**(223 + 신규 2: 날조 law_trace→reject / 날조 step 인용→reject). orchestrator/데모 trace 는 실제 Citation 에서 빌드 → 통과(회귀 0).
+- **codex 미해결 → 해소**: 날조/stale trace 적발 반영 완료. (HALU-015 "사후 서사 금지" 검증으로 강제.)
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**
