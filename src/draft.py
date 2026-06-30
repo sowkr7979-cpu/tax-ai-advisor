@@ -68,6 +68,11 @@ _INTERNAL_ONLY_SECTIONS = {
     "11. 회계사 검토 필요사항",
 }
 
+# OUT-007(변경②): §8 은 3소스 채널(①법령MCP·②내부RAG·③웹)을 **모두** 표시해야 한다.
+# 답하지 못한 채널도 생략하지 않고 SILENT(커버리지 갭)로 남긴다 — 부분 커버리지(채널 누락)는
+# "안 한 검색을 한 것처럼" 보이게 하는 정직성 위반이므로 fail-closed (codex 적발).
+_OUT007_REQUIRED_CHANNELS = {"①", "②", "③"}
+
 
 class DraftError(RuntimeError):
     """Base error for the Draft Agent."""
@@ -332,7 +337,12 @@ def validate_draft_package(data: DraftPackageData) -> None:
     need({"보수", "중립", "적극"}.issubset(keys),
          "6. 선택지 비교표는 보수/중립/적극 3종 필수")
     need(bool(data.issue_memos), "7. 쟁점별 검토 메모(≥1)")
-    need(bool(data.channel_results), "8. 출처 채널별 독립 결과(≥1 채널, OUT-007)")
+    # OUT-007: §8 은 3채널(①②③)을 모두 표시 — 누락 채널은 SILENT 로 남겨야 하며,
+    # 채널 자체를 빼면(부분 커버리지) 정직성 위반 → fail-closed.
+    _present_channels = {cr.channel for cr in data.channel_results}
+    need(_OUT007_REQUIRED_CHANNELS.issubset(_present_channels),
+         "8. 출처 채널별 독립 결과는 3채널(①②③) 모두 표시 필수(누락 채널은 SILENT 로 표기, "
+         f"OUT-007) — 누락 채널: {sorted(_OUT007_REQUIRED_CHANNELS - _present_channels)}")
     need(bool(data.citations), "9. 관련 법령·근거 자료(≥1 버전객체 인용)")
     need(bool(data.additional_requests), "10. 추가 요청 자료(≥1)")
     need(bool(data.review_items), "11. 회계사 검토 필요사항(≥1, slice⑤ review_items)")

@@ -107,6 +107,33 @@ def test_strategy_table_requires_three_options():
         validate_draft_package(only_two)
 
 
+def test_out007_incomplete_channel_coverage_fails():
+    """OUT-007(codex 적발): §8 은 3채널(①②③) 모두 표시 필수 — 채널 누락(부분 커버리지)은
+    SILENT 로 남기지 않고 빼면 정직성 위반 → fail-closed. ③웹 누락 시 거부."""
+    data, _, _ = build_demo_draft_package()
+    missing_web = dataclasses.replace(
+        data, channel_results=[cr for cr in data.channel_results if cr.channel != "③"]
+    )
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(missing_web)
+
+
+def test_out007_silent_channel_is_accepted():
+    """답 못한 채널은 *생략하지 않고* SILENT 로 present 하면 통과 — 검증 요건은 '채널 표시'
+    이지 'ANSWERED' 가 아니다(정직 표기)."""
+    from src.draft import ChannelResult
+    data, _, _ = build_demo_draft_package()
+    silent_web = ChannelResult(
+        channel="③", source_label="③공식웹", status="SILENT", answered=False,
+        answer_excerpt="(승격 가능한 공식근거 없음 — 커버리지 갭)", citation_locators=[],
+    )
+    with_silent = dataclasses.replace(
+        data,
+        channel_results=[cr for cr in data.channel_results if cr.channel != "③"] + [silent_web],
+    )
+    validate_draft_package(with_silent)  # must not raise (③ 가 SILENT 로 present)
+
+
 # --------------------------------------------------------------------------- #
 # OUT-003 — 무인용 단정 금지
 # --------------------------------------------------------------------------- #

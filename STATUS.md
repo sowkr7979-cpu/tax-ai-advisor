@@ -35,6 +35,12 @@
 - **변경② 상태**: 백엔드(데이터+렌더+검증) **완료**. 남음: 프론트 DraftScreen §8 + Playwright assertion.
 - **다음**: 변경③ OUT-008 §10 ReasoningTrace + law-tracing 도식 → 13목차(DOCX 네이티브) + 프론트 Mermaid.
 
+### iter5 (799017e 이후) — OUT-007 §8 완전 채널 커버리지 강제 (codex 적발)
+- **codex stop-time 적발**: "§8 validation accepts incomplete channel coverage" — §8 검증이 `channel_results≥1`만 요구 → ②내부RAG/③웹이 **생략**돼도 통과(부분 커버리지 = 안 한 검색을 한 척, 정직성 위반).
+- **수정**: `validate_draft_package` §8 을 **3채널(①②③) 전부 표시 필수**로 강화(`_OUT007_REQUIRED_CHANNELS`). 답 못한 채널은 *생략 ✕* → SILENT 로 남겨야 통과. orchestrator/데모는 항상 3채널 → 회귀 0.
+- **측정**: **pytest 221**(219 + 신규 2: ③ 누락→fail-closed / ③ SILENT present→pass). 회귀 0.
+- **codex 미해결 → 해소**: 부분 커버리지 적발 반영 완료.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**
