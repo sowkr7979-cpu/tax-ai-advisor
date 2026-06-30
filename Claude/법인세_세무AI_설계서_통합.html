@@ -94,7 +94,7 @@
 <a class="toc-h3" href="#4-1-1-자료-수집-인터뷰-Intake-Agent-분석에-들어가기-전-단계">4-1-1. 자료 수집 인터뷰 (Intake Agent) — *분석에 들어가기 전 단계*</a>
 <a class="toc-h3" href="#4-2-아키텍처-14p-기준-골격-법인세-전략-확장">4-2. 아키텍처 (14p 기준 골격 → 법인세 전략 확장)</a>
 <a class="toc-h3" href="#4-2-1-근거-데이터-레이어-3소스-각각-독립-완결-답변-종합의견-김다은-PDF-14p-3개-소스-병렬-검증-구조-차용-종합형으로-발전">4-2-1. 근거 데이터 레이어 — 3소스 **각각 독립 완결 답변 → 종합의견** *(김다은 PDF 14p &quot;3개 소스 병렬 검증&quot; 구조 차용, 종합형으로 발전)*</a>
-<a class="toc-h3" href="#4-3-검토패키지-DOCX-목차">4-3. 검토패키지(DOCX) 목차</a>
+<a class="toc-h3" href="#4-3-검토패키지-DOCX-목차-13목차-기존-11-8-채널별-원본-10-추론도식-2개-신설">4-3. 검토패키지(DOCX) 목차 — 13목차 (기존 11 → §8 채널별 원본·§10 추론도식 2개 신설)</a>
 <a class="toc-h3" href="#4-4-신뢰성-설계-면접에서-후벼팔-지점-선제-방어">4-4. 신뢰성 설계 (면접에서 후벼팔 지점 선제 방어)</a>
 <a class="toc-h3" href="#4-5-정량-효과-ROI-틀-Copilot-KPI-차용">4-5. 정량 효과 (ROI 틀 — Copilot KPI 차용)</a>
 <a class="toc-h3" href="#4-6-MVP-시연-범위-보여줄-것-vs-설계로만-남길-것-검증-보안">4-6. MVP 시연 범위 — *보여줄 것* vs *설계로만 남길 것* (검증·보안)</a>
@@ -110,12 +110,13 @@
 <a class="toc-h2" href="#부록-회계사-토의-확정-결과-남은-합의">부록. 회계사 토의 — 확정 결과 + 남은 합의</a>
     </nav>
     <main class="content">
-<h1>법인세 세무 AI 설계서 — <strong>Tax Intelligence Workspace</strong> (통합본)</h1>
-<blockquote><strong>작성 목적</strong>: 딜로이트 안진 <strong>Business Tax(세무본부)</strong> 지원 + 내부 기획 논의용 What/Why/How<br><strong>제품명</strong>: Tax Intelligence Workspace (TIW)<br><strong>한 줄 타겟</strong>: <em>"감사로 <strong>검증</strong>을 체화한 회계사가, <strong>검증 가능한</strong> 법인세 전략 AI를 만든다."</em><br><strong>포지셔닝</strong>: 전략층 상향(더존 위층) · 구조 중심 데모 · 회계사 최종판단(HITL)<br><strong>근거</strong>: 법률·세무 AI <strong>8개사 벤치마크</strong>(<code>경쟁사_AI_벤치마크_분석.md</code>) + 타겟 도출(<code>타겟_정의서.md</code>)<br><em>통합 출처: Claude 설계서(포지셔닝·차별·면접무기) + Codex 설계서(제품 구조·지원자료·로드맵)</em></blockquote>
+<h1>법인세·전 세목 세무 AI 설계서 — <strong>Tax Intelligence Workspace</strong> (통합본)</h1>
+<blockquote><strong>작성 목적</strong>: 딜로이트 안진 <strong>Business Tax(세무본부)</strong> 지원 + 내부 기획 논의용 What/Why/How<br><strong>제품명</strong>: Tax Intelligence Workspace (TIW)<br><strong>한 줄 타겟</strong>: <em>"감사로 <strong>검증</strong>을 체화한 회계사가, <strong>검증 가능한</strong> 세무 전략 AI(법인세를 대표 데모로 전 세목 확장)를 만든다."</em><br><strong>포지셔닝</strong>: 전략층 상향(더존 위층) · 구조 중심 데모 · 회계사 최종판단(HITL)<br><strong>근거</strong>: 법률·세무 AI <strong>8개사 벤치마크</strong>(<code>경쟁사_AI_벤치마크_분석.md</code>) + 타겟 도출(<code>타겟_정의서.md</code>)<br><em>통합 출처: Claude 설계서(포지셔닝·차별·면접무기) + Codex 설계서(제품 구조·지원자료·로드맵)</em></blockquote>
 <hr>
 <h2 id="1-한-줄-정의">1. 한 줄 정의</h2>
 <p><strong>Tax Intelligence Workspace는 회사별 회계·세무자료를 기반으로 세무 리스크·절세 기회·세무조사 방어 가능성·전략 선택지를 비교하고, 회계사가 최종 판단할 수 있도록 <em>근거 중심 검토패키지 초안</em>을 생성하는 Business Tax 자문형 AI Agent다.</strong></p>
 <p>핵심: AI는 회계사의 <strong>판단을 대체하지 않는다.</strong> AI가 <em>자료 정리·계산·근거 검색·쟁점 구조화·선택지 비교·초안 작성</em>을 수행하고, <strong>회계사가 검토·최종 판단(HITL)</strong> 한다.</p>
+<blockquote><strong>세목 범위(변경①)</strong>: 엔진은 특정 세목에 묶이지 않는다. <strong>법인세를 대표 데모</strong>로 삼되, <strong>소득세·원천세(퇴직소득 등)·부가가치세·상속·증여세·지방세</strong>를 <em>동일 파이프라인</em>(리스크→선택지→근거→계산검산→검토패키지)으로 처리한다. 세목·쟁점→법령 매핑을 레지스트리로 일반화한다(<code>ORCH-015</code>, <code>docs/03 §6</code>).</blockquote>
 <hr>
 <h2 id="0-Context-배경">0. Context — 배경</h2>
 <ul>
@@ -160,7 +161,7 @@
 </ul>
 <hr>
 <h2 id="3-WHAT-무엇을-만들-것인가">3. WHAT — 무엇을 만들 것인가</h2>
-<blockquote><strong>정의</strong>: "감사로 검증을 체화한 회계사가 만드는, <strong>검증 가능한 법인세 전략 AI = Tax Intelligence Workspace.</strong>"<br>절세 전략 시나리오를 생성하되, 각 방안의 <strong>과세 리스크와 방어논리를 근거와 함께 검증</strong>해 제시. <strong>최종 판단은 회계사(HITL).</strong></blockquote>
+<blockquote><strong>정의</strong>: "감사로 검증을 체화한 회계사가 만드는, <strong>검증 가능한 세무 전략 AI = Tax Intelligence Workspace</strong>(법인세 대표 데모 → 전 세목)."<br>절세 전략 시나리오를 생성하되, 각 방안의 <strong>과세 리스크와 방어논리를 근거와 함께 검증</strong>해 제시. <strong>최종 판단은 회계사(HITL).</strong></blockquote>
 <h3 id="3-1-제품-구조-회사별-Tax-Workspace-Tax-Vault-저장소-6-Agent">3-1. 제품 구조 — 회사별 Tax Workspace = Tax Vault(저장소) + 6 Agent</h3>
 <blockquote><strong>Tax Vault</strong>는 저장 계층이고, <strong>6 Agent = Intake·Risk·Research·Strategy·Evidence·Draft</strong> (docs <code>03_RFP</code>의 <code>INTK</code> + <code>AGT</code> 도메인과 정합).</blockquote>
 <div class="table-wrap"><table>
@@ -194,7 +195,7 @@
 <li><strong>예시 회사</strong>: 일반 제조업 법인</li>
 <li><strong>첫 화면</strong>: "무엇을 검토할까요?" Agent 채팅</li>
 <li><strong>입력(MVP 확정)</strong>: <strong>수기 입력 + 엑셀 TB 업로드</strong> — TB·계정별 원장·전기 법인세 신고서·재무제표(+확장: 계약서·이사회의사록·통장·법인카드·세금계산서). <em>ERP 연동은 향후.</em></li>
-<li><strong>검토 범위(확정)</strong>: 특정 절세 소재 1개에 고정하지 않고 <strong>전 세무항목을 동일 구조로 검토 가능</strong>(Tax Skill Library: 접대비·업무용승용차·가지급금 인정이자·지급이자 손금불산입·기부금 한도·감가상각·세액공제 등). 어떤 항목이든 <strong>리스크 → 선택지 비교 → 근거 → 계산 검산 → 검토패키지</strong> 동일 파이프라인으로 처리.</li>
+<li><strong>검토 범위(확정 — 전 <em>세목</em> 확장, 변경①)</strong>: 법인세 한 <em>세목</em>에도, 특정 절세 소재 1개에도 고정하지 않고 <strong>전(全) 세목을 동일 구조로 검토 가능</strong>(Tax Skill Library). 세목별 예: <strong>법인세</strong>(접대비·업무용승용차·가지급금 인정이자·지급이자 손금불산입·기부금 한도·감가상각·세액공제) · <strong>소득세/원천세</strong>(퇴직소득 vs 근로소득 구분·임원 퇴직급여 한도·고문료 실질) · <strong>부가가치세</strong>(매입세액 공제·세금계산서) · <strong>상속·증여세</strong>(가업상속·평가·할증) · <strong>지방세</strong>(취득세·재산세) <em>(국제조세·관세는 확장 플래그)</em>. 어떤 세목·항목이든 <strong>리스크 → 선택지 비교 → 근거 → 계산 검산 → 검토패키지</strong> 동일 파이프라인으로 처리한다. 구현은 세목·쟁점 → 법령(법인세법·소득세법·부가가치세법·상증세법 등) <strong>매핑 레지스트리</strong>로 일반화(<code>ORCH-015</code>).</li>
 <li><strong>핵심 시나리오</strong>: <strong>선택지별(보수/중립/적극) 세부담·과세리스크·방어가능성·근거 비교</strong></li>
 <li><strong>목업 3화면(확정)</strong>: ① Intake 자료수집 챗 → ② 선택지 비교표 → ③ DOCX 검토패키지 미리보기</li>
 <li><strong>산출물</strong>: Agent 채팅 결과 + <strong>DOCX 검토패키지 초안</strong></li>
@@ -266,11 +267,13 @@
 <li><strong>권위는 단순 채널서열이 아니라 "tie-break/조정 기준"</strong>: 법적 권위 위계(법률&gt;시행령&gt;시행규칙&gt;예규·판례·심판례&gt;실무서&gt;웹) + 시점 + 사실관계 동일성으로 조정. ①을 더 신뢰하되, 시행령·예규·심판례는 <em>해석·보충</em>(법령을 override하지 않음). <em>(상세 <code>docs/02 §5</code>.)</em></li>
 <li><strong>★ 내부 지식 축적</strong>: 라이선스·공개·합성·신규 작성 자료를 내부 지식 DB에 적재(임베딩) → ②의 자산 + 거래처별 <strong>Tax Memory</strong> 재활용. <em>(전직장 고객자료 반입은 비밀유지 위반 → 금지.)</em></li>
 <li><strong>환각 통제</strong>: 법령은 원문(①)으로 고정, 해석은 ②·③로 보강하되 <strong>최종 근거는 법적 권위 위계 기준</strong>(요지: 법령 원문이 최우선, 실무서·웹은 해석·보완), 미해소 충돌은 단정 대신 <strong>회계사 검토</strong>로.</li>
+<li><strong>★ 채널별 독립 결과의 <em>출력 가시화</em>(<code>OUT-007</code>, 변경②)</strong>: 종합의견만 보여주지 않고, <strong>종합 <em>전</em> 의 ①②③ 각 채널 답변·인용·상태를 검토패키지 §8에 병렬로 노출</strong>한다. 회계사가 "어느 소스가 무엇을 말했고 어디서 갈렸는지"를 직접 본다(블랙박스 방지). <strong>내부 RAG 코퍼스가 현재 비어 있으면 ②는 <code>SILENT(커버리지 갭)</code> 으로 정직 표기</strong>(<code>RAG-014</code> — 없는 자료를 합성하지 않음). 종합은 여전히 §1·§7에서 별도 제시(채널 원본 ⟂ 종합 분리, <code>EVAL-002</code>).</li>
 </ul>
-<h3 id="4-3-검토패키지-DOCX-목차">4-3. 검토패키지(DOCX) 목차</h3>
+<h3 id="4-3-검토패키지-DOCX-목차-13목차-기존-11-8-채널별-원본-10-추론도식-2개-신설">4-3. 검토패키지(DOCX) 목차 — 13목차 (기존 11 → §8 채널별 원본·§10 추론도식 2개 신설)</h3>
 <ol>
-<li>Executive Summary · 2. 회사 개요·검토 범위 · 3. 입력 자료 목록 · 4. 주요 세무 리스크 · 5. 절세 기회 · 6. <strong>선택지별 세부담·리스크 비교표</strong> · 7. 쟁점별 검토 메모 · 8. 관련 법령·예규·판례 근거 · 9. 추가 요청자료 · 10. 회계사 검토 필요사항 · 11. 결론 초안·추천 검토 순서</li>
+<li>Executive Summary · 2. 회사 개요·검토 범위 · 3. 입력 자료 목록 · 4. 주요 세무 리스크 · 5. 절세 기회 · 6. <strong>선택지별 세부담·리스크 비교표</strong> · 7. 쟁점별 검토 메모 · 8. <strong>출처 채널별 독립 결과(①법령MCP·②내부RAG·③웹) — 종합 전 원본</strong> ★신규 · 9. 관련 법령·근거 자료 · 10. <strong>법령 추적 경로 + 추론 과정 도식(Reasoning &amp; Law-Tracing)</strong> ★신규 · 11. 추가 요청자료 · 12. 회계사 검토 필요사항 · 13. 결론 초안·추천 검토 순서</li>
 </ol>
+<blockquote><strong>신설 2개 섹션 (<code>OUT-007</code>/<code>OUT-008</code>)</strong>:<br>- <strong>§8 출처 채널별 독립 결과</strong> — 종합의견으로 합치기 <em>전</em> 의 ①법령MCP·②내부RAG·③웹 <strong>각 채널 독립 답변(SourceAnswer) + 인용 + 상태(<code>SourceAnswerStatus</code>: ANSWERED/SILENT/ERROR/BLOCKED)</strong> 를 그대로 병렬 표시한다. <em>웹 abstain·내부 RAG 코퍼스 부재는 ②③를 <code>SILENT(커버리지 갭)</code> 로 <strong>정직하게</strong> 표기</em>(없는 자료를 있는 척하지 않음, <code>RAG-014</code>).<br>- <strong>§10 법령 추적 경로 + 추론 도식</strong> — 어떤 법령/조문/시행버전을 따라 결론에 이르렀는지(law-tracing)와 <strong>오케스트레이터의 단계별 판단 과정(ReasoningTrace)</strong> 을 식별가능하게 <strong>도식화</strong>한다(하이브리드: 프론트=Mermaid 인터랙티브 / DOCX=이미지 의존 0의 네이티브 도식 + 단계 트레이스 표). 상세 §4-4.<br>- <strong>내부/고객본 분리(<code>OUT-004</code>)</strong>: §7 쟁점메모·§8 채널별 원본·§10 추론도식(전체)·§12 회계사 검토는 <strong>내부 검토본 전용</strong>. 고객 전달본은 §10을 <em>법령 추적 요약</em>(조문·시점만)으로 축약 수록한다. <strong>§13 결론·추천 검토순서는 양본 공통</strong>이되, 고객본은 내부 전략·미해소 충돌·적극안 리스크 표현을 <em>완화/redaction</em>(과세 리스크 자체는 은폐 금지, <code>docs/03 §3</code>)하고 "회계사 최종 검토 전제" 문구를 부착한다.</blockquote>
 <h3 id="4-4-신뢰성-설계-면접에서-후벼팔-지점-선제-방어">4-4. 신뢰성 설계 (면접에서 후벼팔 지점 선제 방어)</h3>
 <ul>
 <li><strong>계산 검증(감사 DNA)</strong>: 절세효과·세법 한도를 코드 Ground Truth와 대조, 불일치 자동 플래그 → <strong>"세무 팩트체커/검산기"</strong>(슈퍼로이어 팩트체커의 세무판, <em>계산</em>이라 더 강함).</li>
@@ -278,7 +281,9 @@
 <li><strong>과세·방어 양면</strong>: 리스크까지 스스로 까는 구조 → 깊이 의심 방어 + 감사적 회의 증명.</li>
 <li><strong>HITL(운영 게이트 H1~H5, <code>docs/03 §5</code>)</strong>: AI는 시나리오·수치·근거까지, <strong>결정·서명은 회계사(Reviewer).</strong> 적극 절세·고위험·최종 검토패키지는 <strong>Reviewer 승인 없이는 고객 전달본 생성 금지</strong>(승인자·timeout·escalation·감사기록까지 계약).</li>
 <li><strong>보안·테넌시(<code>docs/01</code>)</strong>: 고객 재무정보 민감 → <strong>테넌트 격리키(<code>client_id</code>/<code>matter_id</code>) 전파 · <code>RoleAssignment</code> 기반 최소권한 · 공유⟂테넌트 인덱스 물리분리 · 변조방지 감사로그 · 비학습·마스킹·프라이빗 배포</strong>(AiLex 폐쇄형·슈퍼로이어 비학습 참조).</li>
+<li><strong>★ 투명성 — 추론 트레이스 + 법령 추적 도식(<code>HALU-015</code>/<code>OUT-008</code>, 변경③)</strong>: "검증 가능한 AI"의 핵심으로, <em>결론만</em>이 아니라 <strong>AI가 거기에 이른 사고 과정 전체를 식별가능하게 도식화</strong>한다.</li>
 </ul>
+<p>  - <strong>(a) 법령 추적 경로(law-tracing)</strong>: 쟁점마다 <em>어느 법령·조문·시행버전(efYd)·적용시점(as-of)·pinpoint·인용문</em> 을 따라갔는지의 사슬을 보존·표시 → "이 조문이 이 주장을 지지" 가 한눈에 추적된다(<code>PROV-004</code>·<code>ORCH-005</code> 계보 가시화).   - <strong>(b) 추론 과정 도식(ReasoningTrace)</strong>: 오케스트레이터의 단계별 판단을 구조화된 트레이스(단계·입력·<strong>판단/근거</strong>·인용·결과)로 승격하고 흐름을 도식화한다 — <em>Intake → 쟁점 도출(왜 이 쟁점이 주쟁점인가) → 3채널 리서치(각 채널 입력·조회 법령·판단) → 종합(권위 위계·시점으로 어떻게 조정했나) → 전략(보수/중립/적극 도출 근거) → Draft</em>.   - <strong>렌더링(하이브리드, 사용자 확정)</strong>: <strong>프론트/HTML 미리보기 = Mermaid 인터랙티브 순서도</strong>(식별성↑) · <strong>DOCX = 이미지 의존 0의 네이티브 도식(표·화살표 박스) + 단계별 추론 트레이스 표</strong>(byte 결정성 보존). 같은 <code>ReasoningTrace</code> 자료원에서 두 렌더가 파생된다.   - <strong>효과</strong>: 회계사가 <em>AI를 신뢰하기 위해 결과를 역추적</em>하지 않아도 되게 — 사고 과정 자체가 산출물에 박혀 검증·서명(HITL)을 돕는다.</p>
 <h3 id="4-5-정량-효과-ROI-틀-Copilot-KPI-차용">4-5. 정량 효과 (ROI 틀 — Copilot KPI 차용)</h3>
 <ul>
 <li><strong>핵심 KPI(확정)</strong>: <strong>검토패키지 초안 1건 생성 시간 ≤ 10분</strong> (Intake → 리스크·선택지 비교 → 근거 → DOCX 초안까지).</li>
@@ -286,7 +291,7 @@
 <li><strong>품질 동반 지표</strong>: 모든 결론 <strong>출처 인용 100% · 계산 검산 통과 · 회계사 검토항목 자동첨부</strong> → "빠르면서 검증 가능"을 같이 증명.</li>
 </ul>
 <h3 id="4-6-MVP-시연-범위-보여줄-것-vs-설계로만-남길-것-검증-보안">4-6. MVP 시연 범위 — <em>보여줄 것</em> vs <em>설계로만 남길 것</em> (검증·보안)</h3>
-<blockquote>검증(<code>docs/08</code>)·보안(<code>docs/01</code>)은 풀스펙으로 설계돼 있으나, <strong>MVP 데모는 임팩트 큰 서브셋만</strong> 실제로 보여준다. 빌드 게이트 = <code>docs/09 §8</code> <strong>vertical slice 6종</strong>. 원칙: <strong>"보여주는 건 적게, 설계는 깊게"</strong> — 핵심 몇 개로 시연, 나머지는 "이미 설계됨"으로 깊이 증명.</blockquote>
+<blockquote>검증(<code>docs/08</code>)·보안(<code>docs/01</code>)은 풀스펙으로 설계돼 있으나, <strong>MVP 데모는 임팩트 큰 서브셋만</strong> 실제로 보여준다. 빌드 게이트 = <code>docs/09 §8</code> <strong>vertical slice 7종</strong>(①~⑥ + ⑦다세목·투명성). 원칙: <strong>"보여주는 건 적게, 설계는 깊게"</strong> — 핵심 몇 개로 시연, 나머지는 "이미 설계됨"으로 깊이 증명.</blockquote>
 <p><strong>검증 게이트(G1~G5, <code>docs/08</code>)</strong></p>
 <div class="table-wrap"><table>
 <thead><tr><th>게이트</th><th>MVP 데모</th><th>내용</th></tr></thead>
@@ -339,7 +344,7 @@
 <blockquote><strong>업계 정석과 일치 + 계산층 검증·회계사 직접 개발(8개사 공백)이 우리만의 영역.</strong></blockquote>
 <hr>
 <h2 id="7-로드맵">7. 로드맵</h2>
-<blockquote><strong>실행 우선순위(<code>docs</code> 연계)</strong>: 먼저 <strong>P0(MVP) + vertical slice 6종</strong>(①법령MCP 앵커 답변 ②citation 검증된 RAG 답변 ③공식소스 Web run ④충돌 케이스 ⑤CPA 검토 워크플로 ⑥테넌트격리 테스트) 통과를 게이트로, 이후 Phase 2~4 확장 (<code>docs/09 §8</code>).</blockquote>
+<blockquote><strong>실행 우선순위(<code>docs</code> 연계)</strong>: 먼저 <strong>P0(MVP) + vertical slice 7종</strong>(①법령MCP 앵커 답변 ②citation 검증된 RAG 답변 ③공식소스 Web run ④충돌 케이스 ⑤CPA 검토 워크플로 ⑥테넌트격리 테스트 ⑦다세목·투명성[<code>ORCH-015</code>·<code>OUT-007</code>·<code>OUT-008</code>/<code>HALU-015</code>]) 통과를 게이트로, 이후 Phase 2~4 확장 (<code>docs/09 §8</code>).</blockquote>
 <ul>
 <li><strong>Phase 1 — 구조 데모</strong>: Agent 채팅 화면 / <strong>제조업 샘플 + 엑셀 TB 업로드</strong> / <strong>전 세무항목 구조 검토(Tax Skill Library, 얕은 라우팅)</strong> / 리스크·절세 후보 / <strong>선택지 비교표 / DOCX 검토패키지 초안</strong> / <strong>목업 3화면</strong></li>
 <li><strong>Phase 2 — 세무조정 Skill 심화</strong>(항목별 규칙·계산 정교화): 접대비 · 업무용승용차 · 가지급금 인정이자 · 지급이자 손금불산입 · 기부금 한도 · 감가상각 · 통합고용세액공제 · 연구인력개발비 세액공제</li>

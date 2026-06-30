@@ -2,14 +2,14 @@
 
 ## Context — 왜 이 작업인가
 
-`md 파일/법인세_세무AI_설계서_통합.md`(서사 정본) + `docs/01~09`(규범 명세)까지 **설계는 끝났고 코드는 0**인 상태다. README의 현재 단계는 "사용자+AI 공동 채점표 검토 → Ralph loop(vertical slice 6종 게이트)". 목표는 이 설계서를 스펙으로 **TIW 백엔드 + 평가 하버스 + 프론트 목업 3화면**을 Python으로 greenfield 구현하고, **6개 vertical slice를 rubric ≥90점**으로 통과시키는 것이다. 매 iteration 끝에 **codex 리뷰**를 강제로 받는다.
+`md 파일/법인세_세무AI_설계서_통합.md`(서사 정본) + `docs/01~09`(규범 명세)가 스펙이다. **v1.0(slice ①~⑥)은 이미 구현·PASS 완료**(STATUS.md). **현 미션 v1.1**: 사용자 승인 기능 확장 3종을 **slice ⑦(다세목·투명성)** 으로 추가 구현 — **7개 vertical slice를 rubric ≥90점**으로 통과시키되 기존 6 slice 회귀 0. 매 iteration 끝에 **codex 리뷰**를 강제로 받는다.
 
 ## 확정된 결정
 
 - **스택**: Python (FastAPI 백엔드 / pytest+LLM-judge 하버스 / python-docx)
 - **외부 의존성**: 실연동 (+ `SourceSnapshot` 픽스처 녹화로 결정적 회귀)
 - **범위**: 백엔드 파이프라인 + 평가 하버스 + 프론트 목업 3화면
-- **완료 게이트**: 6 slice 각각 rubric ≥90 + 하드게이트 위반 0 + 목업 3화면 렌더
+- **완료 게이트**: **7** slice 각각 rubric ≥90 + 하드게이트 위반 0 + 목업 3화면 렌더 *(v1.1: slice⑦ 다세목·투명성 추가 — 변경①②③)*
 - **codex 리뷰**: review gate로 매 iteration(stop 시점) 강제
 
 ## 루프 메커니즘
@@ -24,13 +24,13 @@
 1. **`!codex login`** — codex CLI는 설치됐으나 미로그인. 미로그인이면 review gate가 동작 안 함.
 2. **review gate 켜기** — `/codex:setup --enable-review-gate` (stop 전 fresh codex 리뷰 강제 = 매 iteration 리뷰).
 3. **git 초기화** — `.git`가 비어있음(깨짐). `git init` + 기본 브랜치 `main` + 설계 산출물 베이스라인 커밋(이후 diff·pairwise regression 기준).
-4. **rubric 90 게이트 명문화** — docs/09에 "목표 90점"은 이미 있음. 완료 게이트("6 slice 전부 ≥90 + 하드게이트 0")를 docs/09에 1줄로 확정(첫 reviewed 변경으로).
+4. **rubric 90 게이트 명문화** — docs/09에 완료 게이트 확정됨: v1.0 "6 slice 전부 ≥90 + 하드게이트 0" → **v1.1 "7 slice 전부 ≥90"**(slice⑦ 추가, Freeze v1.1, 사용자 승인).
 5. **PROMPT.md codex 리뷰** — 루프 시작 전에 드라이버 프롬프트 자체를 codex로 1회 리뷰(메트릭 게이밍 여지·완료조건·가드레일 점검).
 
 ## 런치 커맨드 (체크리스트 후)
 
 ```
-/ralph-loop "루트 PROMPT.md를 읽고 TIW greenfield 빌드의 다음 iteration을 그대로 실행하라. STATUS.md가 6개 슬라이스 전부 ≥90/100 + 하드게이트 0 + 목업 3화면 렌더를 보일 때만 <promise>ALL_SLICES_90</promise>를 출력하라." --completion-promise "ALL_SLICES_90" --max-iterations 120
+/ralph-loop "루트 PROMPT.md를 읽고 TIW 빌드의 다음 iteration을 그대로 실행하라. 이번 미션은 slice ⑦(다세목 ORCH-015 · 채널별 독립표시 OUT-007 · 추론·법령추적 도식 OUT-008/HALU-015). STATUS.md가 7개 슬라이스 전부 ≥90/100 + 하드게이트 0 + 목업 3화면 렌더를 보일 때만 <promise>ALL_SLICES_90</promise>를 출력하라." --completion-promise "ALL_SLICES_90" --max-iterations 120
 ```
 
 언제든 `/cancel-ralph`로 중단 가능.
@@ -40,7 +40,7 @@
 - **gold-set 품질이 rubric의 의미를 좌우** — 4·5·7차원(법리추론·쟁점누락·리스크)은 본래 CPA 채점. 사용자(회계사)가 gold 케이스를 시드·검증해줄수록 점수가 신뢰 가능. 초기엔 설계서 예시로 부트스트랩.
 - **메트릭 게이밍** — 루프가 채점을 자기 유리하게 고칠 위험 → rubric/gold/scorer 읽기전용 + codex 리뷰가 감시.
 - **실연동 비용/레이트리밋** — 픽스처 녹화로 회귀는 결정적, 실호출은 신규 케이스에만.
-- **루프 규모** — 6 slice 풀스펙 90점은 거대. 정체 시 슬라이스 1~2개부터 90 달성 후 확장으로 축소 가능.
+- **루프 규모** — 7 slice 풀스펙 90점은 거대. v1.1은 기존 slice ①~⑥는 PASS 상태에서 **slice⑦만 신규**(다세목·투명성). 정체 시 slice⑦의 세 기능(①세목확장→②채널표시→③추론도식) 중 하나씩 90 달성 후 확장.
 
 ## 검증 방법
 

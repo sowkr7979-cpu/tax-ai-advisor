@@ -3,19 +3,30 @@
 > 매 iteration 시작 시 이 파일 + `git log --oneline -15`를 먼저 읽는다. (PROMPT.md §3.1)
 > 점수는 **STATUS 자기보고가 아니라** 같은 iteration의 `pytest -q` + `python -m tiw.eval` 산출 `RubricResult`로만 증명된다(완료 판정 기준).
 
+## ★ 미션 v1.1 (변경①②③) — slice ⑦ 진행 중 (완료 게이트 미충족)
+> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **7-slice 게이트 미충족**(slice⑦ 미착수) → `<promise>` 금지, 계속 개선.
+- **Rubric Freeze v1.1** (사용자 승인 확장) — 완료 게이트 6→**7 slice ≥90** + per-FR 예시 H/I/J + DOCX 11→13목차. 기존 가중치·하드게이트·6 slice 합격조건 **불변**(회귀 0).
+- **slice ⑦ 3 기능 (스펙: 정본 §3-4·§4-2-1·§4-3·§4-4 + docs/03·08·09)**:
+  - **변경① `ORCH-015`** 세목·쟁점→법령 레지스트리(법인세 하드코딩 제거) — 소득세/퇴직소득 케이스 동일 파이프라인 13목차 산출 + 미등록 세목 fail-closed.
+  - **변경② `OUT-007`** 채널별 독립결과(①법령·②내부RAG·③웹) §8 병렬표시 + 내부RAG 부재 시 SILENT 정직표기 + 채널원본⟂종합 분리.
+  - **변경③ `OUT-008`/`HALU-015`** §10 law-tracing 사슬 + ReasoningTrace 도식(하이브리드: 프론트 Mermaid / DOCX 네이티브), 실제 trace 정합(사후 서사 금지).
+- **다음 타겟(우선순위)**: ① ORCH-015 레지스트리 + 소득세/퇴직소득 fixture·gold → ② OUT-007 채널별 표시(draft.py 섹션 + contributions 전달) → ③ OUT-008/HALU-015 ReasoningTrace + 도식. 각 단계 매 iteration codex 리뷰.
+- **착수 전 측정 필요**: `tiw.eval`에 slice ⑦ 하버스(slice7_multitax_transparency) 추가 → 현재 점수(미구현이므로 <90) 산출이 첫 iteration.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
-- 완료 게이트: 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0.
+- 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**
 - 가중치(합100): 요구6·검색9·인용12·**법리20**·쟁점10·충돌7·리스크11·산출9·**보안14**·운영2.
 - 하드게이트 캡: 누수0·무권한/전직장0·날조60·시점오류55·검토경고누락60·재현불가75.
 - 평가셋: hidden freeze 50% / public practice 50%(rotate) · 인간 CPA 앵커 20%.
 
-## 현재 단계
-**전체 완료 + 라이브 엔드투엔드 앱 구동** — 6/6 vertical slice PASS + 프론트 목업 3화면 Playwright 렌더 통과 + DOCX Draft(11목차) + **오케스트레이터/CLI(`python -m tiw run`)로 "새 질문 → 검토패키지 DOCX"가 한 명령으로 구동**(라이브 1회 실행으로 실제 DOCX 산출 + replay 결정성 증명). PROMPT.md 완료조건 전부 충족. **pytest 210 passed**.
+## v1.0 결과 (✅ 완료 — 이력; **현재 미션은 상단 v1.1 slice⑦**)
+> 아래는 v1.0(slice ①~⑥) 달성 기록이다. **현재 상태가 아님** — 현재는 v1.1 7-slice 게이트 **미충족**(상단 섹션). 이 기록은 회귀 baseline·구현 참조용으로 보존한다.
+**[v1.0 완료]** 6/6 vertical slice PASS + 프론트 목업 3화면 Playwright 렌더 통과 + DOCX Draft(11목차 — v1.1에서 13목차로 확장 예정) + **오케스트레이터/CLI(`python -m tiw run`)로 "새 질문 → 검토패키지 DOCX"가 한 명령으로 구동**(라이브 1회 실행으로 실제 DOCX 산출 + replay 결정성 증명). v1.0 PROMPT.md 완료조건 충족. **pytest 214 passed**(당시).
 
 ### ★ 라이브 엔드투엔드 오케스트레이터 + CLI (이번 빌드 — 6 슬라이스 chaining)
 - **Strategy Agent(`src/strategy.py`)**: 종합의견+리스크+회수 조문 → 보수/중립/적극 3종 선택지(§3-5). 인용은 **회수된 버전객체에 한정**(`registry.require_citation` 선행, LLM이 id 주조 불가) · 적극 가드레일/검토경고 fail-closed 복구 · grounding 결정적 재검증(`verify_entailment`, self-report 비신뢰).
-- **오케스트레이터(`src/orchestrator.py`)**: §4-1 흐름 Intake→쟁점도출(TB→조문)→**3소스 Research**(①`legal_research`·②`internal_rag`(Chroma 테넌트격리·L3 외부LLM 미송신)·③`web_research`(공식소스 승격))→**Synthesis**(ConflictResolution)→Risk→**Strategy**→Evidence→**Draft 11목차 DOCX**. `live`/`replay` 토글. ①②③ 동일 gen 프롬프트를 `_MemoLLMClient`로 단일화 → 라이브=replay 결정성.
+- **오케스트레이터(`src/orchestrator.py`)**: §4-1 흐름 Intake→쟁점도출(TB→조문)→**3소스 Research**(①`legal_research`·②`internal_rag`(Chroma 테넌트격리·L3 외부LLM 미송신)·③`web_research`(공식소스 승격))→**Synthesis**(ConflictResolution)→Risk→**Strategy**→Evidence→**Draft 11목차(v1.0 당시) DOCX**. `live`/`replay` 토글. ①②③ 동일 gen 프롬프트를 `_MemoLLMClient`로 단일화 → 라이브=replay 결정성.
 - **CLI(`tiw/cli.py`+`tiw/__main__.py`)**: `python -m tiw run [--live|--replay] [--internal|--client] [--approve-demo] --company … --question … --out …`. `python -m tiw.eval` 독립 보존.
 - **데모(`tests/fixtures/company/A제조_2026.json`)**: 제조업 법인(TB 4계정·전기신고·자료 수집/없음/모름/결손·L3 사내메모).
 - **검증**: pytest 210 · 슬라이스 회귀 0(①90.5②97.3③96.8④93.5⑤92.3⑥100) · replay 결정성(라이브=replay doc.xml 내용 동일, sha `01775e`) · 신규 fixture secret 0 · **L3 메모 외부 LLM 송신 0(독립 스캔 확인)** · 비-데모 주쟁점(지급이자/기부금)에 접대비 서사 누출 0(독립 probe + 회귀테스트).
@@ -28,10 +39,11 @@
   - **`_spot_issues`** 가 질문 무관하게 기업업무추진비 주쟁점 고정 → **질문이 명시한 쟁점을 주쟁점으로 승격**(`_ISSUE_QUERY_TERMS`; 데모 질문은 기업업무추진비 명시 → 동일).
   - **지급이자 절세기회 템플릿** 추가(validate ≥1 opportunity 충족 → 지급이자 단독 matter 도 정상).
   - 회귀테스트 5건(요약 누출0·심화절 유지·웹 정직·증빙 쟁점일치·질문→주쟁점). **codex 재검증 STILL-LEAKS 지적 전부 해소**. pytest **210**, 데모 결정성 유지(sha `01775e`), 슬라이스 회귀 0.
-  - **3라운드(draft.py 섹션 헤더)**: 11목차 §8 고정 헤더 "관련 법령·예규·판례 근거"가 **예규/판례를 무조건 표기**(데모조차 법령+웹만 인용 → 과표기) → **"관련 법령·근거 자료"**(법령·예규·판례·웹 포괄, 실제 인용만 본문 나열)로 정정. 백엔드(REQUIRED_SECTIONS·validate)·프론트(DraftScreen·fixture·Playwright)·테스트 동기 갱신. **pytest 210 + Playwright 3 passed**. codex 최종 STILL-LEAKS의 유일 잔여 항목 해소 → **SUMMARY-SAFE**.
+  - **3라운드(draft.py 섹션 헤더)**: 11목차(v1.0 당시) §8 고정 헤더 "관련 법령·예규·판례 근거"가 **예규/판례를 무조건 표기**(데모조차 법령+웹만 인용 → 과표기) → **"관련 법령·근거 자료"**(법령·예규·판례·웹 포괄, 실제 인용만 본문 나열)로 정정. 백엔드(REQUIRED_SECTIONS·validate)·프론트(DraftScreen·fixture·Playwright)·테스트 동기 갱신. **pytest 210 + Playwright 3 passed**. codex 최종 STILL-LEAKS의 유일 잔여 항목 해소 → **SUMMARY-SAFE**.
   - **4라운드(비-데모 replay 경로 fail-closed UX)**: 질문→주쟁점 승격 후, replay 에 녹화 안 된 질문/쟁점(예: 지급이자)은 LLM fixture 부재로 **raw traceback(exit 1)** 노출 → CLI 가 transport fail-closed(`LLMError`/`LawSourceError`/`WebSearchError`/`Embedding*`)를 잡아 **명확한 안내 + exit 2**로 변환(데모는 질문 없이 결정적 실행, 새 질문은 `--live`). 잘못된/합성 답을 만들지 않고 산출물도 미생성. **codex 재검증 2차 잔여 2건 반영**: (1) Orchestrator 생성자를 try 밖→**안으로 이동**(live 키 부재 등 구성 시점 오류도 친화 exit 2), (2) `_REPRO_ERRORS` 외 예기치 못한 예외(비-repro RuntimeError 등)도 **catch-all 로 깔끔히 exit 1**(raw traceback 전면 금지). 회귀테스트 4건(비-데모 replay→exit2·산출없음 / 데모 replay→exit0·DOCX / live 생성실패→exit2 / 예기치못한 오류→exit1·traceback 없음). **pytest 214 passed**.
 
-## 6 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
+## 7 Vertical Slice 점수표 (RubricResult 기준 — 이번 iteration `python -m tiw.eval` 산출)
+> ⑦은 v1.1 신규 — **미구현(<90)** 이므로 7-slice 완료 게이트 **미충족**. ①~⑥은 PASS 유지(회귀 0 강제).
 | # | Slice | 점수 | 하드게이트 | 상태 |
 |---|---|---:|---|---|
 | ⑥ | 테넌트 격리 | **100** (min over 4 cases) | 누수0 (TENANT_LEAK 미발생) | **통과 (≥90)** |
@@ -40,6 +52,7 @@
 | ③ | 공식소스 Web run | **96.8** (min: PUB-001=100·PUB-002=97.2·HID-001=96.8) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — Tavily 실 wiring(공식도메인 발견·RECORD/REPLAY) + Source Policy(사전/사후) + 승격(WEB-011, 법령 원문 대조) + WEB-012(최신성⟂적용시점 분리) + slice① 생성기 재사용(채널③/WEB). 분모 79(conflict는 ④·웹은 공유 L0 보안은 ⑥) |
 | ④ | 충돌 케이스(3소스 종합) | **93.5** (min: PUB-001=93.5·PUB-002=100·HID-001=96.4·HID-002=100) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 결정테이블(권위·시점·사실·채널 tie-break) + claim 단위 정합 + 인용 상속(신규 0) + lineage 100%. conflict(7) 차원 측정(①②③에서 N/A였던 차원)=100. 분모 77(search per-source·security는 ⑥) |
 | ⑤ | CPA HITL 워크플로 | **92.3** (min: PUB-001=100·PUB-002=92.3·HID-001=95.2) | 0 (UNAPPROVED_RELEASE/MISSING_WARNING/TENANT_LEAK 미발생) | **통과 (≥90)** — H1~H5 게이트·승인 전 FinalMemo/고객본 차단(contract proof + 감사로그 이중)·검토항목 자동·graceful degrade·ReviewHistory 해시체인 |
+| ⑦ | 다세목·투명성(`ORCH-015`·`OUT-007`·`OUT-008`/`HALU-015`) | **미구현(<90)** | — (하버스 slice7 미작성) | **미충족** ★v1.1 신규 — 세목 레지스트리 + 채널별 독립표시 + 추론·법령추적 도식. 이번 미션 타겟. |
 
 ### slice ① 법령 코어 (이번 빌드 — judge 제외 결정적 부분만)
 - **LawDataSource 추상화**(`src/ai/law_data_source.py`, API-002): `MOLEGLawDataSource`(법제처 DRF = 동작 primary) + `KoreanLawMCPSource`(by-design 채널①, **UNWIRED TODO**) + `FallbackLawDataSource`(MCP→법제처, API-003). 채점 차원 진입: 검색9·인용12(결정적)·요구6·운영2.
@@ -55,7 +68,7 @@
 - pytest: **70 passed**. `python -m tiw.eval`: slice⑥=PASS(100), slice①=PASS(90.5, judge 연결). 요약 2/2 완료게이트(구현된 슬라이스).
 - fail-closed 증명: throwing/empty store → `NOT_REPRODUCIBLE`(cap75) + total<90 실패 (`측정 못 함 = 만점` 불가).
 
-프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기): **완료** — `frontend/`(Vite+React+TS), 백엔드 산출 fixture 렌더, Playwright 3 passed(스크린샷+텍스트/테이블/근거링크 assertion). DOCX Draft: `src/draft.py`(11목차, OUT-002/003/004/006 — 무인용 단정 금지·고객본 미승인 차단·필수섹션 강제), slice①Citation·④SynthesisOpinion·⑤review_items 연계. pytest 184 passed.
+프론트 목업 3화면(Intake챗·선택지비교표·DOCX미리보기): **완료** — `frontend/`(Vite+React+TS), 백엔드 산출 fixture 렌더, Playwright 3 passed(스크린샷+텍스트/테이블/근거링크 assertion). DOCX Draft: `src/draft.py`(11목차(v1.0 당시), OUT-002/003/004/006 — 무인용 단정 금지·고객본 미승인 차단·필수섹션 강제), slice①Citation·④SynthesisOpinion·⑤review_items 연계. pytest 184 passed.
 
 ### slice ① judge 레이어 (이번 빌드 — 실연동 완료)
 - **LLM 어댑터 실연동**(`src/ai/llm_client.py`): Anthropic Messages API(claude-opus-4-8). **temperature 미전송**(Opus 4.6+ 는 sampling param 400) — 결정성은 fixture 재생으로. RECORD/REPLAY 트랜스포트(law_data_source 패턴 재사용) + ModelVersion·토큰·비용 로깅(docs/07). zero-retention/L3·L4 게이팅 주석(slice①은 L0 공개 법령만 송신).

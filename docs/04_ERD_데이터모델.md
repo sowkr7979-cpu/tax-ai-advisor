@@ -146,6 +146,13 @@ erDiagram
   ClaimAlignment ||--o| ConflictResolution : resolved_by
   SynthesisOpinion ||--o{ ConflictFlag : flags
   SynthesisOpinion ||--o{ ConfidenceScore : scored_by
+
+  AnswerRun ||--o| ReasoningTrace : traces
+  ReasoningTrace ||--o{ ReasoningStep : steps
+  ReasoningStep }o--o| AgentRun : evidenced_by
+  ReasoningStep }o--o| SourceAnswer : evidenced_by
+  ReasoningStep }o--o| ConflictResolution : evidenced_by
+  ReasoningStep }o--o{ Citation : cites
 ```
 
 ### 4-1. 핵심 속성 (F 발췌)
@@ -169,6 +176,10 @@ erDiagram
 **`ConflictFlag`**: `flag_id` · `synthesis_id` · `claim_alignment_id` · `sources[]` · `description` · `escalated_to_review`(bool).
 
 **`ConfidenceScore`**: `target_kind`(SOURCE_ANSWER|SYNTHESIS) · `target_id` · `retrieval_confidence` · `generation_confidence`(**분리**, `HALU-006`) · `abstained`(bool) · `reason`. → 소스답변·종합의견 **각각** 채점.
+
+**`ReasoningTrace`**(변경③, `HALU-015`/`OUT-008`): `trace_id` · **`answer_run_id`(FK→AnswerRun, 1:1)** · `client_id` · `policy_version` · `steps[]`(순서). → 질의 1건의 **오케스트레이션 사고 과정**을 구조화 보존(검토패키지 §10 도식·law-tracing 자료원). 새 사실/인용을 만들지 않고 실제 실행 산출을 **참조**한다. **연결 사슬**: `AnswerRun ─1:1─ ReasoningTrace ─1:N─ ReasoningStep`, 각 step은 그 `AnswerRun` 하위의 `SourceAnswer→AgentRun`(`SourceAnswer ||--o{ AgentRun`)을 `agent_run_id`로 핀(아래).
+
+**`ReasoningStep`**: `step_id` · `trace_id`(FK→ReasoningTrace) · `seq` · `stage`(INTAKE|ISSUE_SPOTTING|RESEARCH_CH1_LAW|RESEARCH_CH2_RAG|RESEARCH_CH3_WEB|SYNTHESIS|STRATEGY|DRAFT) · `inputs` · `decision`(판단/근거 요지) · **`agent_run_id`(FK→AgentRun; RESEARCH_*/STRATEGY/DRAFT 단계는 필수, 그 외 nullable)** · `source_answer_id?`(FK→SourceAnswer) · `conflict_resolution_id?`(FK→ConflictResolution; SYNTHESIS 단계) · `citation_ids[]`(법적 판단 단계는 ≥1) · `law_trace`(쟁점→법령명·조문·시행버전 efYd·as_of·pinpoint). → **trace 정합 불변**: 각 step의 참조 FK(`agent_run_id`/`source_answer_id`/`conflict_resolution_id`)는 같은 `answer_run_id` 하위의 실제 `AgentRun`/`SourceAnswer`/`ConflictResolution`(`HALU-010`/`ORCH-005`)로 해소되어야 하며, 불일치 시 표시 차단(`HALU-014/015` 확장 — 사후 서사 금지).
 
 ---
 
