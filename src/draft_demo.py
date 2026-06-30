@@ -298,7 +298,7 @@ def build_demo_draft_package() -> tuple[DraftPackageData, dict[str, str], dict[s
         ),
         RiskItem(
             "기부금 한도 초과·이월",
-            "법정·지정기부금 한도 초과액의 손금불산입 및 이월공제 적정성 검토 필요.",
+            "특례·일반 기부금 한도 초과액의 손금불산입 및 이월공제 적정성 검토 필요.",
             citation_ids=[k["c24"]], severity="MEDIUM",
         ),
         RiskItem(

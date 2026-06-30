@@ -197,7 +197,7 @@
       },
       {
         "title": "기부금 한도 초과·이월",
-        "description": "법정·지정기부금 한도 초과액의 손금불산입 및 이월공제 적정성 검토 필요.",
+        "description": "특례·일반 기부금 한도 초과액의 손금불산입 및 이월공제 적정성 검토 필요.",
         "severity": "MEDIUM",
         "citation_ids": [
           "cit_sa_matter_amfg_2026_c24_pv_법인세법_제24조_20240101"
