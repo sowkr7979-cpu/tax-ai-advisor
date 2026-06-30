@@ -407,15 +407,18 @@ def validate_draft_package(data: DraftPackageData) -> None:
             if len(toks) >= 2:
                 _known_pairs.add((toks[0], toks[-1]))
         for e in rt.law_trace:
-            # 모든 law_trace 행은 locator(pinpoint) *또는* (법령명,조문) 으로 실제 인용에
-            # backed 되어야 한다 — 빈 locator 라고 통과시키지 않는다.
-            backed = (bool(e.locator) and e.locator in _known_loc) \
-                or ((e.law_name, e.article) in _known_pairs)
+            # locator(pinpoint)가 있으면 *그 문자열 자체*가 실제 인용과 일치해야 한다(stale/오기
+            # 차단). 비어 있을 때만 (법령명,조문) 쌍으로 backed 여부를 본다(빈 locator 우회 차단).
+            # → stale non-empty locator 가 pair fallback 으로 새는 것을 막는다(codex).
+            if e.locator:
+                backed = e.locator in _known_loc
+            else:
+                backed = (e.law_name, e.article) in _known_pairs
             if not backed:
                 raise DraftValidationError(
-                    f"HALU-015 §10 law-tracing 미backed(날조/stale): 쟁점 '{e.issue}' 의 인용 "
-                    f"({e.law_name} {e.article} / locator={e.locator!r}) 가 패키지 실제 인용에 "
-                    f"없음(사후 서사 차단)"
+                    f"HALU-015 §10 law-tracing 미backed/stale: 쟁점 '{e.issue}' 의 인용 "
+                    f"({e.law_name} {e.article} / locator={e.locator!r}) 가 패키지 실제 인용과 "
+                    f"불일치(사후 서사·stale 차단)"
                 )
         for s in rt.steps:
             for loc in s.citation_locators:

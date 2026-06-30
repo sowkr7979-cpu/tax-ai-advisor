@@ -66,6 +66,12 @@
 - **측정**: **pytest 226**(225 + 신규 1: 빈 locator 소득세법 제22조 날조행→reject). 실제 trace 는 locator 보유 → 통과(회귀 0).
 - **codex 미해결 → 해소**(누적 codex 적발 4건 전부 반영: 오법조회·부분커버리지·날조trace·빈locator우회).
 
+### iter10 (32a47cc 이후) — §10 law-trace stale non-empty locator 차단 (HALU-015 codex)
+- **codex 적발**: "§10 law-trace validation now lets stale non-empty locators pass" — OR 로직이 locator 가 stale/오기여도 (법령,조문) 쌍만 맞으면 통과.
+- **수정**: locator 가 **있으면 엄격히 `_known_loc` 검증**(불일치=reject), **비어 있을 때만** (법령,조문) fallback. pair fallback 의 stale 누출 차단(backing 로직 exhaustive: 비어있지않음→정확매칭 / 비어있음→pair).
+- **측정**: **pytest 227**(226 + 신규 1: stale non-empty locator→reject). 실제 trace locator 는 정확 매칭 → 통과(회귀 0).
+- **codex 미해결 → 해소**(누적 5건: 오법조회·부분커버리지·날조trace·빈locator우회·stale-locator).
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

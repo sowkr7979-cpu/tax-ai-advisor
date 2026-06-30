@@ -183,6 +183,25 @@ def test_out008_empty_locator_unbacked_law_trace_is_rejected():
         validate_draft_package(bad)
 
 
+def test_out008_stale_nonempty_locator_law_trace_is_rejected():
+    """HALU-015(codex 후속): 비어있지 않은 locator 가 패키지 인용 문자열과 불일치(stale/오기)면
+    — (법령명,조문) 쌍이 패키지에 있더라도 — 거부. pair fallback 은 빈 locator 에만 적용."""
+    from src.draft import LawTraceEntry, ReasoningTrace
+    data, _, _ = build_demo_draft_package()
+    rt = data.reasoning_trace
+    # (법인세법, 제25조)는 패키지에 존재하나 locator 문자열은 stale/오기(known_loc 에 없음)
+    stale = LawTraceEntry(
+        issue="stale locator", law_name="법인세법", article="제25조", as_of="2026-01-01",
+        basis_kind="사업연도", locator="법인세법 제25조 [STALE 2020 버전 오기]",
+        quote_excerpt="stale 인용 문자열",
+    )
+    bad = dataclasses.replace(
+        data, reasoning_trace=ReasoningTrace(steps=rt.steps, law_trace=rt.law_trace + [stale]),
+    )
+    with pytest.raises(DraftValidationError):
+        validate_draft_package(bad)
+
+
 # --------------------------------------------------------------------------- #
 # OUT-003 — 무인용 단정 금지
 # --------------------------------------------------------------------------- #
