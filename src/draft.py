@@ -199,6 +199,44 @@ class ChannelResult:
     citation_locators: list[str] = field(default_factory=list)  # 이 채널이 든 인용 pinpoint
 
 
+@dataclass(frozen=True)
+class LawTraceEntry:
+    """OUT-008(변경③): 한 쟁점의 법령 추적 1행 — 결론이 *어느 법령·조문·시행버전·시점*을
+    따라갔는지(law-tracing). 실제 회수된 버전객체 Citation 에서 도출(날조 ✕)."""
+
+    issue: str                    # 쟁점 표시 제목
+    law_name: str                 # 법령명 (법인세법·소득세법 …)
+    article: str                  # 조문 라벨 (제25조)
+    as_of: str                    # 적용시점(귀속연도)
+    basis_kind: str               # 적용기준
+    locator: str                  # pinpoint
+    quote_excerpt: str            # 인용 발췌
+
+
+@dataclass(frozen=True)
+class ReasoningStep:
+    """OUT-008/HALU-015(변경③): 오케스트레이션 한 단계의 구조화 기록.
+
+    *사후 서사*가 아니라 실제 실행 단계의 기록이어야 한다 — refs(source_answer_id 등)는
+    실제 산출과 정합하고, 법적 판단 단계는 인용(pinpoint)을 동반한다(HALU-015)."""
+
+    seq: int
+    stage: str                    # INTAKE|ISSUE_SPOTTING|RESEARCH_CH1_LAW|RESEARCH_CH2_RAG|RESEARCH_CH3_WEB|SYNTHESIS|STRATEGY|DRAFT
+    decision: str                 # 판단/근거 요지
+    citation_locators: list[str] = field(default_factory=list)
+    refs: dict = field(default_factory=dict)  # source_answer_id/synthesis_id 등 실제 산출 참조
+
+
+@dataclass(frozen=True)
+class ReasoningTrace:
+    """OUT-008/HALU-015(변경③): 질의 1건의 사고 과정 — 단계 시퀀스 + 법령 추적.
+
+    검토패키지 §10 도식(DOCX 네이티브) / 프론트 Mermaid 의 *동일 자료원*."""
+
+    steps: list[ReasoningStep] = field(default_factory=list)
+    law_trace: list[LawTraceEntry] = field(default_factory=list)
+
+
 @dataclass
 class DraftPackageData:
     """The Draft Agent input — slice ①~④ 분석결과 + 선택지 + 검토항목."""
@@ -255,6 +293,9 @@ class DraftPackageData:
     # OUT-007(변경②): 종합 *전* 의 채널별 독립 결과(①법령MCP·②내부RAG·③웹). 검토패키지
     # §8 에 병렬 표시(종합의견과 분리). 비어 있으면 §8 렌더는 생략된다(점진 도입).
     channel_results: list[ChannelResult] = field(default_factory=list)
+
+    # OUT-008/HALU-015(변경③): 추론 과정 + 법령 추적(§10 도식 자료원). None 이면 §10 생략.
+    reasoning_trace: Optional[ReasoningTrace] = None
 
     # -- helpers --------------------------------------------------------- #
     @property
@@ -724,4 +765,21 @@ def draft_package_to_fixture(
             }
             for cr in data.channel_results
         ],
+        # OUT-008/HALU-015(변경③): 추론 과정 + 법령 추적 — 프론트 §10 Mermaid 도식용
+        "reasoning_trace": (
+            {
+                "steps": [
+                    {"seq": s.seq, "stage": s.stage, "decision": s.decision,
+                     "citation_locators": list(s.citation_locators), "refs": dict(s.refs)}
+                    for s in data.reasoning_trace.steps
+                ],
+                "law_trace": [
+                    {"issue": e.issue, "law_name": e.law_name, "article": e.article,
+                     "as_of": e.as_of, "basis_kind": e.basis_kind, "locator": e.locator,
+                     "quote_excerpt": e.quote_excerpt}
+                    for e in data.reasoning_trace.law_trace
+                ],
+            }
+            if data.reasoning_trace else None
+        ),
     }

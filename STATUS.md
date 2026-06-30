@@ -41,6 +41,13 @@
 - **측정**: **pytest 221**(219 + 신규 2: ③ 누락→fail-closed / ③ SILENT present→pass). 회귀 0.
 - **codex 미해결 → 해소**: 부분 커버리지 적발 반영 완료.
 
+### iter6 (68c8adf 이후) — OUT-008 part1: ReasoningTrace 데이터 모델 + 실제 trace 빌드
+- **변경③(part1)**: `draft.py` `LawTraceEntry`/`ReasoningStep`/`ReasoningTrace` + `DraftPackageData.reasoning_trace`(Optional) + fixture 직렬화. orchestrator `_build_reasoning_trace` → **실제 실행 단계**(INTAKE→ISSUE_SPOTTING→RESEARCH_CH1/2/3→SYNTHESIS→STRATEGY→DRAFT) + law-tracing(쟁점별 **실제 회수 Citation** 에서 법령명·조문·시행시점·pinpoint·발췌).
+- **HALU-015 정합**: 법적 판단 단계(쟁점도출·종합·전략)는 인용 pinpoint 동반, SYNTHESIS step 은 실제 `synthesis_id` 참조(사후 서사 ✕). 채널 step 은 `source_answer_id` 참조.
+- **최소 blast radius**: `REQUIRED_SECTIONS`(12) 미변경 — §10 DOCX 렌더/13목차는 다음 iter. `reasoning_trace` Optional 기본 None → 데모/검증 무영향(회귀 0).
+- **측정**: **pytest 223**(221 + 신규 2: trace 단계 커버리지+법적단계 인용+synthesis_id 참조 / fixture 직렬화).
+- **다음**: §10 DOCX 네이티브 도식 + law-tracing 표 → **13목차** → 프론트 §8/§10(Mermaid) + Playwright → slice7 하버스.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

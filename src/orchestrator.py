@@ -66,7 +66,10 @@ from src.draft import (
     DraftPackageData,
     InputMaterial,
     IssueMemo,
+    LawTraceEntry,
     OpportunityItem,
+    ReasoningStep,
+    ReasoningTrace,
     RiskItem,
     StrategyOption,
     build_client_deliverable_docx,
@@ -383,6 +386,11 @@ class Orchestrator:
             additional_requests=self._evidence_requests(issues, deficits),
             answered_channels=answered_channels, synthesis=synthesis,
             channel_results=self._channel_results(contributions),  # OUT-007(변경②)
+            reasoning_trace=self._build_reasoning_trace(           # OUT-008(변경③)
+                primary=primary, issues=issues, materials=materials, deficits=deficits,
+                contributions=contributions, synthesis=synthesis, strategy=strategy,
+                citations=citations, by_issue=by_issue,
+            ),
         )
 
         # -- OUT-003 하드게이트 — 무인용 단정/날조 차단은 DOCX 출력 여부와 무관하게 항상
@@ -836,10 +844,80 @@ class Orchestrator:
             ))
         return results
 
+    def _build_reasoning_trace(self, *, primary, issues, materials, deficits,
+                               contributions, synthesis, strategy, citations,
+                               by_issue) -> ReasoningTrace:
+        """OUT-008/HALU-015(변경③): 실제 실행 단계에서 추론 트레이스 + 법령 추적 구성.
+
+        각 step 은 실제 산출(SourceAnswer/Synthesis/Strategy)을 참조하고, 법적 판단 단계는
+        인용 pinpoint 를 동반한다(사후 서사 금지 — trace 가 실제 실행과 정합). law-tracing 은
+        쟁점별로 *실제 회수된 버전객체 Citation* 에서 도출한다."""
+        cmap = {c.citation_id: c for c in citations}
+        primary_cit = cmap.get(by_issue.get(primary["issue_key"], ""))
+        primary_loc = [primary_cit.source_locator] if primary_cit and primary_cit.source_locator else []
+        steps: list[ReasoningStep] = []
+        seq = 1
+
+        collected = sum(1 for m in materials if m.status == "수집")
+        steps.append(ReasoningStep(seq, "INTAKE",
+            f"자료 {collected}/{len(materials)} 수집 · 결손/모름/없음 {len(deficits)}건 고지(자료한계 꼬리표).", []))
+        seq += 1
+        steps.append(ReasoningStep(seq, "ISSUE_SPOTTING",
+            f"{len(issues)}개 쟁점 도출 — 주쟁점 '{primary['title']}'"
+            f"({primary['law_name']} {primary['article']}) 선정(질문 명시 쟁점 우선, 없으면 최고위험).",
+            primary_loc))
+        seq += 1
+
+        stage_map = {"①": "RESEARCH_CH1_LAW", "②": "RESEARCH_CH2_RAG", "③": "RESEARCH_CH3_WEB"}
+        for c in contributions:
+            locs = [cit.source_locator for cit in (getattr(c, "citations", None) or [])
+                    if getattr(cit, "source_locator", None)]
+            status = c.status.value if hasattr(c.status, "value") else str(c.status)
+            label = _CHANNEL_SOURCE_LABEL.get(c.channel_label, c.channel_label)
+            decision = (f"{label} {status} — 인용 {len(locs)}건" if c.answered
+                        else f"{label} {status} — 커버리지 갭(근거 없음, 합성 ✕)")
+            steps.append(ReasoningStep(
+                seq, stage_map.get(c.channel_label, "RESEARCH"), decision, locs,
+                refs={"source_answer_id": getattr(c.source_answer, "source_answer_id", "")}))
+            seq += 1
+
+        answered = [c for c in contributions if c.answered]
+        syn = synthesis.synthesis
+        steps.append(ReasoningStep(seq, "SYNTHESIS",
+            f"응답 소스 {len(answered)}/{len(contributions)} → "
+            f"{'합의(AGREE)' if not synthesis.abstained else '보류(abstain)'}; "
+            f"권위 위계(법률>시행령>…>실무서>웹)·시점 유효성으로 정합, 신규 인용 0(소스 인용 상속).",
+            primary_loc, refs={"synthesis_id": getattr(syn, "synthesis_id", "")}))
+        seq += 1
+        steps.append(ReasoningStep(seq, "STRATEGY",
+            f"보수/중립/적극 {len(strategy.options)}종 선택지 — 인용=회수 버전객체(검증), "
+            f"grounding={'OK' if strategy.entailment_supported else '부분'}.", primary_loc))
+        seq += 1
+        steps.append(ReasoningStep(seq, "DRAFT",
+            "검토패키지 조립 — 무인용 단정 0 검증(OUT-003) · 필수섹션 강제(OUT-006).", []))
+
+        law_trace: list[LawTraceEntry] = []
+        seen_cids: set[str] = set()
+        for issue in issues:
+            cid = by_issue.get(issue["issue_key"])
+            cit = cmap.get(cid)
+            if cit is None or cid in seen_cids:
+                continue
+            seen_cids.add(cid)
+            basis = cit.applicable_basis
+            law_trace.append(LawTraceEntry(
+                issue=issue["title"], law_name=issue["law_name"], article=issue["article"],
+                as_of=basis.as_of_date.strftime("%Y-%m-%d") if basis and basis.as_of_date else "",
+                basis_kind=basis.basis_kind.value if basis and basis.basis_kind else "",
+                locator=cit.source_locator or "", quote_excerpt=(cit.quote or "").strip()[:120]))
+
+        return ReasoningTrace(steps=steps, law_trace=law_trace)
+
     def _assemble_package(self, *, company, question, primary, materials, limits, risks,
                           opportunities, strategy: StrategyResult, issue_memos, citations,
                           source_objects, review_items, additional_requests, synthesis,
                           channel_results: Optional[list[ChannelResult]] = None,
+                          reasoning_trace: Optional[ReasoningTrace] = None,
                           answered_channels: Optional[set[str]] = None,
                           ) -> DraftPackageData:
         # 요약/결론/권고순서는 **실제 주쟁점 + 실제 응답 출처에서 도출**한다(하드코딩된
@@ -858,6 +936,7 @@ class Orchestrator:
             recommended_order=recommended_order,
             data_limits=limits, synthesis=synthesis.synthesis, source_objects=source_objects,
             channel_results=list(channel_results or []),  # OUT-007(변경②) 채널별 독립 결과
+            reasoning_trace=reasoning_trace,              # OUT-008(변경③) 추론·법령추적
         )
 
     # -- render ----------------------------------------------------------- #

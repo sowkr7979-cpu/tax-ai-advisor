@@ -157,6 +157,43 @@ def test_out007_fixture_serializes_channel_results():
     assert all("status" in c and "answered" in c for c in fx["channel_results"])
 
 
+# --------------------------------------------------------------------------- #
+# OUT-008 / HALU-015 추론 트레이스 + 법령 추적 (변경③)
+# --------------------------------------------------------------------------- #
+def test_out008_package_carries_reasoning_trace():
+    """패키지가 *실제 실행 단계* 추론 트레이스 + 법령 추적을 보유한다(사후 서사 ✕)."""
+    result = _run()
+    rt = result.package.reasoning_trace
+    assert rt is not None
+    stages = [s.stage for s in rt.steps]
+    # 실제 실행 흐름 커버: Intake→쟁점→3채널→종합→전략→Draft
+    assert stages[0] == "INTAKE" and stages[1] == "ISSUE_SPOTTING"
+    assert {"RESEARCH_CH1_LAW", "RESEARCH_CH2_RAG", "RESEARCH_CH3_WEB"}.issubset(set(stages))
+    assert "SYNTHESIS" in stages and "STRATEGY" in stages and stages[-1] == "DRAFT"
+    by_stage = {s.stage: s for s in rt.steps}
+    # 법적 판단 단계(쟁점도출·종합·전략)는 인용 pinpoint 동반(HALU-015)
+    assert by_stage["ISSUE_SPOTTING"].citation_locators
+    assert by_stage["SYNTHESIS"].citation_locators
+    assert by_stage["STRATEGY"].citation_locators
+    # SYNTHESIS step 은 실제 synthesis 산출 참조(사후 서사 아님)
+    assert by_stage["SYNTHESIS"].refs.get("synthesis_id")
+    # law-tracing: 실제 회수 버전객체 Citation 에서 도출 — 주쟁점=법인세법 제25조
+    assert rt.law_trace
+    primary_lt = rt.law_trace[0]
+    assert primary_lt.law_name == "법인세법" and "제25조" in primary_lt.article
+    assert primary_lt.locator and primary_lt.as_of
+
+
+def test_out008_fixture_serializes_reasoning_trace():
+    """프론트 §10 Mermaid 도식용 fixture 에 reasoning_trace 가 직렬화된다."""
+    from src.draft import draft_package_to_fixture
+    result = _run()
+    fx = draft_package_to_fixture(result.package, titles=result.titles, articles=result.articles)
+    rt = fx["reasoning_trace"]
+    assert rt and rt["steps"] and rt["law_trace"]
+    assert any(s["stage"] == "SYNTHESIS" for s in rt["steps"])
+
+
 def test_three_source_synthesis_agree_lineage_intact():
     result = _run()
     syn = result.synthesis
