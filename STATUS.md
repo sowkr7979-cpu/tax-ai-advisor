@@ -250,7 +250,14 @@
 > 사용자 추가요구: **DART API 로 임의 dummy 회사**의 절세전략·세무리스크 의사결정보고서(**종합세무검토 포함**) 생성. 분개장·계정별원장·증빙은 **임의(가상) 생성**, **[상황]→[사실관계]** 로 바꾸고 [사실관계]도 임의 생성해 추론. **pytest +6**(test_dart_case).
 - **DART 실연동** (`src/dart_fetch.py` 신규): OpenDART `corpCode.xml`(zip)→회사명/종목코드↔corp_code 매핑(캐시 `tests/fixtures/dart/corp_code_map.json`, **12MB gitignore**) + `fnlttSinglAcntAll.json`→`CompanyFinancials`(BS/IS 라인). **키는 `.env` DART_API_KEY 에서만 읽고 캐시/픽스처에 미저장**(URL 제외, 응답 본문만 캐시; secret 스캔 0 확인). OFS 비면 CFS 폴백. 재무 fixture(소형 105KB)는 커밋(replay 재현).
 - **회사 그라운딩 보고서** (`src/dart_case_data.py` 신규 + `scenario_report.build_company_case_docx`): DART 실수치(데모=**한미반도체 FY2024 연결**: 자산7,109억·이익잉여금6,100억[자본금127억의 48배]·매출5,589억·영업이익2,554억·순이익1,526억)→ **① 회사개요 ② 종합세무검토(재무제표→잠재 세무쟁점 6行: 잉여금환원·임원보수·가지급금·R&D공제·접대비·업무용차량) ③ 시나리오 4종**(자기주식·임원보수·가지급금 = demo 재사용 + **[사실관계] 합성**[실수치 맥락]; **신규 R&D 세액공제** 시나리오=조특법 제10조·신성장구분·당기/증가분·최저한세 분기, 절세 positive) **④ 부록 분개장·총계정원장·증빙목록 dummy**. [상황]→**[사실관계]** 라벨(플로우차트 시작박스 포함). 재무수치만 실값·그 외 분개/증빙/거래사실은 가상(dummy) 명시. 생성기 `scripts/build_dart_case_report.py`(`--company`/`--year`/`--fs`). 산출=`산출물/한미반도체_종합세무검토_경우의수_의사결정보고서.docx`(22쪽).
-- **테스트** `tests/test_dart_case.py`(6: 실수치 개요·종합검토行·시나리오4 grounding·R&D positive·DOCX[이미지8·종합검토·증빙·[사실관계]]). 합성 CompanyFinancials 로 **네트워크 0**.
+- **테스트** `tests/test_dart_case.py`(6: 실수치 개요·종합검토行·시나리오4 grounding·R&D positive·DOCX[종합검토·증빙·[사실관계]]). 합성 CompanyFinancials 로 **네트워크 0**.
+
+### ★ 시나리오별 Tax Plan + 법제처 판례·해석례 실조회 + RAG 회수사유·일치검토 (2026-07-01, 미커밋)
+> 사용자 추가요구(강제): ① 각 시나리오에 한맥 수준 **TAX PLAN(대안별 요지·추가세부담·장단점)** + **실행 타임라인(시점 최적화)을 [실행계획]에** 포함 ② **korean-law API 는 법령만이 아니라 최신 예규·판례·질의해석까지 검토** ③ 내부 RAG 는 **왜 회수했는지 상세 설명 + 현재 내용과 일치하는지 세밀 검토** ④ 필요 자료는 가상 생성. **pytest +1**(Tax Plan 대안).
+- **① Tax Plan(대안 비교)**: `scenario_planner.PlanAlt`(대안 요지·추가세부담(가정 억)·장단점·권고) + `Scenario.alternatives`. 시나리오마다 대안 3종(예: 자기주식 소각/현금배당/유상감자) — **권고 대안 = 최저 추가세부담**(일관성). 렌더 `N-4. Tax Plan` 표 + `scenario_flowchart.save_burden_bar`(추가세부담 비교 막대, 권고 강조). **실행 타임라인**: `save_plan_timeline`(시점·행위·효과 세로 도식)을 `N-5 [실행계획]`에 삽입.
+- **② 법제처 판례·해석례 실조회** (`src/law_open_api.py` 신규): DRF `lawSearch.do?target=prec|expc|law` 키워드 조회 → `LawHit`(제목·번호·일자·출처·링크). **OC 키 redact**(응답 상세링크가 OC echo → `content.replace(oc,'***')` 후에만 캐시/링크; 캐시 `tests/fixtures/law_open/` secret 0 확인). `research_issue`가 판례+해석례+법령 동시 조회(target별 degrade). 렌더 `N-8. 관련 판례·해석례·법령(법제처 실시간)` — **실제 회수만**(날조 0), 0건/오프라인은 '조회 불가' 정직 표기. 실측: 가지급금→대법원 2025두34068(2025.09), 자기주식→서울고법 2014누66344 등 **최신 실판례** 회수.
+- **③ RAG 회수사유·일치검토**: `_rag_evidence`가 passage별 **회수 사유**(질의어 매칭 토큰·코사인 유사도) + **일치 검토**(`_scenario_key_terms` 핵심어 겹침 → 직접관련/배경참고/참고만 판정, 겹친 핵심어 명시, ‘키워드 1차판정·원문 의미는 회계사 확인’ 고지)를 반환. 렌더 `N-7`. **fail-closed**(미가용 [] + stderr 고지).
+- 렌더 `_render_scenario` 9소절(플로우차트·매트릭스·권고·**Tax Plan**·**실행계획+타임라인**·분개·**RAG 사유/일치**·**판례/해석례**·근거법령). `with_law` 토글(테스트 네트워크 0). 두 산출물 재생성(가나다 22쪽·한미반도체). 매 단계 codex 리뷰.
 
 ## 빌드 환경 메모
 - 스택: Python 3.11+ (검증: 3.14.4). 핵심 deps = `pydantic>=2.7`+`pyyaml`(결정적 경로). 어댑터(fastapi/anthropic/chromadb/model2vec/numpy/pypdf/python-docx)는 `[adapters]`/`[api]` extra — slice⑥ 테스트는 실키·heavy wheel 없이 통과(내부 RAG DB 실임베딩만 model2vec+pypdf+numpy 필요).
