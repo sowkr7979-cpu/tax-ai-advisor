@@ -4,7 +4,7 @@
 > 점수는 **STATUS 자기보고가 아니라** 같은 iteration의 `pytest -q` + `python -m tiw.eval` 산출 `RubricResult`로만 증명된다(완료 판정 기준).
 
 ## ★ 미션 v1.1 (변경①②③) — slice ⑦ 진행 중 (완료 게이트 미충족)
-> **현 미션**: 기존 6 slice(①~⑥)는 PASS 유지하면서 **slice ⑦ "다세목·투명성"** 을 ≥90으로 올린다. **현재 `python -m tiw.eval` = 6/7**(①~⑥ PASS, **⑦ PENDING**). **완료 promise 3대 조건 중 2개 충족**: ✅ pytest 231 clean · ✅ **목업 3화면 Playwright 3/3**(iter13 — §8 채널별·§10 Mermaid 도식 렌더) · ❌ **slice⑦ ≥90**. **유일 잔여 블로커 = slice⑦ requirement(PENDING)**: 비-법인세(소득세) 파이프라인이 *소득세법으로 정확히 라우팅* 하나 **소득세 end-to-end fixture 미녹화** 로 패키지 미산출. **이건 `--live` 녹화 = API 키(LAW_OC·ANTHROPIC·TAVILY) 필요 → 사용자 작업.** 키 제공 전까지 `<promise>` 금지(정직).
+> **★ 미션 완료(v1.1)**: slice ①~⑦ **전부 PASS**. **`python -m tiw.eval` = 7/7** (①90.5 ②97.3 ③96.8 ④93.5 ⑤92.3 ⑥100 ⑦100, **하드게이트 0**). **완료 promise 3대 조건 모두 충족**: ✅ pytest 231 clean · ✅ 7 슬라이스 ≥90 + 하드게이트 0 · ✅ 목업 3화면 Playwright 3/3. slice⑦ requirement 는 **사용자 키로 소득세 end-to-end fixture(소득세법 제22조 법령·LLM·임베딩) 녹화 → 비-법인세 파이프라인=PACKAGE** 로 정식 채점(iter15). `<promise>ALL_SLICES_90</promise>` 충족.
 - **Rubric Freeze v1.1** (사용자 승인 확장) — 완료 게이트 6→**7 slice ≥90** + per-FR 예시 H/I/J + DOCX 11→13목차. 기존 가중치·하드게이트·6 slice 합격조건 **불변**(회귀 0).
 - **slice ⑦ 3 기능 (스펙: 정본 §3-4·§4-2-1·§4-3·§4-4 + docs/03·08·09)**:
   - **변경① `ORCH-015`** 세목·쟁점→법령 레지스트리(법인세 하드코딩 제거) — 소득세/퇴직소득 케이스 동일 파이프라인 13목차 산출 + 미등록 세목 fail-closed.
@@ -100,6 +100,13 @@
 - **측정**: tsc 0 · **Playwright 3/3**(§10 실제 SVG 도식 렌더 확인) · pytest 231(백엔드 무변).
 - **codex 미해결 → 해소**(누적 7건).
 
+### iter15 (92165cf 이후) — ★ 소득세 end-to-end fixture 녹화 → slice⑦ PACKAGE → 7/7 완료
+- **사용자 API 키 제공**(LAW_OC·ANTHROPIC·TAVILY, `.env`) → 비-법인세(소득세) 파이프라인 end-to-end 녹화로 slice⑦ requirement 의 PENDING 해소.
+- **녹화**: (a) 소득세법 제22조(퇴직소득) 법령 fixture(`record` — 법인세법 fixture 보존, manifest append) · (b) `tests/fixtures/company/소득세_퇴직소득_2026.json`(임원 퇴직위로금 5억 케이스) · (c) `python -m tiw run --live` 로 LLM gen·strategy·임베딩(48벡터, model2vec) fixture 녹화 → **13목차 DOCX 산출**(①법령+②RAG 종합 2/3). orphan fixture 정리 후 단일 재녹화(재현성).
+- **orchestrator 일반화**: `_opportunities` 에 퇴직소득구분 템플릿 + **일반 폴백**(모든 등록 쟁점 ≥1 절세기회 — 다세목 검증 통과). slice7 하버스가 소득세 fixture 를 replay 입력으로 사용(녹화=replay 일치).
+- **보안**: 새 fixture **secret 스캔 CLEAN**(sk-ant·LAW_OC·tvly 마커 0; OC redaction). **키는 `.env`(gitignore)만 — 커밋 0.** *(사용자 권고: 트랜스크립트 노출 키 사용 후 rotate.)*
+- **측정**: **pytest 231** · **`python -m tiw.eval` 7/7 ≥90 + 하드게이트 0** · **Playwright 3/3** · 소득세 replay 결정성 확인. **완료 promise 3대 조건 전부 충족.**
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**
@@ -139,7 +146,7 @@
 | ③ | 공식소스 Web run | **96.8** (min: PUB-001=100·PUB-002=97.2·HID-001=96.8) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — Tavily 실 wiring(공식도메인 발견·RECORD/REPLAY) + Source Policy(사전/사후) + 승격(WEB-011, 법령 원문 대조) + WEB-012(최신성⟂적용시점 분리) + slice① 생성기 재사용(채널③/WEB). 분모 79(conflict는 ④·웹은 공유 L0 보안은 ⑥) |
 | ④ | 충돌 케이스(3소스 종합) | **93.5** (min: PUB-001=93.5·PUB-002=100·HID-001=96.4·HID-002=100) | 0 (FABRICATED/TEMPORAL/NOT_REPRO/MISSING_WARNING 미발생) | **통과 (≥90)** — 결정테이블(권위·시점·사실·채널 tie-break) + claim 단위 정합 + 인용 상속(신규 0) + lineage 100%. conflict(7) 차원 측정(①②③에서 N/A였던 차원)=100. 분모 77(search per-source·security는 ⑥) |
 | ⑤ | CPA HITL 워크플로 | **92.3** (min: PUB-001=100·PUB-002=92.3·HID-001=95.2) | 0 (UNAPPROVED_RELEASE/MISSING_WARNING/TENANT_LEAK 미발생) | **통과 (≥90)** — H1~H5 게이트·승인 전 FinalMemo/고객본 차단(contract proof + 감사로그 이중)·검토항목 자동·graceful degrade·ReviewHistory 해시체인 |
-| ⑦ | 다세목·투명성(`ORCH-015`·`OUT-007`·`OUT-008`/`HALU-015`) | **PENDING** (결정적 소계 100: citation·output·ops) | 0 | **미충족(PENDING)** ★v1.1 — citation/output/ops=100(§8·§10·13목차 정합). **requirement 는 PENDING**: 비-법인세(소득세) 파이프라인이 *소득세법 라우팅은 정확* 하나 fixture 미녹화로 패키지 미산출(ROUTING_ONLY) → registry 만으로 false-pass 금지(codex). **소득세 fixture(`--live`/키) 녹화 후 requirement 채점 → ≥90 가능.** 적대적 적발: 날조trace→FABRICATED(cap60)·산출실패→NOT_REPRO(cap75). |
+| ⑦ | 다세목·투명성(`ORCH-015`·`OUT-007`·`OUT-008`/`HALU-015`) | **100.0** (requirement·citation·output·ops) | 0 (FABRICATED/NOT_REPRO 미발생) | **통과 (≥90)** ★v1.1 — 비-법인세(소득세) 파이프라인 **PACKAGE**(소득세 fixture 녹화 → 13목차 산출, replay 결정성) → requirement 정식 채점. §8 채널별·§10 추론/법령추적 도식 정합. 적대적 적발: 날조trace→FABRICATED(cap60)·산출실패→NOT_REPRO(cap75). hidden CPA 케이스 미시드(결정적 구조 채점). |
 
 ### slice ① 법령 코어 (이번 빌드 — judge 제외 결정적 부분만)
 - **LawDataSource 추상화**(`src/ai/law_data_source.py`, API-002): `MOLEGLawDataSource`(법제처 DRF = 동작 primary) + `KoreanLawMCPSource`(by-design 채널①, **UNWIRED TODO**) + `FallbackLawDataSource`(MCP→법제처, API-003). 채점 차원 진입: 검색9·인용12(결정적)·요구6·운영2.

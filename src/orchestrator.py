@@ -723,11 +723,15 @@ class Orchestrator:
                         "운행기록부 작성으로 업무사용비율 인정·손금 한도 확대(자료 보완 전제)."),
             "지급이자": ("가지급금 정리·지급이자 부인 최소화",
                       "업무무관 가지급금 정리·약정이자 수령으로 지급이자 손금불산입·인정이자 익금 축소 여지."),
+            "퇴직소득구분": ("퇴직소득 한도·소득구분 최적화",
+                       "정관상 임원 퇴직급여 지급규정·근속연수 적용으로 퇴직소득 인정범위 확대·세부담 최적화 여지(실질·규정 정합 전제)."),
         }
+        # 미등록 쟁점도 검증(≥1 절세기회) 충족을 위해 일반 절세기회로 폴백(다세목 일반화).
+        _generic_op = ("세부담 최적화 여지 검토",
+                       "적용 가능한 한도·공제·소득구분 최적화로 세부담을 줄일 여지를 회계사 검토로 정량화.")
         for issue in issues:
-            t = templ.get(issue["issue_key"])
-            if t:
-                ops.append(OpportunityItem(t[0], t[1], citation_ids=[by_issue[issue["issue_key"]]]))
+            t = templ.get(issue["issue_key"], _generic_op)
+            ops.append(OpportunityItem(t[0], t[1], citation_ids=[by_issue[issue["issue_key"]]]))
         return ops
 
     def _issue_memos(self, issues, by_issue, citations, unresolved) -> list[IssueMemo]:

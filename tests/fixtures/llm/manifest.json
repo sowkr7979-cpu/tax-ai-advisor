@@ -35,6 +35,12 @@
     "recorded_at": "2026-06-29T07:23:09.549483+00:00",
     "tag": "judge_S1-PUB-001_S1-PUB-001-q1"
   },
+  "45aaf66932ac88cb44ce46ad9b39311e8e332ca79a15108cb5781ab14476e498": {
+    "file": "strategy_matter_inc_2026_퇴직소득구분_45aaf66932ac88cb.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-30T04:24:06.313380+00:00",
+    "tag": "strategy_matter_inc_2026_퇴직소득구분"
+  },
   "4c18eacbdc0cfbc3aeedc73495838aedbbd408fa7bd61dc8aa5c8a89d4027ce5": {
     "file": "gen_sa_S3-PUB-001_S3-PUB-001-q1_4c18eacbdc0cfbc3.json",
     "model": "claude-opus-4-8",
@@ -88,6 +94,12 @@
     "model": "claude-opus-4-8",
     "recorded_at": "2026-06-29T14:37:43.811533+00:00",
     "tag": "synthjudge_S4-HID-001_S4-HID-001-s1"
+  },
+  "7679dc29cc6333c92af0dd804393e34d95212ac728a9cd000aabe2c5e3753fe3": {
+    "file": "gen_sa_matter_inc_2026_law_7679dc29cc6333c9.json",
+    "model": "claude-opus-4-8",
+    "recorded_at": "2026-06-30T04:23:22.082640+00:00",
+    "tag": "gen_sa_matter_inc_2026_law"
   },
   "7be91bc78fbd5e7e71b11e77eae2faeb8ec269a1594f4c18e966e65095375e67": {
     "file": "judge_S3-HID-001_S3-HID-001-q1_7be91bc78fbd5e7e.json",

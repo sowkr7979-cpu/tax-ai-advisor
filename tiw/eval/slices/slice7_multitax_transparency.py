@@ -93,21 +93,15 @@ def _income_tax_pipeline() -> tuple[str, str]:
                             (현 replay 상태 — 소득세 fixture 는 --live/키 선행 필요).
       * ``FAIL``         — 오라우팅(법인세법 등) 또는 예기치 못한 실패.
     """
-    from datetime import date
+    from pathlib import Path
 
     from src.orchestrator import CompanyProfile, Orchestrator
 
-    company = CompanyProfile(
-        client_id="client_inc_eval", matter_id="matter_inc_eval", company_name="소득세평가(주)",
-        fiscal_year="2026 사업연도", as_of_date=date(2026, 1, 1), high_risk=True,
-        review_scope="임원 퇴직위로금 소득구분 검토", industry="제조업",
-        default_question="퇴직소득 vs 근로소득 구분을 검토해줘",
-        trial_balance=[{"account": "퇴직위로금", "amount": 500000000,
-                        "note": "한도초과분 근로소득 검토", "issue_key": "퇴직소득구분"}],
-        prior_year={},
-        materials=[{"name": "임원 퇴직급여 규정", "status": "수집", "confidentiality": "L2"}],
-        internal_memo={},
-    )
+    # 녹화(--live)와 *동일한* fixture 를 replay 한다 — 입력 일치로 LLM/임베딩 fixture 키가 맞아야
+    # PACKAGE 가 결정적으로 재생된다. 소득세(퇴직소득) 케이스(법인세 외 세목).
+    _fixture = (Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "company"
+                / "소득세_퇴직소득_2026.json")
+    company = CompanyProfile.from_fixture(_fixture)
     orch = Orchestrator(mode="replay")
     seen: dict = {}
     _orig = orch.law.lookup_provision

@@ -12,17 +12,18 @@ from src.draft_demo import build_demo_draft_package
 from tiw.eval.slices.slice7_multitax_transparency import run_cases
 
 
-def test_slice7_pending_until_noncorporate_pipeline_recorded():
-    """정직성(codex): slice⑦ 은 비-법인세(소득세) 파이프라인이 *실제 패키지를 산출* 할 때만
-    requirement 가 채점된다. 현 replay 는 소득세 fixture 미녹화 → ROUTING_ONLY(소득세법
-    라우팅만 확인) → requirement PENDING → 슬라이스 ≥90 불가(registry 만으로 false-pass 금지).
-    결정적 차원(citation/output/ops)은 정상 채점, 하드게이트 0."""
+def test_slice7_passes_with_noncorporate_pipeline_package():
+    """비-법인세(소득세/퇴직소득) 파이프라인이 *실제 13목차 패키지를 산출*(PACKAGE) →
+    requirement 정식 채점 → slice⑦ ≥90 PASS, 하드게이트 0. 녹화된 소득세 fixture(법령
+    제22조·LLM·임베딩)로 replay 가 결정적으로 PACKAGE 를 재생함을 증명한다(registry 만의
+    false-pass 가 아니라 *파이프라인 실제 행사*)."""
     [r] = run_cases([])
-    assert r.has_pending
-    assert "requirement" in r.pending_dimensions
+    assert not r.has_pending
     assert not r.hard_gate_hit
-    assert str(r.metrics.get("income_tax_pipeline", "")).startswith("ROUTING_ONLY")
+    assert str(r.metrics.get("income_tax_pipeline", "")).startswith("PACKAGE")
+    assert r.total >= 90
     dims = {s.dimension: s.score for s in r.dimension_scores if s.applicable and s.score is not None}
+    assert dims.get("requirement") == 100   # 다세목: 소득세 end-to-end 패키지 산출
     assert dims.get("citation") == 100      # §10 trace backed(날조/stale 0)
     assert dims.get("output") == 100        # §8 채널 + §10 도식 + 13목차
     assert dims.get("ops") == 100

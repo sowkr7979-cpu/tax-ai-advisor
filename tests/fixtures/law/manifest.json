@@ -10,6 +10,17 @@
     "recorded_at": "2026-06-29T05:53:41.297362+00:00",
     "url_redacted": "https://www.law.go.kr/DRF/lawSearch.do?target=law&query=법인세법&type=XML&OC=***"
   },
+  "lawSearch__query=소득세법__target=law": {
+    "bytes": 2608,
+    "content_hash": "123f36f8b7161c43a99fb9a9e1b546e9759b40fa126f2131fca1b0407f77d0dc",
+    "file": "lawSearch_search_0d5ef7e833.xml",
+    "params": {
+      "query": "소득세법",
+      "target": "law"
+    },
+    "recorded_at": "2026-06-30T04:10:58.123560+00:00",
+    "url_redacted": "https://www.law.go.kr/DRF/lawSearch.do?target=law&query=소득세법&type=XML&OC=***"
+  },
   "lawService__LM=법인세법__efYd=20200101__target=eflaw": {
     "bytes": 917999,
     "content_hash": "5d9bb8b807288926d45755c240abd618fd9d847d5a797be37ede6e7bc9b76850",
@@ -33,5 +44,17 @@
     },
     "recorded_at": "2026-06-29T05:53:42.321393+00:00",
     "url_redacted": "https://www.law.go.kr/DRF/lawService.do?target=eflaw&LM=법인세법&efYd=20240101&type=XML&OC=***"
+  },
+  "lawService__LM=소득세법__efYd=20240101__target=eflaw": {
+    "bytes": 1241849,
+    "content_hash": "679bc64993991d97c0e5b036284b98721c54699b6539d41de7d8898a3632fc75",
+    "file": "lawService_ef20240101_0a6eee94ce.xml",
+    "params": {
+      "LM": "소득세법",
+      "efYd": "20240101",
+      "target": "eflaw"
+    },
+    "recorded_at": "2026-06-30T04:10:59.379530+00:00",
+    "url_redacted": "https://www.law.go.kr/DRF/lawService.do?target=eflaw&LM=소득세법&efYd=20240101&type=XML&OC=***"
   }
 }
