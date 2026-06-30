@@ -195,14 +195,14 @@ def build_tax_plan_docx(
                        fill=_HEADER_FILL, size=10)
         for ln in fs.lines:
             r = tbl.add_row().cells
-            if ln.amount_eok is None:  # 구분행
+            if ln.amount is None:  # 구분행
                 _font_cell(r[0], ln.label, bold=True, fill=_SUBHEAD_FILL, size=10)
                 _font_cell(r[1], "", fill=_SUBHEAD_FILL); _font_cell(r[2], "", fill=_SUBHEAD_FILL)
                 continue
             name = ("　" * ln.indent) + ln.label
             fill = _ISSUE_FILL if ln.is_issue else None
             _font_cell(r[0], name, bold=ln.bold, fill=fill, size=9.7)
-            _font_cell(r[1], f"{ln.amount_eok:,.0f}", bold=ln.bold, fill=fill, size=9.7)
+            _font_cell(r[1], f"{ln.amount:,.0f}", bold=ln.bold, fill=fill, size=9.7)
             if ln.is_issue:
                 _issue_cell(r[2], ln.issue_label, cviews, ln.citation_ids)
             else:

@@ -148,6 +148,65 @@ def save_gift_waterfall(steps, before: float, after: float, out_path: str | Path
     return out_path
 
 
+def save_strategy_screening(cards, out_path: str | Path) -> Path:
+    """카테고리별 절세전략 스크리닝 맵(적용·조건부 / 미해당) — 가로 누적 막대."""
+    _setup_font()
+    cats: list[str] = []
+    for c in cards:
+        if c.category not in cats:
+            cats.append(c.category)
+    applied = [sum(1 for c in cards if c.category == cat and c.applies) for cat in cats]
+    notapp = [sum(1 for c in cards if c.category == cat and not c.applies) for cat in cats]
+    fig, ax = plt.subplots(figsize=(9.2, 0.66 * len(cats) + 1.6))
+    y = list(range(len(cats)))
+    ax.barh(y, applied, color=_GREEN, label="적용·조건부", height=0.55)
+    ax.barh(y, notapp, left=applied, color="#BDC1C6", label="미해당", height=0.55)
+    for i, (a, nn) in enumerate(zip(applied, notapp)):
+        if a:
+            ax.text(a / 2, i, str(a), ha="center", va="center", color="white",
+                    fontsize=10.5, fontweight="bold")
+        if nn:
+            ax.text(a + nn / 2, i, str(nn), ha="center", va="center", color="#202124", fontsize=10)
+    ax.set_yticks(y); ax.set_yticklabels(cats, fontsize=10.5)
+    ax.invert_yaxis()
+    ax.set_xlabel("전략 수", fontsize=10.5)
+    ax.set_title("그림 1. 카테고리별 절세전략 스크리닝(적용·조건부 / 미해당)", fontsize=12.5,
+                 fontweight="bold", color="#202124", pad=8)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    ax.legend(loc="lower right", fontsize=9.5, frameon=False)
+    fig.tight_layout()
+    out_path = Path(out_path); out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight"); plt.close(fig)
+    return out_path
+
+
+def save_strategy_effect_tier(cards, out_path: str | Path) -> Path:
+    """적용 전략별 기대 절세효과(정성 등급: 높음/중간/낮음) — 가로 막대."""
+    _setup_font()
+    order = {"높음": 3, "중간": 2, "낮음": 1, "정성": 1}
+    applied = sorted([c for c in cards if c.applies],
+                     key=lambda c: (-order.get(c.effect_tier, 1), c.priority))
+    labels = [c.title for c in applied]
+    vals = [order.get(c.effect_tier, 1) for c in applied]
+    colors = [_GREEN if v == 3 else (_BLUE if v == 2 else _GREY) for v in vals]
+    fig, ax = plt.subplots(figsize=(9.6, 0.5 * len(applied) + 1.4))
+    y = list(range(len(applied)))
+    ax.barh(y, vals, color=colors, height=0.6)
+    for i, c in enumerate(applied):
+        ax.text(vals[i] + 0.04, i, c.effect_tier, va="center", fontsize=9, color="#202124")
+    ax.set_yticks(y); ax.set_yticklabels(labels, fontsize=9)
+    ax.invert_yaxis()
+    ax.set_xticks([1, 2, 3]); ax.set_xticklabels(["낮음", "중간", "높음"], fontsize=9.5)
+    ax.set_xlim(0, 3.5)
+    ax.set_title("그림 2. 적용 전략별 기대 절세효과(정성 등급 — 금액 아님)", fontsize=12.5,
+                 fontweight="bold", color="#202124", pad=8)
+    ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
+    fig.tight_layout()
+    out_path = Path(out_path); out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight"); plt.close(fig)
+    return out_path
+
+
 def save_timeline(steps, out_path: str | Path) -> Path:
     """실행 타임라인(단계·일자·행위·세무효과) 도식."""
     _setup_font()

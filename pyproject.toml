@@ -33,8 +33,10 @@ api = [
 # to RECORD those embedding fixtures (scripts/record_rag_fixtures.py).
 adapters = [
   "anthropic>=0.40",   # LLM — default model claude-opus-4-8
-  "chromadb>=0.5",     # local embedded vector DB (behind src/ai adapter)
-  "model2vec>=0.3",    # slice ② local on-prem static multilingual embedder (record only)
+  "chromadb>=0.5",     # local embedded vector DB (slice ② tenant-isolated RAG, behind src/ai adapter)
+  "model2vec>=0.3",    # local on-prem static multilingual embedder — slice ② fixture record + 내부 RAG DB 실임베딩(src/rag_db_index)
+  "numpy>=1.26",       # 내부 RAG DB 코사인 인덱스(src/rag_db_index — vectors.npy)
+  "pypdf>=4.0",        # 내부 RAG DB PDF 텍스트 추출(RAG DB/*.pdf → 페이지 청크)
   "httpx>=0.27",       # tavily / brave / dart / korean-law-mcp HTTP clients
   "python-docx>=1.1",  # DOCX review package
   "requests>=2.31",    # slice ① 법제처 DRF + slice ③ Tavily live recording (lazy; replay uses stdlib)

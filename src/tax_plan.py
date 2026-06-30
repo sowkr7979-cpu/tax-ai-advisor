@@ -27,7 +27,7 @@ class FinancialLine:
     """재무제표 한 줄. ``is_issue`` 면 강조표시 + ``issue_label`` 쟁점을 단다."""
 
     label: str
-    amount_eok: Optional[float]          # 금액(억원). None 이면 소계/구분행
+    amount: Optional[float]              # 금액(재무제표 네이티브 단위 그대로 — 억원/원 등). None 이면 소계/구분행
     is_issue: bool = False
     issue_label: str = ""                # 쟁점 요지(강조행에만)
     citation_ids: list[str] = field(default_factory=list)

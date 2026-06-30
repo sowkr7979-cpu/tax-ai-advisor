@@ -32,6 +32,13 @@ logs/
 *.duckdb
 *.sqlite
 *.sqlite3
+# 내부 RAG DB — 원본 PDF(공개 세무 가이드, 287MB)와 임베딩 인덱스는 런타임 데이터.
+# 코드·매니페스트·README 만 형상관리(코퍼스는 각자 내려받아 scripts/build_rag_db_index.py 로 재생성).
+RAG DB/*.pdf
+RAG DB/_index/
+
+# DART corp_code 매핑 캐시(12MB 대용량 — 키로 재생성 가능). 회사 재무 fixture(소형)는 커밋.
+tests/fixtures/dart/corp_code_map.json
 
 # NOTE: tests/golden/ and tests/fixtures/ ARE committed (ground truth + deterministic replay)
 

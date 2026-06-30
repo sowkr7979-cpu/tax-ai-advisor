@@ -570,10 +570,24 @@ class Orchestrator:
                 store.close()
 
     def _run_web(self, company, question, primary, ar) -> Optional[WebSourceAnswer]:
-        if primary["issue_key"] != "기업업무추진비":
-            return None  # only the 제25조 official-source fixture is available
+        # replay: only the recorded 제25조(기업업무추진비) 공식소스 fixture가 존재 →
+        # 다른 쟁점은 호출하지 않는다(미녹화 Tavily fixture로 인한 결정성 붕괴 방지).
+        # live: 실제 주쟁점으로 Tavily를 호출(녹화)해 ③웹 채널을 실제 가동한다 →
+        # 결과에 ①법령·②RAG와 함께 ③웹 답변이 같이 나오고 종합의견으로 묶인다.
+        if self.mode != "live" and primary["issue_key"] != "기업업무추진비":
+            return None
         try:
-            return self.web.run(
+            web = self.web
+            if self.mode == "live":
+                # self.web 은 replay 전용(default Tavily). live 에서는 녹화 transport 로
+                # 실제 Tavily 검색을 수행하는 파이프라인을 구성한다(law grounding 은 동일
+                # replay law source — 녹화된 법령 버전이 있어야 승격/grounding 가능).
+                from src.ai.tavily_client import RecordingTavilyTransport, TavilyClient
+                web = WebResearchPipeline(
+                    tavily=TavilyClient(transport=RecordingTavilyTransport()),
+                    law_source=self.law,
+                )
+            return web.run(
                 question_text=question, law_name=primary["law_name"],
                 article_label=primary["article"], as_of_date=_WEB_AS_OF,
                 issue=primary["issue_key"], tax_type=primary["tax_type"], high_risk=company.high_risk,

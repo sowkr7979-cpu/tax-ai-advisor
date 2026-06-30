@@ -94,6 +94,13 @@ _JARGON_SUBS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"내부\s*RAG"), "내부 자료"),
     (re.compile(r"RAG"), "내부 자료"),
     (re.compile(r"DRF"), ""),
+    # 제품·고유명사(회계사 자연어 — 영어 노출 0)
+    (re.compile(r"DART"), "전자공시시스템"),
+    (re.compile(r"\(\s*R&D\s*\)"), ""),
+    (re.compile(r"R&D"), "연구개발"),
+    (re.compile(r"DB형"), "확정급여형"),
+    (re.compile(r"FY\s*(\d{4})"), r"\1 사업연도"),
+    (re.compile(r"TIW"), "본 도구"),
     (re.compile(r"DOCX"), "보고서"),
     (re.compile(r"HITL"), "회계사 검토"),
     (re.compile(r"Reviewer"), "검토 회계사"),

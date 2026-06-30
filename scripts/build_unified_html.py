@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """통합 설계서 md -> html 동기화 빌더.
 
-`md 파일/법인세_세무AI_설계서_통합.md`(정본)를 읽어 동일 템플릿의 HTML을 생성하고,
-`md 파일/`과 `Claude/` 두 사본에 동일하게 기록한다.
+`md 파일/법인세_세무AI_설계서_통합.md`(정본)를 읽어 동일 템플릿의 HTML을 생성해
+`md 파일/` 사본에 기록한다(`Claude/` 미러는 레포서 삭제됨 — 디렉터리 있으면만 기록).
 
 - 스타일/head/wrapper 템플릿은 기존 HTML의 head 부분을 그대로 재사용한다(슬라이스).
 - 본문/TOC만 현재 md에서 재생성한다.
@@ -127,6 +127,10 @@ def main():
     tail = '    </main>\n  </div>\n  <footer>Generated from %s</footer>\n</div>\n</body>\n</html>\n' % SRC_LABEL
     out = head + '      ' + '\n'.join(toc) + '\n' + mid + body_html + '\n' + tail
     for p in OUT_PATHS:
+        # Claude/ 미러는 레포에서 삭제됨 — 부모 디렉터리가 없으면 건너뛴다(재생성 안 함).
+        if not os.path.isdir(os.path.dirname(p)):
+            print('skip (dir absent)', os.path.relpath(p, ROOT))
+            continue
         open(p, 'w', encoding='utf-8', newline='').write(out)
         print('wrote', os.path.relpath(p, ROOT))
     print('%d TOC entries, %d chars' % (len(toc), len(out)))
