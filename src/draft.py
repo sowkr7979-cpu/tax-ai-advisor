@@ -1,4 +1,4 @@
-"""src/draft.py — Draft Agent (OUT-002/003/006): 11목차 검토패키지 DOCX 생성.
+"""src/draft.py — Draft Agent (OUT-002/003/006): 13목차 세무 검토패키지 DOCX 생성.
 
 # OUT-002  DOCX 검토패키지 11목차 생성 (인쇄가능 DOCX)
 # OUT-003  답변에 인용·검토항목·자료한계 포함 — 무인용 단정 0 (HALU-001)
@@ -128,9 +128,20 @@ class CitationView:
         ef = ""
         # effective_from is carried on the version object; surface via locator/basis.
         loc = cit.source_locator or ""
-        art = article_label or (loc.split()[-1] if loc else "")
+        toks = loc.split()
+        # 변경①(다세목): 링크 법령명은 **실제 인용 locator** 에서 도출한다(소득세법 등).
+        # 과거 기본값 "법인세법" 하드코딩은 비-법인세 인용의 §9 근거 링크를 엉뚱한 법령으로
+        # 보내 인용 정직성을 깼다(codex 적발). locator 형식은 "<법령명> <조문>" 이며 조문은 항상
+        # 마지막 토큰이므로, 법령명은 **마지막 토큰을 제외한 앞부분 전체**로 본다 — 공백 포함
+        # 법령명("상속세 및 증여세법" 등)까지 안전(codex 비차단 지적 반영). locator 가 비면 폴백.
+        if len(toks) >= 2:
+            derived_law = " ".join(toks[:-1])
+            art = article_label or toks[-1]
+        else:
+            derived_law = law_name
+            art = article_label or (toks[-1] if toks else "")
         label = loc if not title else f"{loc}({title})"
-        href = _law_permalink(law_name, art)
+        href = _law_permalink(derived_law, art)
         return CitationView(
             citation_id=cit.citation_id,
             label=label,
@@ -512,7 +523,7 @@ def _render_package_docx(
     # P2: core properties timestamp 를 고정값으로 — wall-clock 비유입(byte 결정성↑).
     doc.core_properties.created = _DETERMINISTIC_TS
     doc.core_properties.modified = _DETERMINISTIC_TS
-    doc.add_heading(f"{data.company_name} {data.fiscal_year} 법인세 검토패키지 초안", level=0)
+    doc.add_heading(f"{data.company_name} {data.fiscal_year} 세무 검토패키지 초안", level=0)
     sub = doc.add_paragraph(
         f"검토기준일(as-of) {data.as_of_date:%Y-%m-%d} · "
         f"{'내부 검토본' if internal else '고객 전달본'} · "

@@ -962,7 +962,7 @@ class Orchestrator:
             self._say("[HITL] 고객 전달본 생성(H4·H5 승인 proof 선행, 내부 전략메모·검토항목 제외).")
             return out_path, True
         build_review_package_docx(package, out_path, titles=titles, articles=articles)
-        self._say(f"[Draft] 내부 검토본 11목차 DOCX 생성 → {out_path}")
+        self._say(f"[Draft] 내부 검토본 13목차 DOCX 생성 → {out_path}")
         return out_path, False
 
     def _client_release_proof(self, company: CompanyProfile) -> ReleaseAuthorization:

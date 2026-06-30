@@ -25,6 +25,7 @@ from contract.cluster_f_qa import Citation
 from contract.cluster_h_review import GateType, ReleaseAuthorization, ReviewItemCategory
 from src.draft import (
     REQUIRED_SECTIONS,
+    CitationView,
     DraftValidationError,
     OpportunityItem,
     RiskItem,
@@ -250,6 +251,46 @@ def test_citations_and_review_items_present_in_docx(tmp_path):
     assert "회계사 검토 필요사항" in text
     assert any(it.requires_warning for it in data.review_items)
     assert "검토경고" in text  # HALU-009 carrier 표기
+
+
+def test_citation_link_derives_law_name_from_locator_not_hardcoded_corporate():
+    """변경①(다세목): 비-법인세 인용의 §9 근거 링크는 실제 locator 의 법령명으로 생성돼야 한다.
+
+    과거 ``CitationView.from_citation`` 의 ``law_name`` 기본값이 '법인세법' 으로 하드코딩돼
+    소득세법 인용의 링크가 ``…/법령/법인세법/제22조`` 로 잘못 향했다(codex 적발). 오프라인 법령
+    replay 의 실제 버전객체로 소득세법 제22조 인용을 만들어 링크가 소득세법으로 가는지 검증한다."""
+    from dataclasses import replace
+
+    from src.ai.law_data_source import default_law_source
+    from src.law_anchor import build_law_source_answer
+
+    law = default_law_source()
+    lk = replace(law.lookup_provision("소득세법", "제22조", date(2024, 1, 1)),
+                 as_of_date=date(2026, 1, 1))
+    bundle = build_law_source_answer(
+        lookup=lk, client_id="client_retire", answer_run_id="ar_t",
+        source_answer_id="sa_t_c22", source_type_label="법률", matter_id="matter_t")
+    cv = CitationView.from_citation(bundle.citation, title="퇴직소득", article_label="제22조")
+    assert cv.href == "https://www.law.go.kr/법령/소득세법/제22조"
+    assert "법인세법" not in cv.href
+    # 법인세법 인용(데모)은 그대로 법인세법 링크 유지(회귀 0)
+    demo, titles, articles = build_demo_draft_package()
+    dv = {v.citation_id: v for v in demo.citation_views(titles, articles)}
+    assert any(v.href == "https://www.law.go.kr/법령/법인세법/제25조" for v in dv.values())
+
+
+def test_citation_link_handles_multiword_law_name():
+    """변경①(다세목): 공백 포함 법령명('상속세 및 증여세법')도 조문 토큰만 제외한 앞부분
+    전체를 법령명으로 도출해 §9 링크가 정확해야 한다(loc.split()[0] 단순파싱 회귀 방지, codex)."""
+    from types import SimpleNamespace
+
+    fake = SimpleNamespace(
+        citation_id="c_inh", source_locator="상속세 및 증여세법 제13조",
+        source_kind="법률", quote="제13조(상속세 과세가액) …", authority_rank=1,
+        applicable_basis=SimpleNamespace(
+            as_of_date=date(2026, 1, 1), basis_kind=SimpleNamespace(value="FISCAL_YEAR")))
+    cv = CitationView.from_citation(fake, title="상속세 과세가액", article_label="제13조")
+    assert cv.href == "https://www.law.go.kr/법령/상속세 및 증여세법/제13조"
 
 
 # --------------------------------------------------------------------------- #

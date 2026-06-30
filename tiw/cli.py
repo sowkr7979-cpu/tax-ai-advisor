@@ -44,7 +44,7 @@ def _reconfig_utf8() -> None:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="tiw",
-        description="TIW — 법인세 검토패키지 오케스트레이터 (새 질문 → 11목차 DOCX).",
+        description="TIW — 세무 검토패키지 오케스트레이터 (새 질문 → 13목차 DOCX).",
         epilog="평가 하버스는 별도: `python -m tiw.eval [--slice N]`.",
     )
     sub = parser.add_subparsers(dest="command")
@@ -63,7 +63,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run.set_defaults(mode="replay")
     aud = run.add_mutually_exclusive_group()
     aud.add_argument("--internal", dest="audience", action="store_const", const="internal",
-                     help="내부 검토본 (기본) — 11목차 전체")
+                     help="내부 검토본 (기본) — 13목차 전체")
     aud.add_argument("--client", dest="audience", action="store_const", const="client",
                      help="고객 전달본 — HITL 승인 proof 필요(내부 전략메모·검토항목 제외)")
     run.set_defaults(audience="internal")
