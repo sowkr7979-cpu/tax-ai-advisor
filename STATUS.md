@@ -94,6 +94,12 @@
 - **측정**: tsc --noEmit 0 · **Playwright 3/3** · **pytest 231**(백엔드 무변, 회귀 0).
 - **promise 진행**: ✅pytest ✅Playwright 3화면 — **유일 잔여 = slice⑦ requirement(소득세 fixture, 사용자 키)**.
 
+### iter14 (f112903 이후) — §10 Mermaid 실제 SVG 렌더 (codex 적발)
+- **codex 적발**: "§10 claims Mermaid diagram rendering, but only renders raw Mermaid text" — `<pre.mermaid>` 에 flowchart 소스만 넣고 런타임 부재로 도식 미렌더(claim 과 불일치).
+- **수정**: `mermaid` npm 패키지 설치 + `DraftScreen` useEffect 에서 `mermaid.run({nodes:[ref]})` → `<pre.mermaid>` 가 **실제 SVG 도식**으로 렌더(인터랙티브, 하이브리드 프론트). Playwright 단언을 `mermaid svg` visible + 노드 라벨(SYNTHESIS)로 갱신(raw 텍스트 ✕).
+- **측정**: tsc 0 · **Playwright 3/3**(§10 실제 SVG 도식 렌더 확인) · pytest 231(백엔드 무변).
+- **codex 미해결 → 해소**(누적 7건).
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

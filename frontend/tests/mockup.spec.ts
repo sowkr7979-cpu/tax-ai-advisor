@@ -96,9 +96,9 @@ test("화면③ DOCX 검토패키지 미리보기 — 13목차 + §8 채널별 +
   await expect(firstCite).toHaveAttribute("href", /law\.go\.kr\/.+제25조/);
   await expect(citeList).toContainText("기업업무추진비");
 
-  // §10 추론도식: Mermaid flowchart 정의 + 추론단계 표 + 법령추적 표(OUT-008/HALU-015)
+  // §10 추론도식: Mermaid 런타임이 *실제 SVG 도식* 으로 렌더(raw 텍스트 ✕) + 단계 라벨
   const mermaid = page.getByTestId("reasoning-mermaid");
-  await expect(mermaid).toContainText("flowchart");
+  await expect(mermaid.locator("svg")).toBeVisible();
   await expect(mermaid).toContainText("SYNTHESIS");
   await expect(page.getByTestId("reasoning-steps")).toContainText("INTAKE");
   const lawTrace = page.getByTestId("law-trace");

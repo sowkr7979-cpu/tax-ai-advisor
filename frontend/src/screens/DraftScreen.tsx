@@ -1,4 +1,6 @@
 // 화면③ DOCX 검토패키지 미리보기 — 13목차(+§8 채널별·§10 추론도식) + 근거 인용 링크.
+import { useEffect, useRef } from "react";
+import mermaid from "mermaid";
 import { citationIndex } from "../data";
 import type { Draft, ReasoningStep } from "../types";
 
@@ -26,6 +28,18 @@ function CiteLinks({ ids }: { ids: string[] }) {
 }
 
 export function DraftScreen({ draft }: { draft: Draft }) {
+  // OUT-008(변경③): Mermaid 런타임으로 `<pre.mermaid>` 소스를 실제 SVG 도식으로 렌더한다
+  // (raw 텍스트가 아니라 인터랙티브 도식 — 하이브리드 프론트, codex 적발 수정).
+  const mermaidRef = useRef<HTMLPreElement>(null);
+  useEffect(() => {
+    mermaid.initialize({ startOnLoad: false, securityLevel: "loose", theme: "neutral" });
+    const el = mermaidRef.current;
+    if (el && draft.reasoning_trace) {
+      el.removeAttribute("data-processed"); // 재렌더 허용
+      mermaid.run({ nodes: [el] }).catch(() => {});
+    }
+  }, [draft.reasoning_trace]);
+
   return (
     <section className="screen docx" data-testid="screen-draft">
       <h1>③ DOCX 검토패키지 미리보기 (13목차)</h1>
@@ -192,7 +206,7 @@ export function DraftScreen({ draft }: { draft: Draft }) {
         {draft.reasoning_trace ? (
           <>
             <h3>10-1. 추론 과정 (ReasoningTrace · Mermaid)</h3>
-            <pre className="mermaid" data-testid="reasoning-mermaid">
+            <pre className="mermaid" data-testid="reasoning-mermaid" ref={mermaidRef}>
               {mermaidFlow(draft.reasoning_trace.steps)}
             </pre>
             <table className="grid" data-testid="reasoning-steps">
