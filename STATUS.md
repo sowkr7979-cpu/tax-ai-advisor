@@ -10,8 +10,12 @@
   - **변경① `ORCH-015`** 세목·쟁점→법령 레지스트리(법인세 하드코딩 제거) — 소득세/퇴직소득 케이스 동일 파이프라인 13목차 산출 + 미등록 세목 fail-closed.
   - **변경② `OUT-007`** 채널별 독립결과(①법령·②내부RAG·③웹) §8 병렬표시 + 내부RAG 부재 시 SILENT 정직표기 + 채널원본⟂종합 분리.
   - **변경③ `OUT-008`/`HALU-015`** §10 law-tracing 사슬 + ReasoningTrace 도식(하이브리드: 프론트 Mermaid / DOCX 네이티브), 실제 trace 정합(사후 서사 금지).
-- **다음 타겟(우선순위)**: ① ORCH-015 레지스트리 + 소득세/퇴직소득 fixture·gold → ② OUT-007 채널별 표시(draft.py 섹션 + contributions 전달) → ③ OUT-008/HALU-015 ReasoningTrace + 도식. 각 단계 매 iteration codex 리뷰.
-- **착수 전 측정 필요**: `tiw.eval`에 slice ⑦ 하버스(slice7_multitax_transparency) 추가 → 현재 점수(미구현이므로 <90) 산출이 첫 iteration.
+- **다음 타겟(우선순위)**: ① ORCH-015 레지스트리 **[iter1: 레지스트리 외부화 완료]** → 다음: law_name 쟁점별 threading + 소득세/퇴직소득 fixture·gold → ② OUT-007 채널별 표시(draft.py 섹션 + contributions 전달) → ③ OUT-008/HALU-015 ReasoningTrace + 도식. 각 단계 매 iteration codex 리뷰.
+- **착수 전 측정 필요**: `tiw.eval`에 slice ⑦ 하버스(slice7_multitax_transparency) 추가 → 현재 점수(미구현이므로 <90) 산출. **(iter2 예정)**
+
+### iter1 (a753dd6 이후) — ORCH-015 레지스트리 외부화
+- **변경①(부분)**: `rules/tax_law_mapping.yaml`(세목→쟁점→법령 매핑 데이터) + `rules/tax_law_mapping.py`(로더, `IssueMapping`/`article_by_issue`/`law_name_for`) 신설. orchestrator `_ARTICLE_BY_ISSUE` = `article_by_issue()` 로 전환(하드코딩 제거). **법인세 4항목 문자 단위 동일 → 회귀 0**(`pytest 215 passed`). 소득세/퇴직소득(소득세법 제22조) 레지스트리 등록(데이터; end-to-end 는 fixture 녹화 선행).
+- **남은 일(다음 iter)**: (a) `_lookup`/`_build_citations`/research 로그의 `_LAW_NAME` 하드코딩을 쟁점별 `law_name_for()` 로 threading(소득세 실제 조회 경로) · (b) 소득세/퇴직소득 law·LLM fixture 녹화(--live) + gold · (c) `draft.py` "법인세" 제목 하드코딩 제거 · (d) slice7 하버스로 측정.
 
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).

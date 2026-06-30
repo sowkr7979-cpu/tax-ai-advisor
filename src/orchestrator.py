@@ -53,6 +53,7 @@ from contract.base import (
 from contract.cluster_a_tenancy import RoleAssignment, RoleName
 from contract.cluster_f_qa import Citation, SourceAnswer
 from contract.cluster_h_review import GateType, ReleaseAuthorization
+from rules.tax_law_mapping import article_by_issue  # ORCH-015 다세목 매핑 레지스트리(변경①)
 from src.ai.law_data_source import LawSourceError, default_law_source
 from src.ai.llm_client import LLMClient, LLMConfig, default_llm_client
 from src.chunking import chunk_client_doc, chunk_provision
@@ -92,13 +93,13 @@ DEFAULT_COMPANY_FIXTURE = (
 # is the company FY. The 2024 시행버전이 FY2026 기준 in-force 버전이다(ef 2024 ≤ 2026).
 _LOOKUP_DATE = date(2024, 1, 1)
 
-# TB account → (조문, 조문제목, issue_key) 매핑 (쟁점 도출 — deterministic).
-_ARTICLE_BY_ISSUE: dict[str, tuple[str, str, str]] = {
-    "기업업무추진비": ("제25조", "기업업무추진비의 손금불산입", "기업업무추진비(접대비) 한도·적격증빙"),
-    "기부금": ("제24조", "기부금의 손금불산입", "기부금 한도·이월공제"),
-    "업무용승용차": ("제27조의2", "업무용승용차 관련비용의 손금불산입 등 특례", "업무용 승용차 관련비용 한도"),
-    "지급이자": ("제28조", "지급이자의 손금불산입", "지급이자 손금불산입(가지급금 등)"),
-}
+# TB account 의 issue_key → (조문, 조문제목, 표시제목) 매핑 (쟁점 도출 — deterministic).
+# ORCH-015(변경①): 코드 하드코딩 대신 rules/tax_law_mapping.yaml 레지스트리에서 로드해
+# 세목·쟁점→법령을 일반화한다(법인세 한 세목에 고정 ✕). 법인세 항목은 기존 하드코딩과
+# 문자 단위 동일 → 기존 슬라이스 회귀 0.
+_ARTICLE_BY_ISSUE: dict[str, tuple[str, str, str]] = article_by_issue()
+# 기본 세목(법인세)의 법령명. 쟁점별 법령명은 레지스트리(law_name_for)로 조회한다 —
+# 소득세·부가세 등 비-법인세 세목 조회 시 사용(현재 데모 fixture 는 전부 법인세).
 _LAW_NAME = "법인세법"
 
 # 질문에서 주쟁점을 식별하는 키워드(쟁점별). 질문이 특정 쟁점을 명시하면 그 쟁점을 주쟁점으로

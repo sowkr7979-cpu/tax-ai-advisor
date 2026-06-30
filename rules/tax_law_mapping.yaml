@@ -1,0 +1,40 @@
+# rules/tax_law_mapping.yaml — ORCH-015 다세목(multi-tax) 쟁점→법령 매핑 레지스트리
+#
+# 세목(tax_type) → 쟁점키(issue_key) → (법령명·조문·조문제목·표시제목).
+# 코드 하드코딩(_ARTICLE_BY_ISSUE) 대신 이 레지스트리로 일반화한다(변경①, ORCH-015).
+# 미등록 세목/쟁점은 orchestrator 가 fail-closed 한다(임의 법령 추정 금지).
+# 이 파일은 결정 규칙(rules/)이므로 변경은 reviewer 승인 대상(PROMPT.md §1.4).
+#
+# 주의(회귀 0): 법인세 4항목은 기존 orchestrator._ARTICLE_BY_ISSUE 와 문자 단위 동일해야 한다.
+
+법인세:
+  law_name: 법인세법
+  issues:
+    기업업무추진비:
+      article: 제25조
+      article_title: 기업업무추진비의 손금불산입
+      title: 기업업무추진비(접대비) 한도·적격증빙
+    기부금:
+      article: 제24조
+      article_title: 기부금의 손금불산입
+      title: 기부금 한도·이월공제
+    업무용승용차:
+      article: 제27조의2
+      article_title: 업무용승용차 관련비용의 손금불산입 등 특례
+      title: 업무용 승용차 관련비용 한도
+    지급이자:
+      article: 제28조
+      article_title: 지급이자의 손금불산입
+      title: 지급이자 손금불산입(가지급금 등)
+
+# --- 법인세 외 세목 (변경① 확장; 동일 파이프라인) ----------------------------
+# 아래 세목은 레지스트리에 등록됨. 실제 end-to-end replay 산출은 해당 법령 fixture
+# (소득세법 제22조 등) 녹화가 선행되어야 한다(--live). 미녹화 상태에서 replay 는
+# transport fail-closed (CLI 가 명확 안내) — 임의 답을 만들지 않는다.
+소득세:
+  law_name: 소득세법
+  issues:
+    퇴직소득구분:
+      article: 제22조
+      article_title: 퇴직소득
+      title: 퇴직소득 vs 근로소득 구분·임원 퇴직급여 한도
