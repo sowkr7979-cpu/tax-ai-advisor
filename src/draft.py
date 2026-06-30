@@ -45,6 +45,7 @@ _DETERMINISTIC_TS = datetime(2024, 1, 1, 0, 0, 0)
 # --------------------------------------------------------------------------- #
 # 11목차 필수 섹션 (OUT-006, docs/03 §117·§123 / 설계서 §4-3)
 # --------------------------------------------------------------------------- #
+# 12목차(변경② OUT-007 §8 신설; 변경③ OUT-008 §10 추론도식은 다음 iter 에 추가 → 13목차).
 REQUIRED_SECTIONS: list[str] = [
     "1. Executive Summary",
     "2. 회사 개요·검토 범위",
@@ -53,16 +54,18 @@ REQUIRED_SECTIONS: list[str] = [
     "5. 절세 기회",
     "6. 선택지별 세부담·리스크 비교표",
     "7. 쟁점별 검토 메모",
-    "8. 관련 법령·근거 자료",
-    "9. 추가 요청 자료",
-    "10. 회계사 검토 필요사항",
-    "11. 결론 초안·추천 검토 순서",
+    "8. 출처 채널별 독립 결과",          # OUT-007(변경②) — 종합 전 ①②③ 병렬(내부 전용)
+    "9. 관련 법령·근거 자료",
+    "10. 추가 요청 자료",
+    "11. 회계사 검토 필요사항",
+    "12. 결론 초안·추천 검토 순서",
 ]
 
-# 고객 전달본에서 제외되는 내부 전용 섹션 (OUT-004: 전략리스크 내부용 한정)
+# 고객 전달본에서 제외되는 내부 전용 섹션 (OUT-004: 전략리스크·채널 원본 내부용 한정)
 _INTERNAL_ONLY_SECTIONS = {
     "7. 쟁점별 검토 메모",
-    "10. 회계사 검토 필요사항",
+    "8. 출처 채널별 독립 결과",   # 채널 원본(종합 전)은 내부 검토본 전용
+    "11. 회계사 검토 필요사항",
 }
 
 
@@ -329,11 +332,12 @@ def validate_draft_package(data: DraftPackageData) -> None:
     need({"보수", "중립", "적극"}.issubset(keys),
          "6. 선택지 비교표는 보수/중립/적극 3종 필수")
     need(bool(data.issue_memos), "7. 쟁점별 검토 메모(≥1)")
-    need(bool(data.citations), "8. 관련 법령·근거 자료(≥1 버전객체 인용)")
-    need(bool(data.additional_requests), "9. 추가 요청 자료(≥1)")
-    need(bool(data.review_items), "10. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
+    need(bool(data.channel_results), "8. 출처 채널별 독립 결과(≥1 채널, OUT-007)")
+    need(bool(data.citations), "9. 관련 법령·근거 자료(≥1 버전객체 인용)")
+    need(bool(data.additional_requests), "10. 추가 요청 자료(≥1)")
+    need(bool(data.review_items), "11. 회계사 검토 필요사항(≥1, slice⑤ review_items)")
     need(bool(data.conclusion.strip()) and bool(data.recommended_order),
-         "11. 결론 초안·추천 검토 순서")
+         "12. 결론 초안·추천 검토 순서")
 
     # P1-1: 리스트가 비어있지 않아도 내부 핵심 문자열은 strip 기반 non-empty 강제
     for m in data.input_materials:
@@ -505,8 +509,28 @@ def _render_package_docx(
                 doc.add_paragraph(f"escalation: {memo.escalation}")
         rendered.append(REQUIRED_SECTIONS[6])
 
-    # 8. 관련 법령·근거 자료 (법령·예규·판례·웹 — 실제 인용된 근거만 본문에 나열)
-    doc.add_heading(REQUIRED_SECTIONS[7], level=1)
+    # 8. 출처 채널별 독립 결과 (내부 전용 — 종합 *전* 의 ①②③ 병렬, OUT-007 변경②)
+    if internal:
+        doc.add_heading(REQUIRED_SECTIONS[7], level=1)
+        doc.add_paragraph(
+            "종합의견으로 합치기 전, 각 출처 채널이 독립적으로 낸 결과입니다(채널 원본 ⟂ 종합). "
+            "답하지 못한 채널은 SILENT(커버리지 갭)로 정직하게 표기합니다."
+        )
+        t8 = doc.add_table(rows=1, cols=5)
+        t8.style = "Table Grid"
+        for i, txt in enumerate(["채널", "출처", "상태", "답변 요지", "인용(pinpoint)"]):
+            t8.rows[0].cells[i].text = txt
+        for cr in data.channel_results:
+            r = t8.add_row().cells
+            r[0].text = cr.channel
+            r[1].text = cr.source_label
+            r[2].text = cr.status if cr.answered else f"{cr.status} (커버리지 갭)"
+            r[3].text = cr.answer_excerpt or ("—" if cr.answered else "(근거 없음)")
+            r[4].text = "; ".join(cr.citation_locators)
+        rendered.append(REQUIRED_SECTIONS[7])
+
+    # 9. 관련 법령·근거 자료 (법령·예규·판례·웹 — 실제 인용된 근거만 본문에 나열)
+    doc.add_heading(REQUIRED_SECTIONS[8], level=1)
     for cv in cviews.values():
         rank = f"(권위 {cv.authority_rank})" if cv.authority_rank else ""
         doc.add_paragraph(
@@ -514,34 +538,34 @@ def _render_package_docx(
             f"인용: “{cv.quote[:120]}” · 링크: {cv.href}",
             style="List Bullet",
         )
-    rendered.append(REQUIRED_SECTIONS[7])
-
-    # 9. 추가 요청 자료
-    doc.add_heading(REQUIRED_SECTIONS[8], level=1)
-    for req in data.additional_requests:
-        doc.add_paragraph(req, style="List Bullet")
     rendered.append(REQUIRED_SECTIONS[8])
 
-    # 10. 회계사 검토 필요사항 (내부 전용 — slice⑤ review_items)
+    # 10. 추가 요청 자료
+    doc.add_heading(REQUIRED_SECTIONS[9], level=1)
+    for req in data.additional_requests:
+        doc.add_paragraph(req, style="List Bullet")
+    rendered.append(REQUIRED_SECTIONS[9])
+
+    # 11. 회계사 검토 필요사항 (내부 전용 — slice⑤ review_items)
     if internal:
-        doc.add_heading(REQUIRED_SECTIONS[9], level=1)
+        doc.add_heading(REQUIRED_SECTIONS[10], level=1)
         for it in data.review_items:
             mark = " ⚠검토경고" if it.requires_warning else ""
             doc.add_paragraph(
                 f"[{it.gate or '-'}/{it.category.value}/{it.severity}]{mark} {it.description}",
                 style="List Bullet",
             )
-        rendered.append(REQUIRED_SECTIONS[9])
+        rendered.append(REQUIRED_SECTIONS[10])
 
-    # 11. 결론 초안·추천 검토 순서
-    doc.add_heading(REQUIRED_SECTIONS[10], level=1)
+    # 12. 결론 초안·추천 검토 순서
+    doc.add_heading(REQUIRED_SECTIONS[11], level=1)
     doc.add_paragraph(data.conclusion)
     doc.add_paragraph("추천 검토 순서:")
     for i, step in enumerate(data.recommended_order, start=1):
         doc.add_paragraph(f"{i}. {step}", style="List Number")
-    rendered.append(REQUIRED_SECTIONS[10])
+    rendered.append(REQUIRED_SECTIONS[11])
 
-    # OUT-006: 내부본은 11섹션 모두, 고객본은 내부 전용 2섹션 제외가 의도된 누락
+    # OUT-006: 내부본은 12섹션 모두, 고객본은 내부 전용 3섹션(7·8·11) 제외가 의도된 누락
     expected = REQUIRED_SECTIONS if internal else [
         s for s in REQUIRED_SECTIONS if s not in _INTERNAL_ONLY_SECTIONS
     ]

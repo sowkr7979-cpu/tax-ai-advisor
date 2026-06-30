@@ -29,6 +29,12 @@
 - **측정**: **pytest 219 passed**(217 + 신규 2: 패키지가 ①②③ channel_results 보유 + fixture 직렬화). 데모 3소스 전부 ANSWERED 표면화 확인.
 - **다음(우선순위)**: §8 DOCX 렌더 + `REQUIRED_SECTIONS` 12목차(validate/renderer/내부전용) → §10 OUT-008(ReasoningTrace) 13목차 → 프론트 §8/§10 + Playwright → slice7 하버스 측정.
 
+### iter4 (bbb305b 이후) — OUT-007 §8 DOCX 렌더 + 12목차 (변경② 백엔드 완성)
+- **변경②(백엔드 완성)**: `REQUIRED_SECTIONS` 11→**12**(§8 "출처 채널별 독립 결과" 신설, **내부 전용**). 렌더러 §8 테이블(채널·출처·상태·발췌·인용 pinpoint) + SILENT 정직표기 + 후속 섹션 인덱스 갱신(§9 관련법령~§12 결론). `validate_draft_package` §8(`channel_results`≥1) 요건 추가. `_INTERNAL_ONLY_SECTIONS`={7,8,11}. `draft_demo` 대표 채널 결과 3건. `cli` 요약 목차 동적화(`len(REQUIRED_SECTIONS)`).
+- **측정**: **pytest 219**(섹션 테스트 12로 갱신, 회귀 0) + **라이브 CLI DOCX 12섹션·§8 실물 렌더 확인**(`python -m tiw run --out`).
+- **변경② 상태**: 백엔드(데이터+렌더+검증) **완료**. 남음: 프론트 DraftScreen §8 + Playwright assertion.
+- **다음**: 변경③ OUT-008 §10 ReasoningTrace + law-tracing 도식 → 13목차(DOCX 네이티브) + 프론트 Mermaid.
+
 ## Iteration 0 게이트 — Rubric Freeze ✅ 완료
 - **Rubric Freeze v1.0** @ `470e47c` (사용자(회계사)+AI 공동검토 확정).
 - 완료 게이트(v1.0): 6 vertical slice **각 ≥90/100** + 하드게이트 위반 0. **(v1.1에서 7 slice로 확장 — 위 섹션)**

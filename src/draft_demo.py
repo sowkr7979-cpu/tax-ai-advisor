@@ -23,6 +23,7 @@ from contract.cluster_f_qa import Citation, SourceAnswer, SynthesisOpinion
 from contract.cluster_h_review import ReviewItem
 from src.ai.law_data_source import default_law_source
 from src.draft import (
+    ChannelResult,
     DraftPackageData,
     InputMaterial,
     IssueMemo,
@@ -409,6 +410,24 @@ def build_demo_draft_package() -> tuple[DraftPackageData, dict[str, str], dict[s
         ],
         synthesis=synthesis,
         source_objects=source_objects,
+        # OUT-007(변경②): 종합 전 채널별 독립 결과(①②③) — 데모는 3소스 모두 응답(3/3 AGREE).
+        channel_results=[
+            ChannelResult(
+                channel="①", source_label="①법령MCP", status="ANSWERED", answered=True,
+                answer_excerpt="법인세법 제25조: 기업업무추진비 한도 초과액·적격증빙 미수취분 손금불산입(법령 원문).",
+                citation_locators=["법인세법 제25조"],
+            ),
+            ChannelResult(
+                channel="②", source_label="②내부RAG(실무서)", status="ANSWERED", answered=True,
+                answer_excerpt="사내 실무기준: 건당 3만원(경조사비 20만원) 초과는 적격증빙 수취해야 손금 인정 — 공개 조문에 grounding(L3 메모 외부 미송신).",
+                citation_locators=["법인세법 제25조"],
+            ),
+            ChannelResult(
+                channel="③", source_label="③공식웹", status="ANSWERED", answered=True,
+                answer_excerpt="국세청·법제처 공식자료를 법령 원문과 대조 후 승격 — provenance 인용(블로그/미러 배제).",
+                citation_locators=["법인세법 제25조"],
+            ),
+        ],
     )
     return data, titles, articles
 

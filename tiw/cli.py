@@ -21,6 +21,7 @@ from src.ai.embedding_client import EmbeddingNotReproducible, EmbeddingUnavailab
 from src.ai.law_data_source import LawSourceError
 from src.ai.llm_client import LLMError
 from src.ai.tavily_client import WebSearchError
+from src.draft import REQUIRED_SECTIONS
 from src.orchestrator import DEFAULT_COMPANY_FIXTURE, CompanyProfile, Orchestrator
 
 # 재생 불가/서비스 미가용(transport) — replay 에 녹화 안 된 질문·쟁점은 합성하지 않고
@@ -130,8 +131,8 @@ def _cmd_run(args: argparse.Namespace) -> int:
     n_opt = len(pkg.strategy_options)
     n_rev = len(pkg.review_items)
     print("\n── 산출 요약 ──")
-    print(f"  섹션: 11목차 / 인용(버전객체): {n_cit} / 선택지: {n_opt}(보수·중립·적극) / "
-          f"검토항목: {n_rev}")
+    print(f"  섹션: {len(REQUIRED_SECTIONS)}목차 / 인용(버전객체): {n_cit} / "
+          f"선택지: {n_opt}(보수·중립·적극) / 검토항목: {n_rev}")
     print(f"  종합: {'합의(AGREE)' if result.synthesis and not result.synthesis.abstained else '보류'} · "
           f"전략 grounding: {'OK' if result.strategy and result.strategy.entailment_supported else '부분'}")
     if result.docx_path is not None:

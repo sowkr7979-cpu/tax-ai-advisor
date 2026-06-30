@@ -1,7 +1,7 @@
 """Draft Agent — DOCX 검토패키지 결정적 테스트 (OUT-002/003/004/006).
 
 핵심:
-  - OUT-002/006 : 11목차 필수섹션을 모두 가진 DOCX 생성(누락 → 생성 실패).
+  - OUT-002/006 : 12목차 필수섹션을 모두 가진 DOCX 생성(누락 → 생성 실패).
   - OUT-003     : 무인용 단정 금지 — 리스크·쟁점메모는 인용 동반(미인용 → 차단).
   - OUT-004     : 고객 전달본은 승인 proof(ReleaseAuthorization, slice⑤ HITL) 없이
                   생성 불가 + 내부 전략메모(7)·검토항목(10) 제외.
@@ -75,17 +75,18 @@ def _approved_proof(client_id: str, matter_id: str, *, high_risk: bool) -> Relea
 
 
 # --------------------------------------------------------------------------- #
-# OUT-002/006 — 11목차 필수섹션
+# OUT-002/006 — 12목차 필수섹션
 # --------------------------------------------------------------------------- #
-def test_review_package_has_all_11_sections(tmp_path):
+def test_review_package_has_all_12_sections(tmp_path):
     data, titles, articles = build_demo_draft_package()
     out = build_review_package_docx(
         data, tmp_path / "pkg.docx", titles=titles, articles=articles
     )
     assert out.exists() and out.stat().st_size > 0
     headings = _docx_headings(out)
-    assert headings == REQUIRED_SECTIONS  # 11 섹션, 정확한 순서
-    assert len(REQUIRED_SECTIONS) == 11
+    assert headings == REQUIRED_SECTIONS  # 12 섹션, 정확한 순서
+    assert len(REQUIRED_SECTIONS) == 12
+    assert "8. 출처 채널별 독립 결과" in headings  # OUT-007 §8 신설
 
 
 def test_missing_section_data_fails_closed():
@@ -198,12 +199,13 @@ def test_client_deliverable_with_proof_excludes_internal_sections(tmp_path):
         titles=titles, articles=articles,
     )
     headings = _docx_headings(out)
-    # 내부 전용 섹션(7 쟁점메모·10 검토항목)은 고객본에서 제외(OUT-004)
+    # 내부 전용 섹션(7 쟁점메모·8 채널별 원본·11 검토항목)은 고객본에서 제외(OUT-004)
     assert "7. 쟁점별 검토 메모" not in headings
-    assert "10. 회계사 검토 필요사항" not in headings
+    assert "8. 출처 채널별 독립 결과" not in headings
+    assert "11. 회계사 검토 필요사항" not in headings
     # 그 외 9개 섹션은 유지
     assert "6. 선택지별 세부담·리스크 비교표" in headings
-    assert "8. 관련 법령·근거 자료" in headings
+    assert "9. 관련 법령·근거 자료" in headings
     assert len(headings) == 9
 
 
@@ -224,8 +226,9 @@ def test_frontend_fixture_shape():
     keys = [o["option_key"] for o in draft["strategy_options"]]
     assert keys == ["보수", "중립", "적극"]
     assert all(o["expected_tax_burden"] for o in draft["strategy_options"])
-    # 화면③ DOCX 미리보기: 11섹션 + 인용 href
+    # 화면③ DOCX 미리보기: 12섹션 + 인용 href + 채널별 결과(OUT-007)
     assert draft["sections"] == REQUIRED_SECTIONS
+    assert {c["channel"] for c in draft["channel_results"]} == {"①", "②", "③"}
     assert draft["citations"] and all(c["href"].startswith("https://www.law.go.kr/")
                                       for c in draft["citations"])
     assert any(r["requires_warning"] for r in draft["review_items"])
