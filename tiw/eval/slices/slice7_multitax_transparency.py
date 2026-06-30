@@ -82,6 +82,54 @@ def _trace_fully_backed(pkg) -> bool:
     return True
 
 
+def _income_tax_pipeline() -> tuple[str, str]:
+    """**비-법인세(소득세/퇴직소득) 파이프라인을 실제로 행사**한다 — 레지스트리 lookup 만
+    보는 것이 아니라, 소득세 케이스를 §4-1 오케스트레이터에 *실제로 통과* 시켜 다세목
+    파이프라인이 작동함을 측정한다(codex: registry 만 보고 false-pass 하던 홀 차단).
+
+    반환 (status, detail):
+      * ``PACKAGE``      — 소득세 13목차 검토패키지 산출(소득세 law fixture 녹화 완료).
+      * ``ROUTING_ONLY`` — *소득세법* 으로 정확히 라우팅했으나 fixture 미녹화로 fail-closed
+                            (현 replay 상태 — 소득세 fixture 는 --live/키 선행 필요).
+      * ``FAIL``         — 오라우팅(법인세법 등) 또는 예기치 못한 실패.
+    """
+    from datetime import date
+
+    from src.orchestrator import CompanyProfile, Orchestrator
+
+    company = CompanyProfile(
+        client_id="client_inc_eval", matter_id="matter_inc_eval", company_name="소득세평가(주)",
+        fiscal_year="2026 사업연도", as_of_date=date(2026, 1, 1), high_risk=True,
+        review_scope="임원 퇴직위로금 소득구분 검토", industry="제조업",
+        default_question="퇴직소득 vs 근로소득 구분을 검토해줘",
+        trial_balance=[{"account": "퇴직위로금", "amount": 500000000,
+                        "note": "한도초과분 근로소득 검토", "issue_key": "퇴직소득구분"}],
+        prior_year={},
+        materials=[{"name": "임원 퇴직급여 규정", "status": "수집", "confidentiality": "L2"}],
+        internal_memo={},
+    )
+    orch = Orchestrator(mode="replay")
+    seen: dict = {}
+    _orig = orch.law.lookup_provision
+
+    def _spy(law_name, article, as_of):
+        seen.setdefault("law_name", law_name)  # 주법령 첫 조회 = 주쟁점 라우팅
+        return _orig(law_name, article, as_of)
+
+    orch.law.lookup_provision = _spy  # type: ignore[assignment]
+    try:
+        from src.draft import validate_draft_package
+        result = orch.run(company=company, question=company.default_question, write_docx=False)
+        validate_draft_package(result.package)
+        return "PACKAGE", f"소득세 13목차 산출(law={seen.get('law_name')})"
+    except Exception as exc:  # noqa: BLE001
+        routed = seen.get("law_name")
+        if routed == "소득세법":
+            return ("ROUTING_ONLY",
+                    f"소득세법 라우팅 확인 · fixture 미녹화 fail-closed({type(exc).__name__})")
+        return "FAIL", f"오라우팅(law={routed}) 또는 예외: {type(exc).__name__}"
+
+
 def _evaluate(package_factory: Optional[PackageFactory] = None) -> RubricResult:
     from src.draft import REQUIRED_SECTIONS
 
@@ -129,11 +177,11 @@ def _evaluate(package_factory: Optional[PackageFactory] = None) -> RubricResult:
         if rt is not None and not backed:
             hard.append("FABRICATED_CITATION")
 
+    # -- 변경① 다세목 *파이프라인 실제 행사*(codex): 소득세 케이스를 오케스트레이터에 통과 -- #
+    itp_status, itp_detail = _income_tax_pipeline()
+    metrics["income_tax_pipeline"] = f"{itp_status} — {itp_detail}"
+
     # -- 차원 fractions(0..1) — 행사하는 차원만(나머지는 N/A) ---------------------- #
-    requirement_frac = mean([
-        1.0 if multitax_ok else 0.0,
-        1.0 if (completed and sections_ok) else 0.0,
-    ])
     citation_frac = 1.0 if (trace_present and backed) else (0.5 if trace_present else 0.0)
     output_frac = mean([
         1.0 if channels_ok else 0.0,
@@ -142,21 +190,35 @@ def _evaluate(package_factory: Optional[PackageFactory] = None) -> RubricResult:
     ])
     ops_frac = 1.0 if completed else 0.0
 
+    dim_fractions: dict = {"citation": citation_frac, "output": output_frac, "ops": ops_frac}
+    pending: list[str] = []
+    if itp_status == "PACKAGE":
+        # 법인세 + 소득세(비-법인세) 파이프라인 모두 13목차 패키지 산출 → 다세목 요구 충족.
+        dim_fractions["requirement"] = mean([
+            1.0 if multitax_ok else 0.0,
+            1.0 if (completed and sections_ok) else 0.0,
+            1.0,  # 비-법인세 세목 end-to-end 패키지 산출
+        ])
+    elif itp_status == "ROUTING_ONLY":
+        # 비-법인세 파이프라인이 *소득세법으로 정확히 라우팅* 하나 fixture 미녹화로 패키지를
+        # 못 만든다 → 다세목 요구는 **end-to-end 미완**. requirement 를 PENDING 으로 →
+        # 슬라이스 ≥90 불가(정직: registry 만으로 false-pass 금지, codex). 소득세 law/LLM
+        # fixture(--live, 키) 녹화로 PACKAGE 가 되면 requirement 가 채점된다.
+        pending.append("requirement")
+    else:  # FAIL — 오라우팅/오류 → 다세목 요구 미충족(점수로 강하게 반영)
+        dim_fractions["requirement"] = 0.0
+
     return build_rubric_result(
         case_id=_CASE_ID,
         slice_no=SLICE_NO,
         target_id=_CASE_ID,
         visibility=Visibility.PUBLIC,
         target_kind=TargetKind.SLICE,
-        dim_fractions={
-            "requirement": requirement_frac,
-            "citation": citation_frac,
-            "output": output_frac,
-            "ops": ops_frac,
-        },
+        dim_fractions=dim_fractions,
+        pending_dimensions=pending,
         dim_details={
             "requirement": f"multitax_ok={multitax_ok} tax_types={n_tax_types} "
-            f"13목차={sections_ok}",
+            f"13목차={sections_ok} 소득세파이프라인={itp_status}",
             "citation": f"trace_backed={backed} (날조/stale 0 = OUT-008/HALU-015)",
             "output": f"channels={channels_ok} trace={trace_present} sections={sections_ok}",
             "ops": f"completed={completed}",
@@ -164,10 +226,13 @@ def _evaluate(package_factory: Optional[PackageFactory] = None) -> RubricResult:
         hard_gate_codes=hard,
         metrics={
             **metrics,
-            # 점수 투명성(codex P1-3 패턴): 분모(행사 차원)와 미행사 차원을 명시.
-            "scope_note": "slice⑦ 결정적 구조 채점(requirement6+citation12+output9+ops2=29 분모). "
+            # 점수 투명성(codex P1-3 패턴): 분모(행사 차원)·미행사·PENDING 사유 명시.
+            "scope_note": "slice⑦ 결정적 구조 채점(requirement6+citation12+output9+ops2). "
             "판단차원(법리/쟁점/리스크/충돌/검색/보안)은 ①~⑥ 행사 → N/A. "
-            "hidden freeze CPA 케이스 미시드(docs/09 §10) — 결정적 소계로 해석.",
+            f"비-법인세 파이프라인={itp_status}"
+            + ("(requirement PENDING — 소득세 fixture 미녹화, --live/키 선행 필요)"
+               if itp_status == "ROUTING_ONLY" else "")
+            + ". hidden freeze CPA 케이스 미시드(docs/09 §10).",
         },
     )
 

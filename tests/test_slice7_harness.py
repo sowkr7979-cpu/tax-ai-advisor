@@ -12,15 +12,20 @@ from src.draft_demo import build_demo_draft_package
 from tiw.eval.slices.slice7_multitax_transparency import run_cases
 
 
-def test_slice7_passes_on_real_orchestrator_output():
-    """실제 오케스트레이터(replay 데모) 산출 → 3 기능 정합 → ≥90 PASS, 하드게이트 0."""
+def test_slice7_pending_until_noncorporate_pipeline_recorded():
+    """정직성(codex): slice⑦ 은 비-법인세(소득세) 파이프라인이 *실제 패키지를 산출* 할 때만
+    requirement 가 채점된다. 현 replay 는 소득세 fixture 미녹화 → ROUTING_ONLY(소득세법
+    라우팅만 확인) → requirement PENDING → 슬라이스 ≥90 불가(registry 만으로 false-pass 금지).
+    결정적 차원(citation/output/ops)은 정상 채점, 하드게이트 0."""
     [r] = run_cases([])
-    assert r.total >= 90
+    assert r.has_pending
+    assert "requirement" in r.pending_dimensions
     assert not r.hard_gate_hit
-    dims = {s.dimension: s.score for s in r.dimension_scores if s.applicable}
-    assert dims.get("requirement") == 100   # 다세목 라우팅 + 13목차
+    assert str(r.metrics.get("income_tax_pipeline", "")).startswith("ROUTING_ONLY")
+    dims = {s.dimension: s.score for s in r.dimension_scores if s.applicable and s.score is not None}
     assert dims.get("citation") == 100      # §10 trace backed(날조/stale 0)
     assert dims.get("output") == 100        # §8 채널 + §10 도식 + 13목차
+    assert dims.get("ops") == 100
 
 
 def test_slice7_harness_catches_fabricated_trace():
