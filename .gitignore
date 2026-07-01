@@ -68,6 +68,7 @@ big4_learning_pdf_render/
 docs_kicpa_visual_assets/
 # 루트 PDF는 뷰어 잠금 시 구버전이 남을 수 있어 형상관리 제외(웹 사본 web/assets/ 만 커밋)
 /세무AI_프로젝트소개_KICPA용.pdf
+/법인세세무조정자동화_프로젝트소개_KICPA용.pdf
 # 개인 자기소개서 PDF(민감·재생성) — 스크립트는 커밋, 산출 PDF/임시파일은 제외
 /자기소개서_안진회계법인_Tax부문.pdf
 /자기소개서_안진회계법인_Tax부문.tmp.pdf
@@ -87,3 +88,5 @@ Thumbs.db
 
 # TS incremental build cache
 *.tsbuildinfo
+
+.vercel
