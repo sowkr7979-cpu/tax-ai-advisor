@@ -17,9 +17,12 @@
 web/backend/
 web/data/scenarios.json
 *.py
-*.pdf
 *.docx
 Dockerfile
 requirements-deploy.txt
 pyproject.toml
 .env
+# 개인/기밀 PDF만 명시 제외(공개 web/assets PDF는 업로드 허용). RAG DB·docs PDF는 위 디렉터리 제외로 커버.
+/자기소개서_안진회계법인_Tax부문.pdf
+/자기소개서_안진회계법인_Tax부문.tmp.pdf
+/세무AI_프로젝트소개_KICPA용.pdf
