@@ -93,15 +93,18 @@
     if(typeof st.file_count==="number")fileCount.textContent=st.file_count;
     if(st.files){fileList.innerHTML=st.files.map(f=>`<li>${esc(f)}</li>`).join("");}
     if(st.phase){phase=st.phase;phasePill.textContent=phase==="ready"?"분석 준비됨":phase==="done"?"분석 완료":"인터뷰 중";}
-    // 준비되면 분석 버튼 노출
-    const items=[];
-    if(phase!=="done"){ items.push({label:"■ 그만하고 분석·보고서 생성",cls:st.ready?"go":"",onClick:finalize}); }
+    // 분석 버튼은 최소 사실관계(3개) 이상일 때만 노출(그 전엔 안내).
+    const items=[]; const fc=st.fact_count||0;
+    if(phase!=="done"){
+      if(fc>=3){ items.push({label:"■ 그만하고 분석·보고서 생성",cls:st.ready?"go":"",onClick:finalize}); }
+      else { items.push({label:`분석하려면 ${3-fc}개 더 답해 주세요 (${fc}/3)`,cls:"grey",onClick:function(){bot("몇 가지 질문에 더 답해 주시면 분석·보고서를 생성할 수 있습니다.");}}); }
+    }
     setChoices(items);
   }
 
   async function jpost(path,body){
     const r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    if(!r.ok)throw new Error("서버 오류 "+r.status);
+    if(!r.ok){ let d=""; try{ d=(await r.json()).detail; }catch(_){} throw new Error(d||("서버 오류 "+r.status)); }
     return r.json();
   }
 
