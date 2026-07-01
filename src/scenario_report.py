@@ -21,20 +21,158 @@ import urllib.parse
 from pathlib import Path
 from typing import Optional
 
-from src.cpa_report import (
-    _add_hyperlink,
-    _apply_document_style,
-    _cell,
-    _ko,
-    _set_run_font,
-    _shade,
-)
+from src.cpa_report import _ko, _qn, _set_run_font
 
-_GREY = (0x5F, 0x63, 0x68)
-_HEADING_RGB = (0x1A, 0x73, 0xE8)
-_HEADER_FILL = "E8F0FE"
-_RISK_FILL = {"안전": "E6F4EA", "주의": "FEF7E0", "위험": "FCE8E6"}
-_RISK_RGB = {"안전": (0x18, 0x80, 0x38), "주의": (0xE8, 0x71, 0x0A), "위험": (0xD9, 0x30, 0x25)}
+# --------------------------------------------------------------------------- #
+# Deloitte 브랜드 테마 — 이 산출물(경우의 수 의사결정 보고서)은 딜로이트 스타일을 따른다.
+# (회계사 검토보고서 ``cpa_report`` 의 구글 블루 톤과 독립. 여기 헬퍼는 로컬에서 재정의한다.)
+#
+# 팔레트 근거: Deloitte 브랜드 컬러 — Black(제목/본문), Deloitte Green #86BC25(강조 룰),
+# Green 7 #046A38(라벨/머리행), Blue #0076A8(링크), Cool Gray 11 #53565A(보조 텍스트).
+# 가독성 원칙: ① 제목은 검정+굵게, 섹션마다 딜로이트 그린 하단 룰로 구분, ② 표 머리행은
+# 다크그린 음영+흰 글씨(고대비), ③ 데이터 표는 옅은 그레이 얼룩(zebra)으로 행 구분.
+# --------------------------------------------------------------------------- #
+_FONT_KO = "Noto Sans KR"
+_HYPERLINK_RELTYPE = (
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+)
+_INK = (0x00, 0x00, 0x00)              # Black — 제목·본문
+_GREEN = (0x86, 0xBC, 0x25)            # Deloitte Green — 강조 룰(하단 보더)
+_GREEN_DK = (0x04, 0x6A, 0x38)         # Green 7 — 라벨·머리행 텍스트
+_GREY = (0x53, 0x56, 0x5A)            # Cool Gray 11 — 보조 텍스트
+_LINK_RGB = (0x00, 0x76, 0xA8)         # Deloitte Blue — 하이퍼링크
+_HEADING_RGB = _GREEN_DK               # 라벨/강조 = 딜로이트 다크그린
+_HEADER_FILL = "046A38"               # 표 머리행 음영 = 다크그린
+_HEADER_TEXT = (0xFF, 0xFF, 0xFF)      # 머리행 텍스트 = 흰색(고대비)
+_ROW_FILL = "EEF1EC"                   # 데이터 표 zebra(옅은 그린그레이)
+_RULE_HEX = "86BC25"                   # Heading 1 하단 룰 = 딜로이트 그린
+_RISK_FILL = {"안전": "EAF3DD", "주의": "FEF3CD", "위험": "FBE3E0"}
+_RISK_RGB = {"안전": (0x04, 0x6A, 0x38), "주의": (0xB0, 0x6A, 0x00), "위험": (0xC4, 0x30, 0x1D)}
+
+
+# --------------------------------------------------------------------------- #
+# Deloitte 테마 저수준 헬퍼(색상 하드코딩을 로컬 팔레트로) — cpa_report 원본은 그대로 둔다.
+# --------------------------------------------------------------------------- #
+def _shade(cell, fill: str = _HEADER_FILL) -> None:
+    from docx.oxml import OxmlElement
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(_qn("w:val"), "clear")
+    shd.set(_qn("w:fill"), fill)
+    tc_pr.append(shd)
+
+
+def _cell(cell, text: str, *, bold: bool = False, size: float = 9.5,
+          header: bool = False) -> None:
+    """표 셀 기입 — 머리행은 다크그린 음영 + 흰 글씨(딜로이트 고대비)."""
+    cell.text = ""
+    p = cell.paragraphs[0]
+    run = p.add_run(text)
+    _set_run_font(run, size=size, bold=bold or header,
+                  rgb=_HEADER_TEXT if header else None)
+    if header:
+        _shade(cell, _HEADER_FILL)
+
+
+def _zebra(table, *, start: int = 1, stop: Optional[int] = None,
+           fill: str = _ROW_FILL) -> None:
+    """머리행 아래 데이터 행에 한 줄 걸러 옅은 음영(가독성). 의미색 표에는 쓰지 않는다."""
+    rows = table.rows
+    end = len(rows) if stop is None else stop
+    for i in range(start, end):
+        if (i - start) % 2 == 1:
+            for c in rows[i].cells:
+                _shade(c, fill)
+
+
+def _add_hyperlink(paragraph, url: str, text: str, *, size: float = 10.0) -> None:
+    """클릭 가능한 하이퍼링크(딜로이트 블루·밑줄·Noto Sans KR)."""
+    from docx.oxml import OxmlElement
+
+    part = paragraph.part
+    r_id = part.relate_to(url, _HYPERLINK_RELTYPE, is_external=True)
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(_qn("r:id"), r_id)
+    run = OxmlElement("w:r")
+    rpr = OxmlElement("w:rPr")
+    rfonts = OxmlElement("w:rFonts")
+    for attr in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
+        rfonts.set(_qn(attr), _FONT_KO)
+    rpr.append(rfonts)
+    color = OxmlElement("w:color")
+    color.set(_qn("w:val"), "%02X%02X%02X" % _LINK_RGB)
+    rpr.append(color)
+    u = OxmlElement("w:u")
+    u.set(_qn("w:val"), "single")
+    rpr.append(u)
+    sz = OxmlElement("w:sz")
+    sz.set(_qn("w:val"), str(int(size * 2)))
+    rpr.append(sz)
+    run.append(rpr)
+    t = OxmlElement("w:t")
+    t.set(_qn("xml:space"), "preserve")
+    t.text = text
+    run.append(t)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
+
+
+def _rule_below(style, *, color_hex: str = _RULE_HEX, size: int = 14,
+                space: int = 3) -> None:
+    """문단 스타일에 하단 보더(룰) 추가 — 섹션 제목 구분선(딜로이트 그린)."""
+    from docx.oxml import OxmlElement
+    p_pr = style.element.get_or_add_pPr()
+    pbdr = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(_qn("w:val"), "single")
+    bottom.set(_qn("w:sz"), str(size))
+    bottom.set(_qn("w:space"), str(space))
+    bottom.set(_qn("w:color"), color_hex)
+    pbdr.append(bottom)
+    p_pr.append(pbdr)
+
+
+def _apply_document_style(doc) -> None:
+    """문서 전체 Deloitte 서식 — 검정 제목·다크그린 라벨·그린 섹션 룰·넉넉한 줄간격."""
+    from docx.shared import Pt, RGBColor
+
+    base = {
+        "Normal": (10.5, False, _INK),
+        "List Bullet": (10.5, False, _INK),
+        "List Number": (10.5, False, _INK),
+        "Title": (24, True, _INK),
+        "Heading 1": (15, True, _INK),
+        "Heading 2": (11.5, True, _GREEN_DK),
+    }
+    for sname, (size, bold, rgb) in base.items():
+        try:
+            st = doc.styles[sname]
+        except KeyError:
+            continue
+        st.font.name = _FONT_KO
+        st.font.size = Pt(size)
+        st.font.bold = bold
+        if rgb is not None:
+            st.font.color.rgb = RGBColor(*rgb)
+        rpr = st.element.get_or_add_rPr()
+        rfonts = rpr.get_or_add_rFonts()
+        for attr in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
+            rfonts.set(_qn(attr), _FONT_KO)
+    normal = doc.styles["Normal"]
+    normal.paragraph_format.line_spacing = 1.35
+    normal.paragraph_format.space_after = Pt(5)
+    for hn, before, after in (("Heading 1", 16, 6), ("Heading 2", 10, 4)):
+        try:
+            pf = doc.styles[hn].paragraph_format
+            pf.space_before = Pt(before)
+            pf.space_after = Pt(after)
+        except KeyError:
+            continue
+    # 섹션 구분 — Heading 1 아래 딜로이트 그린 룰(구조·가독성).
+    try:
+        _rule_below(doc.styles["Heading 1"])
+    except KeyError:
+        pass
 
 
 def _law_search_url(label: str) -> str:
@@ -214,7 +352,7 @@ def _render_scenario(doc, n: int, s, ch, *, with_rag: bool, with_law: bool) -> N
             _cell(r[0], f"{a.key}. {a.label}{mark}", size=8.8, bold=a.recommended)
             if a.recommended:
                 for c in r:
-                    _shade(c, "E6F4EA")
+                    _shade(c, "EAF3DD")
             _cell(r[1], _ko(a.summary), size=8.6); _cell(r[2], _ko(a.burden), size=8.6)
             _cell(r[3], _ko(a.pros), size=8.6); _cell(r[4], _ko(a.cons), size=8.6)
         _add_img(doc, ch["burden"].get(s.key), 6.2)
@@ -234,6 +372,7 @@ def _render_scenario(doc, n: int, s, ch, *, with_rag: bool, with_law: bool) -> N
         r = pt.add_row().cells
         _cell(r[0], st.when, size=9.3, bold=True); _cell(r[1], _ko(st.what), size=9.3)
         _cell(r[2], _ko(st.effect), size=9.3)
+    _zebra(pt)
 
     # (6) 회계처리 분개 예시
     if s.journal:
@@ -248,6 +387,7 @@ def _render_scenario(doc, n: int, s, ch, *, with_rag: bool, with_law: bool) -> N
             _cell(r[0], _ko(ln.account), size=9.3)
             _cell(r[1], _won(ln.debit) if ln.debit else "", size=9.3)
             _cell(r[2], _won(ln.credit) if ln.credit else "", size=9.3)
+        _zebra(jt)
 
     # (7) 내부 자료(RAG DB) 근거 — 회수 사유 + 일치 검토
     if with_rag:
@@ -419,6 +559,7 @@ def build_company_case_docx(
     for k, v in overview_rows:
         r = ot.add_row().cells
         _cell(r[0], k, size=9.5, bold=True); _cell(r[1], v, size=9.5)
+    _zebra(ot)
     _body(doc, overview_note, size=10)
 
     # 2. 종합세무검토(재무제표 → 잠재 세무쟁점)
@@ -434,6 +575,7 @@ def build_company_case_docx(
         _cell(r[2], _ko(direction), size=8.8)
         r[3].text = ""
         _add_hyperlink(r[3].paragraphs[0], _law_search_url(basis), basis.split("(")[0].strip(), size=8.5)
+    _zebra(rt)
 
     # 3..N. 시나리오별 의사결정
     for n, s in enumerate(scenarios, start=3):
@@ -518,6 +660,7 @@ def _append_books(doc, scenarios) -> None:
     _cell(r[0], "합계", header=True, size=9); _cell(r[1], _won(tot_d), header=True, size=9)
     _cell(r[2], _won(tot_c), header=True, size=9)
     _cell(r[3], f"{tot_d - tot_c:,.0f}", header=True, size=9)
+    _zebra(lt, stop=len(lt.rows) - 1)   # 합계 행(머리행 서식) 제외
     _body(doc, f"차변 합계 {_won(tot_d)}원 = 대변 합계 {_won(tot_c)}원 "
                f"(대차 일치 {'✓' if abs(tot_d - tot_c) < 1 else '✗'}).", size=9.3, rgb=_GREY)
 
@@ -537,3 +680,4 @@ def _append_evidence(doc, evidence) -> None:
         _cell(r[0], f"증{i:02d}", size=8.8, bold=True)
         _cell(r[1], _ko(name.strip()), size=8.8)
         _cell(r[2], _ko(use.strip()) if use else "—", size=8.8)
+    _zebra(et)

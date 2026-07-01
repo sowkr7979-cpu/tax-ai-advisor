@@ -16,3 +16,8 @@ scripts
 web/data/scenarios.json
 자기소개서*.pdf
 세무AI_프로젝트소개_KICPA용.pdf
+# 타사 분석자료(카톡 이미지 등 226MB) — 배포 불필요, 업로드 413 방지
+타사
+# 루트 산출물/소개 PDF(web/assets 서빙본은 유지, 루트본만 제외)
+/*.pdf
+/*.tmp.pdf

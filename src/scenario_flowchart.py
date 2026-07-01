@@ -27,8 +27,9 @@ _FONT_CANDIDATES = [
     "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/truetype/noto/NotoSansKR-Regular.ttf",
 ]
-_BLUE, _GREEN, _ORANGE, _GREY, _RED = "#1A73E8", "#188038", "#E8710A", "#5F6368", "#D93025"
-_FILL = {"start": "#E8F0FE", "decision": "#FEF7E0", "risk": "#FCE8E6", "safe": "#E6F4EA"}
+# Deloitte 브랜드 팔레트 — 파랑(구글)→딜로이트 블루/그린/앰버/레드로 통일(산출물 톤 일치).
+_BLUE, _GREEN, _ORANGE, _GREY, _RED = "#0076A8", "#046A38", "#ED8B00", "#53565A", "#DA291C"
+_FILL = {"start": "#E6F2F7", "decision": "#FFF4E0", "risk": "#FBE3E0", "safe": "#EAF3DD"}
 _EDGE = {"start": _BLUE, "decision": _ORANGE, "risk": _RED, "safe": _GREEN}
 
 
