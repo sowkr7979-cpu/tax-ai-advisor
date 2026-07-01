@@ -1,0 +1,25 @@
+# Vercel 정적 배포: web/ 정적 파일만 업로드. 백엔드·엔진소스·기밀·대용량은 제외.
+/src
+/rules
+/scripts
+/tests
+/frontend
+/docs
+/Claude
+/md 파일
+/RAG DB
+/산출물
+/.venv
+/.git
+/.claude
+/node_modules
+/.pytest_cache
+web/backend/
+web/data/scenarios.json
+*.py
+*.pdf
+*.docx
+Dockerfile
+requirements-deploy.txt
+pyproject.toml
+.env
