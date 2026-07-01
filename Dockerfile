@@ -21,8 +21,10 @@ COPY requirements-deploy.txt .
 RUN pip install -r requirements-deploy.txt
 
 # 앱 코드만 복사(.dockerignore가 기밀 RAG DB·.env·산출물·테스트 등 제외).
+# contract/ = src/draft.py가 import하는 최상위 패키지(계약/근거 모델). 누락 시 finalize에서 ModuleNotFoundError.
 COPY src ./src
 COPY rules ./rules
+COPY contract ./contract
 COPY web ./web
 
 EXPOSE 8000
