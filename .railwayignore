@@ -1,0 +1,18 @@
+# Railway 업로드 최소화 — Docker 빌드에 필요한 것(src·rules·web·requirements-deploy·Dockerfile)만.
+.git
+.venv
+node_modules
+.claude
+.vercel
+.pytest_cache
+RAG DB
+산출물
+frontend
+docs
+Claude
+md 파일
+tests
+scripts
+web/data/scenarios.json
+자기소개서*.pdf
+세무AI_프로젝트소개_KICPA용.pdf
