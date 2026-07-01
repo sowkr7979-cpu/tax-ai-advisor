@@ -164,5 +164,21 @@ def report(sid: str):
     )
 
 
+# 확장자 없는 clean URL(Vercel과 동일 UX). StaticFiles는 자동 .html 매핑을 안 하므로 명시 라우트.
+@app.get("/live")
+def _live_page():
+    return FileResponse(WEB_DIR / "live.html", media_type="text/html")
+
+
+@app.get("/demo")
+def _demo_page():
+    return FileResponse(WEB_DIR / "demo.html", media_type="text/html")
+
+
+@app.get("/index")
+def _index_page():
+    return FileResponse(WEB_DIR / "index.html", media_type="text/html")
+
+
 # 정적 웹(가장 마지막에 마운트 — API 경로 우선). "/" → index.html
 app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
