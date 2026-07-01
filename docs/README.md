@@ -2,6 +2,7 @@
 
 > **목적**: 신현우님 리뷰 + Codex 2라운드 리뷰를 반영해, 서사형 설계서(`md 파일/법인세_세무AI_설계서_통합.md` — 정본; `Claude/`에 동일 사본)를 **실행 가능한 명세(章 분리 + RFP + ERD + 채점표)** 로 내려쓴 문서 세트.
 > **상태**: **v1.0 구현 완료**(slice ①~⑥ rubric ≥90 + 라이브 엔드투엔드 `python -m tiw run` + 프론트 목업 3화면) → **v1.1 진행 중**(slice⑦ 다세목·투명성, 변경①②③ — `STATUS.md` 상단). Ralph loop 자동 반복 개선 중. **추가 산출물**: 회계사 자연어 보고서(`src/cpa_report.py`)와 **시나리오 Tax Plan(실행계획) 생성기**(`src/tax_plan*.py` — 재무제표 쟁점 강조·그림 4종·근거 하이퍼링크·영어 0·인용 날조 차단, `OUT-009/010`) 구현(정본 §3-4-1).
+> **현황 최신화(2026-07)**: **‘경우의 수’ 의사결정 보고서 엔진** 구현(`src/scenario_planner.py`·`scenario_flowchart.py`·`scenario_report.py`) + **DART 실재무 그라운딩**(`src/dart_case_data.py`) + **내부 RAG OCR 임베딩**(`src/rag_db_index.py`, 31 PDF·1만+ 청크). 대표 산출물 2종(가나다정밀·한미반도체). **신규 소개·검증 자료**: KICPA용 프로젝트 소개 PDF(`scripts/build_project_intro_kicpa_pdf.py`), 이력서용 정적 랜딩(`web/index.html`), **정적 동작 데모(경우의 수 챗봇, `web/demo.html`)**, **라이브 인테이크 백엔드(실제 Claude+엔진, `web/backend/`+`web/live.html`, `python -m web.backend.run`) — 답변 분석 기반 동적 질문·Excel/PDF 분석·임의 세무거래 지원**, 자기소개서·면접 가이드(`md 파일/Big4_Tax_자기소개서_면접가이드.md`). GUI는 openai.com 풍 공유 `web/assets/app.css`. 상세는 정본 `§0-A` 참조.
 > **언어**: 한국어. **독자**: 회계사(비개발자) + 개발/AI 검토자 + 채용 면접관.
 > **감사 대상 spec 표면(정본)**: `md 파일/법인세_세무AI_설계서_통합.md`(+`Claude/` 동일 사본) + `docs/01~09`(`.md`) 만 Ralph가 구현 기준으로 삼는다. **`docs/_build/`**(쉬운설명 PDF·`body_*.html`)는 **Edge-headless PDF 파이프라인(`docs/_build/build_pdf.py`)이 생성하는 파생 설명 아티팩트**로 spec이 아니며 감사 대상에서 **제외**한다(정본 변경 후 별도 재생성 — 일시적으로 구버전 문구가 남을 수 있음).
 

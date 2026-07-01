@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>세무 AI 라이브 — LLM 인터뷰·파일분석·검토패키지</title>
+<meta name="description" content="Claude + 법제처 웹리서치 기반 라이브 세무 인테이크. 답변을 분석해 동적으로 질문하고, Excel/PDF를 읽어 분석하며, 임의 세무거래의 검토 패키지(Word)를 생성합니다." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css" />
+</head>
+<body>
+<div class="hdr"><div class="wrap">
+  <div class="logo"><span class="b">세</span><span class="r">무</span> <span class="y">A</span><span class="g">I</span>
+    <small>Live · LLM Intake</small></div>
+  <a class="back" href="index.html">← 프로젝트 소개</a>
+</div></div>
+<div class="sub"><div class="wrap">
+  <h1>세무 AI 라이브 인테이크 <span class="badge-live" id="liveBadge">연결 확인 중…</span></h1>
+  <p>Claude가 답변을 <b>분석</b>해 동적으로 질문하고, Excel/PDF를 읽어 분석하며, 임의 세무거래의 <b>검토 패키지(Word)</b>를 생성합니다. (법제처·국세청 웹리서치 근거)</p>
+</div></div>
+
+<div class="wrap layout">
+  <div class="card">
+    <h2>세무 인테이크 챗봇 (LLM) <span class="chip-state" id="phasePill">인터뷰 중</span></h2>
+    <div class="chat" id="chat"></div>
+    <div class="choices" id="choices"></div>
+    <div id="errBox"></div>
+    <form class="ask" id="askForm" autocomplete="off">
+      <div class="searchbar">
+        <input type="text" id="askInput" placeholder="답변을 입력하거나 📎로 Excel/PDF를 첨부하세요" />
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.pdf" style="display:none" />
+        <button type="button" class="iconbtn" id="fileBtn" title="파일 첨부(Excel/PDF)">📎</button>
+        <button type="submit" class="send">전송</button>
+      </div>
+    </form>
+  </div>
+  <div class="side">
+    <div class="card">
+      <h2>수집 현황</h2>
+      <div class="panelbody">
+        <div class="kv"><b>감지 거래유형</b><span id="txType">—</span></div>
+        <div class="kv"><b>수집 사실관계</b><span id="factCount">0</span></div>
+        <div class="kv"><b>업로드 파일</b><span id="fileCount">0</span></div>
+        <div style="margin-top:8px;"><b style="color:var(--text2);font-weight:500;">파일</b><ul class="files" id="fileList" style="margin:6px 0 0;padding-left:18px;"></ul></div>
+      </div>
+    </div>
+    <div class="card" id="resultCard" style="display:none;">
+      <h2>검토 패키지</h2>
+      <div class="panelbody">
+        <button class="dl" id="dlBtn">📄 검토 패키지 보고서(.docx) 다운로드</button>
+        <div id="resultInfo" style="margin-top:8px;"></div>
+      </div>
+    </div>
+    <div class="note">
+      결론·근거는 인공지능 추론 초안이며 회계사 검토(HITL)가 필요합니다. 업로드 파일은 분석 목적에만 사용되며 세션 종료 시 폐기됩니다(데모).
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // 기본=동일 오리진(백엔드가 이 파일을 서빙). 정적 호스팅(Vercel) 시 window.LIVE_API 로
+  // 별도 컨테이너 백엔드 URL을 지정하면 그쪽으로 호출한다(백엔드는 해당 도메인 CORS 허용 필요).
+  const API=(window.LIVE_API||"").replace(/\/+$/,"");
+  const chat=q("chat"),choices=q("choices"),errBox=q("errBox"),phasePill=q("phasePill"),
+    askInput=q("askInput"),fileInput=q("fileInput"),fileBtn=q("fileBtn"),
+    txType=q("txType"),factCount=q("factCount"),fileCount=q("fileCount"),fileList=q("fileList"),
+    resultCard=q("resultCard"),dlBtn=q("dlBtn"),resultInfo=q("resultInfo"),liveBadge=q("liveBadge");
+  function q(id){return document.getElementById(id);}
+  let sid=null, phase="interview", busy=false;
+
+  function add(html,cls){const d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
+  // 개발자가 작성한 정적 HTML 문자열 전용(신뢰 가능).
+  function bot(html){return add(html,"bot");}
+  // 서버/LLM 발(發) 텍스트 전용: escape 후 **굵게**·줄바꿈만 허용해 XSS 차단.
+  function fmt(s){return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>");}
+  function botText(s){return add(fmt(s),"bot");}
+  function me(t){const d=document.createElement("div");d.className="msg me";d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
+  function thinking(on){let t=q("_think");if(on){if(!t){t=document.createElement("div");t.id="_think";t.className="think";t.textContent="분석 중…";chat.appendChild(t);chat.scrollTop=chat.scrollHeight;}}else if(t){t.remove();}}
+  function err(m){const d=document.createElement("div");d.className="err";d.textContent=String(m==null?"":m);errBox.innerHTML="";errBox.appendChild(d);setTimeout(()=>errBox.innerHTML="",6000);}
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+  function setChoices(items){choices.innerHTML="";(items||[]).forEach(it=>{const b=document.createElement("button");b.className="chip "+(it.cls||"");b.textContent=it.label;b.onclick=it.onClick;choices.appendChild(b);});}
+
+  function applyState(st){
+    if(!st)return;
+    if(st.tx_type)txType.textContent=st.tx_type;
+    if(typeof st.fact_count==="number")factCount.textContent=st.fact_count;
+    if(typeof st.file_count==="number")fileCount.textContent=st.file_count;
+    if(st.files){fileList.innerHTML=st.files.map(f=>`<li>${esc(f)}</li>`).join("");}
+    if(st.phase){phase=st.phase;phasePill.textContent=phase==="ready"?"분석 준비됨":phase==="done"?"분석 완료":"인터뷰 중";}
+    // 준비되면 분석 버튼 노출
+    const items=[];
+    if(phase!=="done"){ items.push({label:"■ 그만하고 분석·보고서 생성",cls:st.ready?"go":"",onClick:finalize}); }
+    setChoices(items);
+  }
+
+  async function jpost(path,body){
+    const r=await fetch(API+path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!r.ok)throw new Error("서버 오류 "+r.status);
+    return r.json();
+  }
+
+  async function start(){
+    try{
+      const r=await fetch(API+"/api/health"); const h=await r.json();
+      liveBadge.textContent=h.llm?"LIVE":"오프라인(fixture)"; liveBadge.className="badge-live"+(h.llm?"":" badge-off");
+    }catch(e){ liveBadge.textContent="백엔드 미연결"; liveBadge.className="badge-live badge-off";
+      bot("백엔드에 연결하지 못했습니다. 이 페이지는 백엔드 서버(FastAPI)가 실행 중일 때 동작합니다.\n\n실행: 레포 루트에서 <b>python -m web.backend.run</b> 후 표시되는 주소로 접속하세요."); return; }
+    try{
+      const d=await jpost("/api/session/start",{});
+      sid=d.session_id; botText(d.message); applyState(d.state);
+    }catch(e){ err("세션 시작 실패: "+e.message); }
+  }
+
+  async function send(text){
+    if(busy||!sid)return; busy=true; thinking(true);
+    try{
+      const d=await jpost("/api/message",{session_id:sid,text:text});
+      thinking(false);
+      if(d.analysis)add(`<span style="color:#5f6368">🔎 ${esc(d.analysis)}</span>`,"bot");
+      if(d.message)botText(d.message);
+      applyState(d.state);
+    }catch(e){ thinking(false); err("전송 실패: "+e.message); }
+    busy=false;
+  }
+
+  async function uploadFile(file){
+    if(busy||!sid)return; busy=true;
+    add(`📎 ${esc(file.name)} (${Math.round(file.size/1024)}KB)`,"file-tag");
+    thinking(true);
+    try{
+      const fd=new FormData(); fd.append("session_id",sid); fd.append("file",file);
+      const r=await fetch(API+"/api/upload",{method:"POST",body:fd});
+      if(!r.ok)throw new Error("업로드 오류 "+r.status);
+      const d=await r.json(); thinking(false);
+      if(d.summary)add(`<span style="color:#5f6368">📄 추출 요약: ${esc(d.summary)}</span>`,"bot");
+      if(d.message)botText(d.message);
+      applyState(d.state);
+    }catch(e){ thinking(false); err("파일 분석 실패: "+e.message); }
+    busy=false;
+  }
+
+  async function finalize(){
+    if(busy||!sid)return; busy=true; setChoices([]); thinking(true);
+    bot("수집한 사실관계로 거래를 분류하고, 법제처·국세청 근거를 회수해 검토 패키지를 생성합니다…");
+    try{
+      const d=await jpost("/api/finalize",{session_id:sid});
+      thinking(false); phase="done"; phasePill.textContent="분석 완료";
+      if(d.message)botText(d.message);
+      applyState(d.state);
+      resultCard.style.display="block";
+      // summary_html 은 서버에서 동적 필드를 _esc()로 이스케이프해 조립한 표(HTML). 안전.
+      resultInfo.innerHTML=d.summary_html||"";
+      dlBtn.onclick=()=>{ window.location=API+"/api/report/"+sid; };
+    }catch(e){ thinking(false); err("분석 실패: "+e.message); busy=false; }
+    busy=false;
+  }
+
+  q("askForm").addEventListener("submit",e=>{e.preventDefault();const t=askInput.value.trim();if(!t)return;askInput.value="";me(t);send(t);});
+  fileBtn.onclick=()=>fileInput.click();
+  fileInput.onchange=()=>{ if(fileInput.files[0]){ uploadFile(fileInput.files[0]); fileInput.value=""; } };
+
+  start();
+})();
+</script>
+</body>
+</html>

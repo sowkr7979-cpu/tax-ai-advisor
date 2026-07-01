@@ -1,0 +1,21 @@
+# 라이브 백엔드(web/backend) 공개 배포용 런타임 의존성.
+# 주의: RAG(chromadb/model2vec/torch)는 공개 데모에서 비활성(LIVE_WITH_RAG=0)이므로 제외 →
+#       이미지 경량화 + 내부 기밀자료 미노출. 로컬에서 RAG까지 쓰려면 pyproject 전체 설치.
+#
+# ⚠ import명 ≠ 패키지명(정적 검사기 오탐 주의). 아래 매핑으로 전부 충족됨(클린 venv 실측 검증):
+#   코드의  import fitz       → 패키지 pymupdf
+#   코드의  from docx ...     → 패키지 python-docx
+#   코드의  Form/File(멀티파트)→ 패키지 python-multipart (import명 'multipart')
+#   코드의  PIL(matplotlib)   → 패키지 pillow
+#   law.go.kr(법제처)는 표준 urllib 사용 → requests 불필요.
+fastapi==0.138.2
+uvicorn[standard]==0.49.0
+python-multipart==0.0.32   # 파일 업로드(Form/File). import명: multipart
+anthropic==0.112.0         # Claude 호출(httpx·pydantic 자동 동반)
+python-docx==1.2.0         # 검토패키지 DOCX. import명: docx
+pymupdf==1.28.0            # 업로드 PDF 추출·렌더. import명: fitz
+matplotlib==3.11.0         # 도식 4종(numpy·pillow 자동 동반)
+openpyxl==3.1.5            # 업로드 Excel 추출
+numpy==2.5.0
+pillow>=10.0              # matplotlib 이미지 처리. import명: PIL
+pyyaml>=6.0              # 방어적(일부 rules 로더)

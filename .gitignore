@@ -59,6 +59,26 @@ frontend/.playwright/
 !docs/**/*.docx
 !Codex/**/*.docx
 
+# --- 소개/시연 빌드 산출물 (regenerable) ---
+# (주석은 반드시 별도 줄에 — .gitignore는 인라인 주석 미지원)
+# KICPA PDF 임베드용 다운샘플·도식 캐시
+project_intro_assets/
+big4_learning_assets/
+big4_learning_pdf_render/
+docs_kicpa_visual_assets/
+# 루트 PDF는 뷰어 잠금 시 구버전이 남을 수 있어 형상관리 제외(웹 사본 web/assets/ 만 커밋)
+/세무AI_프로젝트소개_KICPA용.pdf
+# 개인 자기소개서 PDF(민감·재생성) — 스크립트는 커밋, 산출 PDF/임시파일은 제외
+/자기소개서_안진회계법인_Tax부문.pdf
+/자기소개서_안진회계법인_Tax부문.tmp.pdf
+# 산출물(생성 DOCX·차트 — 스크립트로 재생성, 대용량이라 형상관리 제외)
+산출물/
+산출물/_charts*/
+# 웹 데모 데이터: 브라우저는 .js만 로드. .json은 중복(export로 재생성) → 제외
+web/data/scenarios.json
+# 라이브 백엔드 세션 산출물(런타임 — 재생성)
+web/backend/_reports/
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

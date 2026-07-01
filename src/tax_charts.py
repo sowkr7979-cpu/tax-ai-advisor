@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import matplotlib
@@ -15,10 +16,14 @@ from matplotlib import font_manager, rcParams  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.patches as mpatches  # noqa: E402
 
-# 한글 폰트(Noto Sans KR) — 라벨 한국어. 없으면 맑은 고딕 폴백.
+# 한글 폰트 — 라벨 한국어. env(KOREAN_FONT_PATH) 우선, Windows(로컬)·Linux(컨테이너) 폴백.
 _FONT_CANDIDATES = [
+    os.environ.get("KOREAN_FONT_PATH", ""),
     r"C:\Windows\Fonts\NotoSansKR-Regular.ttf",
     r"C:\Windows\Fonts\malgun.ttf",
+    "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansKR-Regular.ttf",
 ]
 _BLUE, _GREEN, _ORANGE, _GREY, _RED = "#1A73E8", "#188038", "#E8710A", "#5F6368", "#D93025"
 

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { fixture } from "./data";
+import { OverviewScreen } from "./screens/OverviewScreen";
 import { IntakeScreen } from "./screens/IntakeScreen";
 import { StrategyScreen } from "./screens/StrategyScreen";
 import { DraftScreen } from "./screens/DraftScreen";
 
-type Route = "intake" | "strategy" | "draft";
+type Route = "overview" | "intake" | "strategy" | "draft";
 
 const ROUTES: { key: Route; label: string }[] = [
+  { key: "overview", label: "★ 프로젝트 소개" },
   { key: "intake", label: "① Intake 자료수집 챗" },
   { key: "strategy", label: "② 선택지 비교표" },
   { key: "draft", label: "③ DOCX 검토패키지 미리보기" },
@@ -14,8 +16,8 @@ const ROUTES: { key: Route; label: string }[] = [
 
 function currentRoute(): Route {
   const h = window.location.hash.replace(/^#\/?/, "");
-  if (h === "strategy" || h === "draft") return h;
-  return "intake";
+  if (h === "intake" || h === "strategy" || h === "draft") return h;
+  return "overview";
 }
 
 export function App() {
@@ -49,6 +51,7 @@ export function App() {
         ))}
       </nav>
       <main className="content">
+        {route === "overview" && <OverviewScreen />}
         {route === "intake" && <IntakeScreen intake={fixture.intake} />}
         {route === "strategy" && <StrategyScreen draft={fixture.draft} />}
         {route === "draft" && <DraftScreen draft={fixture.draft} />}

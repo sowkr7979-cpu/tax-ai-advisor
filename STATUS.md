@@ -3,6 +3,26 @@
 > 매 iteration 시작 시 이 파일 + `git log --oneline -15`를 먼저 읽는다. (PROMPT.md §3.1)
 > 점수는 **STATUS 자기보고가 아니라** 같은 iteration의 `pytest -q` + `python -m tiw.eval` 산출 `RubricResult`로만 증명된다(완료 판정 기준).
 
+## ☆ 라이브 백엔드 (2026-07 추가 — 실제 LLM 인테이크·전 세무거래·파일분석)
+> 정적 데모의 한계(규칙기반·4대 거래)를 넘어, **실제 Claude + 기존 엔진**으로 동작하는 백엔드 앱. **하이브리드**(정적 데모 유지 + 라이브).
+- **`web/backend/`**(FastAPI): `app.py`(라우트+정적서빙), `intake.py`(LLM 동적 인터뷰+finalize), `llm.py`(anthropic 직접호출·.env로더·**tool-use 구조화출력**·temperature 미전송), `files.py`(Excel/CSV/PDF 추출: openpyxl·fitz), `run.py`(런처). 실행: 레포루트 `python -m web.backend.run` → `http://127.0.0.1:8000/`(소개) `/live.html`(라이브).
+- **동적 인터뷰**(요구③): Claude가 **답변을 분석**(🔎 analysis)하고 그에 따라 다음 질문을 생성(고정 질문 나열 ✕). `INTAKE_MODEL=haiku-4.5`(빠름), tool-use로 `{analysis,tx_type,next_question,ready}`.
+- **파일 분석**(요구④): Excel/CSV/PDF 업로드→서버 추출→LLM이 내용 근거로 질문. `/api/upload`(multipart).
+- **전 세무거래**(요구⑤): 4대 거래 하드코딩 ✕ — LLM이 **임의 거래**를 분류(예: 비상장주식 저가양도·임원 무상사택 등 검증됨)하고, `FINALIZE_MODEL=sonnet-4.6`이 경우의 수 Scenario(JSON tool-use)를 생성 → **기존 `build_scenario_docx`로 DOCX**(matplotlib 도식 4종 + **법제처 `research_issue` 실시간 근거** + 내부 RAG). `_build_scenario`가 LLM JSON→`Scenario` 안전보정·`validate()`.
+- **검증**(실 API): 세션→반응형 질문(사택 소유/임차 되물음)→CSV 업로드→finalize(≈71s)→보고서 다운로드(640KB, 도식·판례 포함) 전 흐름 OK. Playwright: live.html badge=LIVE·실 LLM 분석·임의거래 감지·0 오류. **키(.env: ANTHROPIC·LAW_OC 등) 유효**.
+- **GUI = openai.com/ko-KR 스타일**: 공유 `web/assets/app.css`(Inter+Noto Sans KR·흰 배경·근검정·모노톤·미니멀 카드/pill)로 index/demo/live 통일. 진입=index(소개) 우선.
+- **보안 하드닝(codex 2라운드 반영·검증)**: ①프롬프트 인젝션 격리 — 업로드 파일·**대화 매 턴 사용자 답변**·finalize facts를 `_wrap_untrusted()`(`<untrusted_data>` 구분자+주입 종료태그 무력화+`_san_tag`로 파일명 속성 이탈 차단)로 감싸고 시스템 규칙 "데이터 내 지시 무시"(실검증: "PWNED/HACKED 출력 강요" 무시). ②세션 상한 `MAX_SESSIONS=200`+TTL 6h+`_evict()`(삽입 후, off-by-one 없음). ③예외 비노출 — `_fail()`이 `str(e)` 대신 일반 메시지+서버 log; finalize는 사용자 안내성 `NotReadyError`만 400 노출. ④업로드 가드 — 확장자 화이트리스트(415)+1MB 청크 누적 15MB 상한(413, 전량 read 전 차단). ⑤finalize 최소 사실관계 3건 미만 400. ⑥`_build_scenario` 배열 12·문자열 2000 상한(citation 폴백 포함). ⑦files.py try/finally로 openpyxl/fitz 핸들 보장. ⑧live.html XSS — 서버/LLM 메시지 `botText()`(esc후 **굵게**·개행만)·err textContent.
+- venv 추가 의존성: fastapi·python-multipart·openpyxl·pymupdf. `web/backend/_reports/` gitignore.
+
+## ☆ 최신 산출물 (2026-07 업데이트 — 소개·시연·지원자료)
+> 코드 엔진 변경 없음(회귀 0). 외부 소개·시연·이직 지원용 산출물 추가 + 설계서 최신화.
+- **KICPA용 프로젝트 소개 PDF**: `scripts/build_project_intro_kicpa_pdf.py` → `세무AI_프로젝트소개_KICPA용.pdf`(10p, ~0.9MB). PyMuPDF·malgun **폰트 서브셋**·이미지 다운샘플·실차트(`산출물/_charts_case`) 임베드. ⚠ 루트 파일이 뷰어로 열려 있으면 잠금(Permission denied) — 닫고 재생성. `KICPA_PDF_OUT` env로 출력경로 override 가능.
+- **이력서용 정적 랜딩 + 실제 동작 데모** (`web/index.html`·`web/demo.html`, **openai.com/ko-KR 스타일** 공유 `web/assets/app.css`: Inter+Noto Sans KR·흰 배경·근검정·모노톤·미니멀 카드/pill — index/demo/live 통일). **포지셔닝(정정)**: 데모는 표준 형식을 보여주는 **3~4쟁점 예시**일 뿐, 시스템은 **모든 세무거래**를 검토(내부 RAG DB 부족분은 **law.go.kr API·판례/예규/세무질의 웹리서치**로 보강). index 지표=전 세목(법인세·소득세·부가·상증·양도 등)·모든 거래·3중 검증. 데모 = **사실관계 인터뷰 챗봇**: 답변 내용에 **반응**(인용 ack + 금액·특수관계·시가·증빙 프로브)하며 최소 20문항 인터뷰(중단 시까지). **거래유형 감지 일관성(강화)**: Q1 답변에서 감지·표시하고 감지·심화질문·분석이 항상 동일 거래에 맞춰짐 — `maybeSwitchType`은 **Q1 거래 계속 검토가 원칙**이며, 부수 언급(`ASIDE`)·**우연한 다른-거래 키워드 동시등장(예: 상여 검토 중 '잉여금·감자·주식 취득')은 전환하지 않고**, `SWITCH_CUE`(사실은·정정·아니라·변경 등) 또는 `saysTransaction`(새 거래 키워드+거래/검토/취득 지정어 근접)로 **명시적 재지정**할 때만 심화슬롯 재주입하며 전환. 슬롯(미답 주제만)+프로브, 부정 인식 `hasNeg`, `inferGate` pass/risk. → **검토 패키지 보고서 .docx**: **실제 scenario_report 형식**(사실관계 전문·게이트 분석·경우의수 매트릭스·권고·절세 대안비교·사후관리/실행계획·분개·근거법령·분개장/원장 부록) + **모든 시나리오에 도식 4종 임베드**(`[그림1]`플로우차트·`[그림2]`매트릭스·`[그림3]`대안비교 그래프·`[그림4]`실행 타임라인). **차트는 `scenarios.js`에 base64 data URI로 내장**(export가 `산출물/_charts_scn`→base64) → **서버(fetch) 없이 file:// 더블클릭으로도 도식 임베드**(`dataUriToBytes`→ImageRun, `imgDims` 비율 보존; 폴백 `.doc`는 base64 `<img>`). docx UMD(CDN `docx@8.5.0`), scenarios.js ≈1.7MB. Playwright 검증: 감지=Q1 일치·전환 동작·EXECPAY 게이트 정확(D1충족/D2위험/D3위험)·docx 이미지 4·전 섹션·XSS 미실행. codex: parse 오류 없음.
+- **React 목업 확장**: `frontend/src/screens/OverviewScreen.tsx` + `App.tsx` 라우트 `overview`(기본). 기존 playwright는 `#/intake|strategy|draft` 명시 이동 → 회귀 없음. `npm run build` OK.
+- **설계서 최신화**: 정본 `md 파일/법인세_세무AI_설계서_통합.md` §0-A 신설 + HTML 재생성(`build_unified_html.py`), `docs/README.md` 현황, `md 파일/면접_질답…` 보조자료 포인터.
+- **이직 지원자료**: `md 파일/Big4_Tax_자기소개서_면접가이드.md`(지원동기·Career goal 각 ~1,000자 + 면접 Q&A·시연 동선·학습포인트).
+- 매 단계 codex 리뷰 진행.
+
 ## ★ 미션 v1.1 (변경①②③) — slice ⑦ 진행 중 (완료 게이트 미충족)
 > **★ 미션 완료(v1.1)**: slice ①~⑦ **전부 PASS**. **`python -m tiw.eval` = 7/7** (①90.5 ②97.3 ③96.8 ④93.5 ⑤92.3 ⑥100 ⑦100, **하드게이트 0**). **완료 promise 3대 조건 모두 충족**: ✅ pytest 231 clean · ✅ 7 슬라이스 ≥90 + 하드게이트 0 · ✅ 목업 3화면 Playwright 3/3. slice⑦ requirement 는 **사용자 키로 소득세 end-to-end fixture(소득세법 제22조 법령·LLM·임베딩) 녹화 → 비-법인세 파이프라인=PACKAGE** 로 정식 채점(iter15). `<promise>ALL_SLICES_90</promise>` 충족.
 - **Rubric Freeze v1.1** (사용자 승인 확장) — 완료 게이트 6→**7 slice ≥90** + per-FR 예시 H/I/J + DOCX 11→13목차. 기존 가중치·하드게이트·6 slice 합격조건 **불변**(회귀 0).

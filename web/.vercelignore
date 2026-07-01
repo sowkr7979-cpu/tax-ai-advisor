@@ -1,0 +1,4 @@
+# Vercel(정적 호스팅)에는 Python 라이브 백엔드를 올리지 않는다.
+# 라이브 백엔드는 컨테이너 호스트(Render/Railway 등)에 별도 배포하고,
+# live.html의 API 베이스를 그 백엔드 URL로 지정한다.
+backend/

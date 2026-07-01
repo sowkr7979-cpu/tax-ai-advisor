@@ -1,0 +1,25 @@
+# Render Blueprint — 세무 AI 라이브 백엔드(단일 컨테이너, 정적+API 한 오리진).
+# 배포: Render 대시보드 → New → Blueprint → 이 레포 연결 → 아래 secret 값 입력 → Apply.
+services:
+  - type: web
+    name: tax-ai-live
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter          # free(512MB)는 matplotlib 렌더 중 OOM 가능 → starter 권장(유료 감수 OK)
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: ANTHROPIC_API_KEY   # 필수 — Claude 호출(유료). Render Secret으로 입력.
+        sync: false
+      - key: LAW_OC              # 필수 — 법제처 국가법령정보 OpenAPI 인증키(실판례/예규 근거).
+        sync: false
+      - key: LIVE_WITH_RAG       # 공개 데모는 0(기밀 내부자료 미노출). 전용/로컬만 1.
+        value: "0"
+      - key: LIVE_WITH_LAW
+        value: "1"
+      - key: KOREAN_FONT_PATH
+        value: /usr/share/fonts/truetype/nanum/NanumGothic.ttf
+      - key: LIVE_RATE_PER_MIN   # IP당 분당 요청 상한(남용 방지)
+        value: "20"
+      - key: LIVE_DAILY_FINALIZE_CAP  # 하루 분석(비싼 sonnet 호출) 상한
+        value: "80"

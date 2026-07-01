@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>세무 AI 검토 데모 — 사실관계 인터뷰 챗봇</title>
+<meta name="description" content="챗봇이 답변에 반응하며 거래 사실관계를 인터뷰하고, 수집한 사실로 '경우의 수' 세무 분석 후 검토 패키지 보고서(Word)를 생성합니다." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css" />
+</head>
+<body>
+<div class="hdr"><div class="wrap">
+  <div class="logo"><span class="b">세</span><span class="r">무</span> <span class="y">A</span><span class="g">I</span>
+    <small>Tax Decision Assistant</small></div>
+  <a class="back" href="index.html">← 프로젝트 소개</a>
+</div></div>
+<div class="sub"><div class="wrap">
+  <h1>사실관계 인터뷰 챗봇</h1>
+  <p>답변 내용에 반응하며 거래 사실관계를 인터뷰하고, 수집한 사실로 ‘경우의 수’ 분석 후 검토 패키지(Word)를 생성합니다.</p>
+</div></div>
+
+<div class="wrap layout">
+  <!-- 좌: 인터뷰 -->
+  <div class="card">
+    <h2>사실관계 인터뷰 <span class="chip-state" id="phasePill">인터뷰 중</span></h2>
+    <div class="chat" id="chat"></div>
+    <div class="choices" id="choices"></div>
+    <form class="ask" id="askForm" autocomplete="off">
+      <div class="searchbar">
+        <input id="askInput" placeholder="답변을 입력하세요 (자유롭게 — 모르면 ‘모름/없음’도 가능)" />
+        <button type="submit">전송</button>
+      </div>
+    </form>
+  </div>
+  <!-- 우: 진행/사실관계/결과 -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <h2>인터뷰 진행</h2>
+      <div class="prog">
+        <small><b id="cnt">0</b>개 수집 · 최소 <b>20</b>문항 권장 (중단 시까지 계속)</small>
+        <div class="bar"><i id="barFill"></i></div>
+      </div>
+      <div class="detect" id="detect" style="display:none;"></div>
+      <div class="facts" id="facts"><div style="color:#9aa0a6;font-size:12.5px;">수집된 사실관계가 여기에 누적됩니다.</div></div>
+    </div>
+    <div class="card" id="resultPanel" style="display:none;">
+      <h2>분석 결과 · 검토 패키지</h2>
+      <div style="padding:14px 16px;">
+        <button class="dl" id="dlBtn" disabled>📄 검토 패키지 보고서 다운로드</button>
+        <div id="resultBox" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    <div class="note">
+      본 데모는 실제 시나리오 엔진 데이터를 <b>규칙 기반</b>으로 재생합니다. 사실관계 분석·근거는 인공지능 추론 초안이며
+      회계사 검토(HITL)가 필요합니다. 금액·사실관계는 사용자가 입력한 가정치입니다.
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js" crossorigin="anonymous"></script>
+<script src="data/scenarios.js"></script>
+<script>
+(function(){
+  const PKG=window.SCENARIOS||{}; const DATA=PKG.scenarios||[];
+  const byKey=Object.fromEntries(DATA.map(s=>[s.key,s]));
+  const lawUrl=l=>"https://www.law.go.kr/LSW/lsSc.do?menuId=1&subMenuId=15&query="+encodeURIComponent(String(l).split("(")[0].trim());
+  const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const won=v=>Number(v||0).toLocaleString();
+
+  // 거래 감지 키워드
+  const KW={
+    TREASURY:["자기주식","자사주","소각","잉여금","배당가능","감자","자기 주식","지분 정리","주식 취득"],
+    EXECPAY:["임원","보수","상여","퇴직금","대표이사 급여","급여 인상","임원 보수","상여금","연봉"],
+    LOAN:["가지급금","대여","대여금","빌려","빌려준","인정이자","자금 대여","자금을 빌"],
+  };
+  // 게이트 판정 키워드(pass/risk)
+  const INFER={
+    TREASURY:{D1:{pass:["배당가능이익 범위","범위 내","충분","적법한 재원","재원 충분"],risk:["초과","부족","재원이 없","배당가능이익이 적"]},
+      D2:{pass:["시가","상증법 평가","평가보고서","시가대로","감정평가"],risk:["고가","높게","비싸게","저가","싸게","시가보다"]},
+      D3:{pass:["균등","전체 주주","지분비율","모든 주주","비율대로"],risk:["특정","일부 주주","일부만","불균등","최대주주만","한 명만","대주주","소수 주주","에게서만"]}},
+    EXECPAY:{D1:{pass:["지급규정","정관","주총","주주총회 승인","위임","규정이 있","규정에 있"],risk:["규정이 없","규정 없","임의","무단"]},
+      D2:{pass:["한도 내","한도 이내"],risk:["한도 초과","초과","과다","과도","급격히 인상","갑자기 인상","넘"]},
+      D3:{pass:["동일 직위 비교","비교했","유사 수준","합리적 수준"],risk:["비교 안","비교는 안","비교하지","안 했","미비교","훨씬 많","현저히 높","지배주주만 많"]}},
+    LOAN:{D1:{pass:["약정이자","인정이자율","이자 받","이자율","적정 이자"],risk:["무이자","이자 없","이자를 안","약정 없","이자가 없"]},
+      D2:{pass:["차입금이 없","차입 없","자기자금"],risk:["차입금","대출이 있","차입이 있","지급이자"]},
+      D3:{pass:["회수 계획","상환 계획","담보","회수했","상환했"],risk:["회수 계획이 없","상환 계획 없","장기 미회수","담보 없","회수 계획 없","미회수"]}},
+  };
+  // 슬롯(질문) — general + 거래별. kw 포함 시 충족으로 간주(이미 답한 주제 재질문 방지).
+  const G=[
+    {id:"tx",     q:"먼저, 이번에 세무 검토가 필요한 거래나 사건은 무엇인가요?", kw:["자기주식","임원","보수","퇴직금","가지급금","대여","감자","상여"]},
+    {id:"company",q:"회사는 어떤 곳인가요? 업종·대략적 규모와 상장 여부를 알려주세요.", kw:["업종","제조","상장","비상장","매출","규모","법인"]},
+    {id:"purpose",q:"그 거래를 하려는 목적·배경은 무엇인가요?", kw:["목적","배경","환원","정리","승계","보상","위해","때문"]},
+    {id:"amount", q:"거래의 예상 금액·규모는 어느 정도인가요? (대략의 가정치도 좋습니다)", kw:["억","만원","원","규모","금액","%"]},
+    {id:"party",  q:"거래 상대방은 누구이며, 회사와 특수관계가 있나요?", kw:["최대주주","대표이사","특수관계","관계회사","상대방","주주","본인"]},
+    {id:"timing", q:"거래 예정 시점과 일정은 어떻게 되나요?", kw:["분기","월","예정","일정","올해","내년","시점"]},
+    {id:"funding",q:"거래에 쓰일 자금의 원천은 무엇인가요? (이익잉여금·차입 등)", kw:["잉여금","이익잉여금","차입","자기자금","대출","재원"]},
+    {id:"proc",   q:"이사회·주주총회 결의 등 의사결정 절차는 거쳤거나 거칠 예정인가요?", kw:["이사회","주주총회","주총","결의","승인"]},
+    {id:"evid",   q:"관련 규정·계약서·평가자료 등 증빙은 어느 정도 갖추고 있나요?", kw:["증빙","계약서","평가보고서","의사록","규정","서류"]},
+    {id:"hist",   q:"과거 유사 거래나 관련 항목의 기존 세무처리 이력이 있나요?", kw:["이력","과거","기존","전기","유사"]},
+    {id:"concern",q:"현재 우려하고 있는 세무 리스크가 있다면 무엇인가요?", kw:["우려","리스크","위험","걱정","부당행위"]},
+    {id:"audit",  q:"세무조사나 과세(경정) 전력이 있나요?", kw:["세무조사","조사","과세","경정","전력"]},
+  ];
+  const DEEP={
+    TREASURY:[
+      {id:"t_d1",q:"자기주식 취득 재원이 상법상 배당가능이익 범위 내인가요? 재원 규모는요?",kw:["배당가능이익","재원","범위","초과"]},
+      {id:"t_d2",q:"취득 가액은 시가(상증법 보충적 평가) 기준인가요, 협의가/액면가인가요?",kw:["시가","평가","고가","저가","감정","액면"]},
+      {id:"t_d3",q:"전체 주주에게서 지분비율대로 균등 취득하나요, 특정·일부 주주에게서만인가요?",kw:["균등","전체 주주","특정","일부","대주주"]},
+      {id:"t_p", q:"취득 목적은 소각인가요, 보유(향후 재매각·임직원 보상 등)인가요?",kw:["소각","보유","재매각"]},
+    ],
+    EXECPAY:[
+      {id:"e_d1",q:"임원 보수·퇴직금 지급규정이 정관 또는 주주총회 결의로 마련돼 있나요?",kw:["지급규정","정관","주총","규정"]},
+      {id:"e_d2",q:"이번 지급(인상)액은 주주총회 승인 한도 이내인가요? 한도는 얼마인가요?",kw:["한도","승인","초과"]},
+      {id:"e_d3",q:"동일 직위의 비지배주주 임원 보수와 비교했나요? 수준 차이가 큰가요?",kw:["동일 직위","비교","비지배","유사"]},
+    ],
+    LOAN:[
+      {id:"l_d1",q:"대여금(가지급금)에 약정이자가 있나요? 인정이자율 이상인가요, 무이자인가요?",kw:["약정이자","인정이자","이자율","무이자","이자"]},
+      {id:"l_d2",q:"회사에 차입금이 있나요? (있으면 지급이자 손금부인 쟁점)",kw:["차입금","차입","대출","지급이자"]},
+      {id:"l_d3",q:"대여금 회수 계획·상환 일정·담보가 있나요?",kw:["회수","상환","담보"]},
+    ],
+  };
+  const CLOSING=[
+    "추가로 알려주실 사실관계가 있나요? (증빙 보관 현황, 향후 일정 등)",
+    "이 거래와 함께 검토가 필요한 다른 쟁점이 있나요?",
+    "회계처리(분개) 방향이나 결산 반영 계획이 정해져 있나요?",
+    "그 밖에 의사결정에 영향을 줄 만한 특이사항이 있나요?",
+  ];
+  // 답변 내용에 '반응'하는 후속 프로브(각 1회). 사용자가 말한 것을 인용해 되묻는다.
+  const PROBES=[
+    {id:"amount", re:/(\d[\d,\.]*\s*(?:억\s*원?|천만원|백만원|만원|원|%))/, q:m=>`방금 ‘${m[1]}’(이)라고 하셨는데, 그 금액·수치는 어떻게 산정·평가하셨나요? 근거자료(평가보고서 등)가 있나요?`},
+    {id:"relation",re:/(최대주주|지배주주|대표이사|특수관계자|특수관계|관계회사)/, q:m=>`말씀하신 ‘${m[1]}’와(과) 회사의 구체적 관계(지분율·직위·거래 내역)는 어떻게 되나요?`},
+    {id:"price",  re:/(고가|저가|시가보다|비싸게|싸게)/, q:m=>`가액이 ‘${m[1]}’ 수준이라면, 시가(상증법 보충적 평가)와의 차이와 그 산정 근거는 무엇인가요?`},
+    {id:"noevid", re:/(준비\s*중|아직\s*없|부족|미비|초안만)/, q:m=>`‘${m[1]}’이라고 하셨는데, 어떤 증빙이 비어 있고 언제까지 보완 가능한가요? (사후 입증에 중요합니다)`},
+    {id:"loanuse",re:/(운영자금|개인\s*용도|업무무관|사적)/, q:m=>`그 자금의 ‘${m[1]}’ 사용은 업무관련성 판단에 직결됩니다. 업무와의 관련성을 좀 더 설명해 주시겠어요?`},
+  ];
+  const VAGUE=/(모름|모르|없습니다|없음|미정|글쎄|잘 모|해당\s*없|아직)/;
+
+  // 상태
+  const chat=q("chat"),choices=q("choices"),cntEl=q("cnt"),barFill=q("barFill"),
+    factsEl=q("facts"),detectEl=q("detect"),resultPanel=q("resultPanel"),resultBox=q("resultBox"),
+    dlBtn=q("dlBtn"),phasePill=q("phasePill"),askInput=q("askInput");
+  function q(id){return document.getElementById(id);}
+  const MIN_Q=20;
+  let facts=[],slots=G.map(s=>Object.assign({scope:"general",filled:false},s)),
+      detected=null,deepAdded=false,curQ=null,curSlot=null,phase="interview",
+      usedProbes=new Set(),closingIdx=0,lastReport=null,promptedReady=false;
+
+  function add(html,cls){const d=document.createElement("div");d.className="msg "+cls;d.innerHTML=html;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d;}
+  function bot(html){return add(html,"bot");}
+  function me(t){const d=document.createElement("div");d.className="msg me";d.textContent=t;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;}
+  function askBot(text){bot(`<div class="qno">질문 ${facts.length+1}</div>${esc(text)}`);curQ=text;}
+  function setChoices(items){choices.innerHTML="";(items||[]).forEach(it=>{const b=document.createElement("button");b.className="chip "+(it.cls||"");b.textContent=it.label;b.onclick=it.onClick;choices.appendChild(b);});}
+  function refreshFacts(){
+    cntEl.textContent=facts.length;barFill.style.width=Math.min(100,facts.length/MIN_Q*100)+"%";
+    factsEl.innerHTML=facts.length?facts.map((f,i)=>`<div class="fact"><b>Q${i+1}. ${esc(f.q)}</b><span>${esc(f.a)}</span></div>`).join("")
+      :'<div style="color:#9aa0a6;font-size:12.5px;">수집된 사실관계가 여기에 누적됩니다.</div>';
+    factsEl.scrollTop=factsEl.scrollHeight;
+  }
+  function detectFrom(t){let best=null,bn=0;for(const k in KW){const n=KW[k].filter(w=>t.includes(w)).length;if(n>bn){bn=n;best=k;}}return bn>0?best:null;}
+  function allText(){return facts.map(f=>f.a).join(" ");}
+
+  function markFilled(){const t=allText();slots.forEach(s=>{if(!s.filled&&s.kw.some(w=>t.includes(w)))s.filled=true;});}
+  function injectDeep(){if(detected&&!deepAdded){const d=(DEEP[detected]||[]).map(s=>Object.assign({scope:detected,filled:false},s));slots=d.concat(slots);deepAdded=true;}}
+  // 부수 언급 표지(다른 쟁점을 '함께' 언급한 것 — 주 거래를 바꾸는 게 아님).
+  const ASIDE=/(함께|또한|다른\s*쟁점|다른\s*거래|추가로|그리고|외에|겸\s|도[\s.,]|도\s*있|도\s*함께)/;
+  // 명시적 '정정·변경' 신호(주 거래를 실제로 바꾸겠다는 표현).
+  const SWITCH_CUE=/(사실은|실은|정정|잘못\s*말|아니라|아니고|이\s*아니라|가\s*아니라|대신에?|말고|바꿔|바꾸|변경|정확히는|메인은|주된?\s*거래는)/;
+  // 새 거래유형을 '이 거래로 검토'하겠다고 명시적으로 지정했는지(키워드 옆에 거래/검토/취득 등 지정어).
+  function saysTransaction(ans,type){
+    return (KW[type]||[]).some(w=>{const i=ans.indexOf(w);if(i<0)return false;
+      const win=ans.slice(i,i+w.length+12);
+      return /(거래|검토|사안|안건|건이|건을|건은|건입|취득|양도|처분|정리|하려|하고자|하겠|할\s*예정)/.test(win);});
+  }
+  function showDetect(sw){detectEl.style.display="block";
+    detectEl.innerHTML=(sw?"거래 유형을 다음으로 전환합니다: ":"질문 답변에서 감지된 거래 유형: ")+`<b>${esc(byKey[detected].title)}</b> — 이후 질문·분석을 이 거래에 맞춥니다.`;}
+  // Q1 답변에서 최초 감지·표시. 이후엔 Q1 거래를 계속 검토한다. '부수 언급'이나 '우연한 키워드
+  // 동시등장'은 무시하고, 사용자가 다른 거래를 '명시적으로 재지정'(정정 신호 또는 새 거래 지정)한
+  // 답변에서만 전환하며 심화질문·분석을 그 거래로 일관되게 맞춘다(감지=표시=분석 항상 일치).
+  function maybeSwitchType(ans){
+    const d=detectFrom(ans);
+    if(!d) return;
+    if(!detected){ detected=d; showDetect(false); return; }   // 최초(주로 Q1) 감지
+    if(d===detected) return;
+    if(ASIDE.test(ans)) return;                               // 부수 언급 → 주 거래 유지
+    // Q1 거래 계속 검토가 원칙. 명시적 재지정일 때만 전환(우연한 키워드 등장으로 바뀌지 않음).
+    if(!(SWITCH_CUE.test(ans) || saysTransaction(ans,d))) return;
+    detected=d;
+    slots=slots.filter(s=>s.scope==="general");               // 이전 거래 심화슬롯 제거
+    deepAdded=false;                                          // 새 거래 심화슬롯 재주입
+    showDetect(true);
+  }
+  function firstClause(t){t=String(t).trim();const m=t.split(/[.。,\n!?·]/)[0];return (m||t).slice(0,22);}
+  function ackText(ans,vague){
+    if(vague) return "그 부분은 추후 확인이 필요하겠네요. ";
+    const f=firstClause(ans);
+    return `‘${f}${ans.trim().length>f.length?"…":""}’라고 하셨군요. `;
+  }
+
+  function nextQuestion(lastAns){
+    injectDeep(); markFilled();   // 새로 주입된 심화슬롯 중 이미 답한 주제는 충족 처리(중복 질문 방지)
+    const vague=lastAns?VAGUE.test(lastAns):false;
+    // 1) 답변에 반응하는 프로브(인용 후속질문)
+    if(lastAns&&!vague){
+      for(const p of PROBES){ if(usedProbes.has(p.id))continue; const m=lastAns.match(p.re);
+        if(m){ usedProbes.add(p.id); curSlot=null; askBot((facts.length?ackText(lastAns,false):"")+p.q(m)); maybeReady(); return; } }
+    }
+    // 2) 미충족 슬롯(거래별 우선 → 일반)
+    const order=slots.filter(s=>s.scope===detected).concat(slots.filter(s=>s.scope==="general"));
+    const nx=order.find(s=>!s.filled);
+    const ack=(lastAns&&facts.length)?ackText(lastAns,vague):"";  // lastAns 없으면(건너뜀) ack 생략
+    if(nx){ curSlot=nx; askBot(ack+nx.q); maybeReady(); return; }
+    // 3) 마무리 순환
+    curSlot=null; askBot(ack+CLOSING[closingIdx++%CLOSING.length]); maybeReady();
+  }
+  function maybeReady(){
+    const ready=facts.length>=MIN_Q;
+    phasePill.textContent=ready?"분석 준비됨":"인터뷰 중";
+    const items=[{label:"이 질문 건너뛰기",cls:"grey",onClick:skip}];
+    if(facts.length>=3)items.push({label:"■ 그만하고 분석",cls:ready?"go":"",onClick:analyze});
+    setChoices(items);
+    if(ready&&!promptedReady){promptedReady=true;bot("사실관계가 <b>20개 이상</b> 수집되었습니다. 더 이어가셔도 좋고, 언제든 <b>‘그만하고 분석’</b>을 누르면 검토 패키지를 생성합니다.");}
+  }
+  function skip(){me("(건너뜀)");if(curSlot)curSlot.filled=true;facts.push({q:curQ,a:"(미응답)"});refreshFacts();
+    bot("네, 이 질문은 건너뛰고 다음으로 넘어가겠습니다.");
+    setTimeout(()=>nextQuestion(null),200);}
+
+  q("askForm").addEventListener("submit",e=>{
+    e.preventDefault();const a=askInput.value.trim();if(!a)return;askInput.value="";
+    if(phase==="done"){bot("분석이 완료되었습니다. 오른쪽에서 보고서를 받거나 새로고침해 다시 시작하세요.");return;}
+    me(a);if(curSlot)curSlot.filled=true;facts.push({q:curQ||"(자유 입력)",a});
+    maybeSwitchType(a);
+    markFilled();refreshFacts();
+    if(/^(그만|분석|중단|끝|완료)/.test(a)&&facts.length>=3){analyze();return;}
+    setTimeout(()=>nextQuestion(a),260);
+  });
+
+  // ---- 분석 ----
+  function hasNeg(t,w){let i=t.indexOf(w);while(i>=0){const af=t.slice(i+w.length,i+w.length+12);if(!/(아니|않|없|안\s|못\s|이 아닌|가 아닌)/.test(af))return false;i=t.indexOf(w,i+1);}return true;}
+  function inferGate(sk,gk,t){const m=(INFER[sk]||{})[gk];if(!m)return"unknown";const risk=m.risk.some(w=>t.includes(w));const pass=m.pass.some(w=>t.includes(w)&&!hasNeg(t,w));if(risk)return"risk";if(pass)return"pass";return"unknown";}
+  function leafForRisk(s,gi){const g=s.gates[gi];const terms=new Set(((g.risk_title+" "+g.risk_detail).match(/[가-힣]{2,}/g)||[]));let best=null,bn=-1;s.leaves.forEach(lf=>{if(lf.risk_level==="안전")return;const hay=lf.path+" "+lf.tax_risk+" "+lf.management;let n=0;terms.forEach(t=>{if(hay.includes(t))n++;});if(n>bn){bn=n;best=lf;}});return best;}
+  function analyze(){
+    if(phase==="done")return;const t=allText();const key=detected||detectFrom(t);
+    if(!key){bot("아직 거래 유형을 특정하기 어렵습니다. ‘자기주식·임원보수·가지급금’ 중 어떤 거래인지 한 번 더 알려주시면 분석하겠습니다.");return;}
+    phase="done";phasePill.textContent="분석 완료";setChoices([]);
+    const s=byKey[key];const findings=s.gates.map(g=>({gate:g,status:inferGate(key,g.key,t)}));
+    const firstRisk=findings.find(f=>f.status==="risk");const unknowns=findings.filter(f=>f.status==="unknown");
+    let resultLeaf,headline,hcls;
+    if(firstRisk){resultLeaf=leafForRisk(s,s.gates.indexOf(firstRisk.gate))||s.leaves.find(l=>l.risk_level!=="안전");headline=`위험 신호 감지 — ${firstRisk.gate.risk_title}`;hcls="danger";}
+    else if(unknowns.length){resultLeaf=s.leaves.find(l=>l.case_label===s.recommended_case)||s.leaves[0];headline="요건 충족 가능성 있으나 확인 필요 사항 존재";hcls="warn";}
+    else{resultLeaf=s.leaves.find(l=>l.case_label===s.recommended_case)||s.leaves[0];headline=`요건 충족 — ${s.safe_title}`;hcls="safe";}
+    lastReport={s,key,findings,unknowns,resultLeaf,headline,hcls,facts:facts.slice()};
+    renderResult(lastReport);
+  }
+  function leafCardHtml(lf,title){
+    const cls=lf.risk_level==="안전"?"safe":lf.risk_level==="주의"?"warn":"danger";
+    const badge=lf.risk_level==="안전"?"b-safe":lf.risk_level==="주의"?"b-warn":"b-danger";
+    const basis=lf.basis.map(b=>`<a href="${esc(lawUrl(b))}" target="_blank" rel="noopener">${esc(String(b).split("(")[0])}</a>`).join("");
+    return `<div class="rc ${cls}"><h3><span class="badge ${badge}">${esc(lf.risk_level)}</span> &nbsp;${esc(title)} · ${esc(lf.path)}</h3>
+      <div class="row"><b>세무리스크</b> — ${esc(lf.tax_risk)}</div><div class="row"><b>절세전략·리스크관리</b> — ${esc(lf.management)}</div>
+      <div class="row basis"><b>근거</b><br/>${basis}</div></div>`;
+  }
+  function renderResult(R){
+    const {s,findings,unknowns,resultLeaf,headline}=R;
+    bot(`<b>✅ 인터뷰 종료 — 분석을 완료했습니다.</b>\n거래 유형: <b>${esc(s.title)}</b> · 수집 사실관계 ${R.facts.length}건`);
+    const c=document.createElement("div");c.className="msg bot";c.style.maxWidth="100%";
+    const fr=findings.map(f=>{const st=f.status==="pass"?'<span class="st-pass">충족</span>':f.status==="risk"?'<span class="st-risk">위험</span>':'<span class="st-unk">확인 필요</span>';return `<tr><td>${esc(f.gate.key)}</td><td>${esc(f.gate.question)}</td><td>${st}</td></tr>`;}).join("");
+    c.innerHTML=leafCardHtml(resultLeaf,headline.length>40?"분석 결과":headline)
+      +`<div style="margin-top:10px;font-size:12.5px;"><b>판단 게이트 분석</b><table class="mx" style="margin-top:6px;"><tr><th>게이트</th><th>판단 질문</th><th>판정</th></tr>${fr}</table></div>`
+      +(unknowns.length?`<div style="margin-top:8px;font-size:12.5px;color:#b06000;"><b>추가 확인 필요:</b> ${esc(unknowns.map(u=>u.gate.key).join(", "))} 관련 사실관계가 인터뷰에서 명확하지 않습니다. 회계사 확인이 필요합니다.</div>`:"");
+    chat.appendChild(c);chat.scrollTop=chat.scrollHeight;
+    resultPanel.style.display="block";
+    resultBox.innerHTML=`<div style="font-size:12.5px;color:var(--text2);margin-bottom:6px;">보고서에는 인터뷰 전문·게이트 분석·경우의 수 매트릭스·권고안·절세 대안비교·사후관리/실행계획·분개·근거·분개장/원장 부록이 포함됩니다.</div>`
+      +`<div style="overflow-x:auto;"><table class="mx"><tr><th>경우의 수</th><th>위험</th><th>세무리스크</th></tr>`
+      +s.leaves.map(lf=>`<tr><td><b>${esc(lf.case_label)}</b><br/><span style="color:#5f6368">${esc(lf.path)}</span></td><td class="lvl ${esc(lf.risk_level)}">${esc(lf.risk_level)}</td><td>${esc(lf.tax_risk)}</td></tr>`).join("")+`</table></div>`;
+    dlBtn.disabled=false;
+    bot("오른쪽 <b>‘검토 패키지 보고서 다운로드’</b>로 Word(.docx) 보고서를 받을 수 있습니다.");
+  }
+
+  // ---- 다운로드 ----
+  dlBtn.addEventListener("click",()=>{if(lastReport)generateReport(lastReport);});
+  function todayStr(){const d=new Date();return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;}
+  function statusKo(s){return s==="pass"?"충족":s==="risk"?"위험":"확인 필요";}
+  // 모든 시나리오의 4종 도식(플로우차트·매트릭스·대안비교 그래프·실행 타임라인)은 scenarios.js에
+  // base64 data URI로 내장돼 있다 → 서버(fetch) 없이 file:// 로도 보고서에 도식을 임베드한다.
+  function assetImg(key){return (byKey[key]&&byKey[key].charts)||{};}
+  function dataUriToBytes(uri){const b64=String(uri).split(",")[1]||"";const bin=atob(b64);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+  async function imgDims(bytes,maxW){let w=maxW,h=Math.round(maxW*0.62);try{const bmp=await createImageBitmap(new Blob([bytes],{type:"image/png"}));h=Math.round(maxW*bmp.height/bmp.width);if(bmp.close)bmp.close();}catch(e){}return {w,h};}
+
+  async function generateReport(R){
+    dlBtn.disabled=true;dlBtn.textContent="보고서 생성 중…";
+    const fn=`검토패키지_${R.s.title.replace(/[^가-힣A-Za-z0-9]/g,"")}_${todayStr().replace(/[^0-9]/g,"")}`;
+    try{
+      if(window.docx&&window.docx.Packer){ await buildDocx(R,fn); }
+      else{ await buildDocFallback(R,fn); }
+    }catch(e){ try{await buildDocFallback(R,fn);}catch(_){ bot("보고서 생성 중 오류가 발생했습니다. 새로고침 후 다시 시도해 주세요."); } }
+    dlBtn.disabled=false;dlBtn.textContent="📄 검토 패키지 보고서 다운로드";
+  }
+
+  function ledgerFrom(journal){const m={};(journal?journal.lines:[]).forEach(l=>{const a=l.account;m[a]=m[a]||[0,0];m[a][0]+=Number(l.debit||0);m[a][1]+=Number(l.credit||0);});return m;}
+
+  // (A) 진짜 .docx
+  async function buildDocx(R,fn){
+    const D=window.docx,{Document,Packer,Paragraph,TextRun,HeadingLevel,Table,TableRow,TableCell,WidthType,AlignmentType,ImageRun,BorderStyle}=D;
+    const s=R.s;
+    const H=t=>new Paragraph({heading:HeadingLevel.HEADING_1,spacing:{before:220,after:90},children:[new TextRun({text:t,bold:true,color:"1A73E8"})]});
+    const H2=t=>new Paragraph({heading:HeadingLevel.HEADING_2,spacing:{before:160,after:60},children:[new TextRun({text:t,bold:true})]});
+    const P=(t,o)=>new Paragraph({spacing:{after:60},children:[new TextRun(Object.assign({text:t,size:20},o||{}))]});
+    const BU=t=>new Paragraph({bullet:{level:0},spacing:{after:30},children:[new TextRun({text:t,size:19})]});
+    const cell=(t,o)=>new TableCell({width:{size:(o&&o.w)||25,type:WidthType.PERCENTAGE},shading:o&&o.sh?{fill:o.sh}:undefined,children:[new Paragraph({children:[new TextRun({text:String(t==null?"":t),bold:!!(o&&o.b),size:(o&&o.size)||18})]})]});
+    const tbl=(head,rows,w)=>new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({tableHeader:true,children:head.map((h,i)=>cell(h,{b:true,w:w&&w[i],sh:"F1F3F4"}))})].concat(rows.map(r=>new TableRow({children:r.map((cv,i)=>cell(cv,{w:w&&w[i]}))})))});
+    async function imgPara(uri,maxW){if(!uri)return null;const by=dataUriToBytes(uri);if(!by.length)return null;const {w,h}=await imgDims(by,maxW);return new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[new ImageRun({data:by,transformation:{width:w,height:h}})]});}
+    function cap(t){return new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:120},children:[new TextRun({text:t,size:15,color:"5F6368",italics:true})]});}
+    const IMG=assetImg(R.key);
+
+    const k=[];
+    k.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:60},children:[new TextRun({text:`${s.title} — 세무 검토 패키지 보고서`,bold:true,size:32})]}));
+    k.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{after:200},children:[new TextRun({text:`작성일 ${todayStr()} · 내부 검토용 · 인공지능 추론 초안(HITL 전제)`,size:18,color:"B06000"})]}));
+
+    k.push(H("0. 이 보고서를 읽는 법 (방법론)"));
+    k.push(P("실무 세무 판단은 ‘안전한가/위험한가’ 단답이 아니라, 핵심 조건을 어떻게 충족하느냐에 따라 갈리는 ‘경우의 수’ 문제입니다. 본 보고서는 챗봇 인터뷰로 수집한 사실관계를 바탕으로 거래를 판단 게이트로 분해해 경우의 수(안전·주의·위험)와 경우별 세무리스크·절세전략을 정리한 인공지능 추론 초안입니다."));
+    k.push(P("금액·사실관계는 사용자가 입력한 가정치이며, 분개·증빙은 검토용 예시입니다. 실제 회계처리·신고 전 담당 회계사의 검토와 서명이 필요합니다.",{color:"B06000"}));
+
+    k.push(H("1. 수집된 사실관계 (인터뷰 전문)"));
+    k.push(tbl(["#","질문","답변"],R.facts.map((f,i)=>[String(i+1),f.q,f.a]),[6,42,52]));
+
+    k.push(H("2. 거래 식별 및 판단 게이트 분석"));
+    k.push(P(`자동 식별된 거래 유형: ${s.title}`,{bold:true}));
+    const fimg=await imgPara(IMG.flow,380); if(fimg){k.push(fimg);k.push(cap("[그림 1] 의사결정 플로우차트 — 주황=분기 · 빨강=세무리스크 · 초록=정상 종결"));}
+    k.push(tbl(["게이트","판단 질문","판정"],R.findings.map(f=>[f.gate.key,f.gate.question,statusKo(f.status)]),[12,66,22]));
+    if(R.unknowns.length)k.push(P(`※ 추가 확인 필요: ${R.unknowns.map(u=>u.gate.key).join(", ")} 관련 사실관계가 인터뷰에서 명확하지 않아 회계사 확인이 필요합니다.`,{color:"B06000"}));
+
+    k.push(H("3. 경우의 수별 결론 매트릭스"));
+    const mimg=await imgPara(IMG.mx,580); if(mimg){k.push(mimg);k.push(cap("[그림 2] 경우의 수별 결론 매트릭스 — 위험등급 음영"));}
+    k.push(tbl(["경우의 수","위험","세무리스크","절세전략·리스크관리","근거"],s.leaves.map(lf=>[`${lf.case_label} (${lf.path})`,lf.risk_level,lf.tax_risk,lf.management,(lf.basis||[]).map(b=>String(b).split("(")[0]).join(", ")]),[18,7,30,29,16]));
+
+    k.push(H("4. 권고안"));
+    k.push(P(R.headline,{bold:true}));
+    k.push(P(`▶ 가장 가까운 경우: ${R.resultLeaf.case_label} (${R.resultLeaf.path}) — 위험등급 ‘${R.resultLeaf.risk_level}’`,{bold:true}));
+    k.push(P(`세무리스크: ${R.resultLeaf.tax_risk}`));
+    k.push(P(`절세전략·리스크관리: ${R.resultLeaf.management}`));
+
+    if((s.alternatives||[]).length){
+      k.push(H("5. 절세 대안 비교 (요지·추가세부담·장단점)"));
+      k.push(P("목표를 달성하는 대안들을 요지·추가세부담(가정)·장단점으로 비교합니다. 금액은 추론용 가상 수치입니다.",{color:"5F6368"}));
+      k.push(tbl(["대안","요지","추가 세부담(가정)","장점","단점"],s.alternatives.map(a=>[`${a.key}. ${a.label}${a.recommended?" ◀권고":""}`,a.summary,a.burden,a.pros,a.cons]),[16,28,18,19,19]));
+      const bimg=await imgPara(IMG.burden,520); if(bimg){k.push(bimg);k.push(cap("[그림 3] 대안별 추가 세부담 비교 (가정 금액, 단위: 억원)"));}
+    }
+    k.push(H("6. 사후관리 · 필요조치 · 실행계획"));
+    k.push(P("[사후관리] 거래 종결 후 지속 점검",{bold:true})); (s.aftercare||[]).forEach(x=>k.push(BU(x)));
+    k.push(P("[필요조치] 지금 즉시 해야 할 일",{bold:true})); (s.actions||[]).forEach(x=>k.push(BU(x)));
+    if((s.plan||[]).length){k.push(P("[실행계획] 실행 타임라인 (시점 최적화)",{bold:true}));
+      const timg=await imgPara(IMG.tl,560); if(timg){k.push(timg);k.push(cap("[그림 4] 실행 타임라인"));}
+      k.push(tbl(["시점","행위","세무효과·목적"],s.plan.map(p=>[p.when,p.what,p.effect]),[16,46,38]));}
+
+    if(s.journal){
+      k.push(H("7. 회계처리 분개 예시 (권고 경로)"));
+      k.push(P(s.journal.title,{bold:true})); k.push(P(s.journal.note,{color:"5F6368"}));
+      k.push(tbl(["계정과목","차변(원)","대변(원)"],s.journal.lines.map(l=>[l.account,l.debit?won(l.debit):"",l.credit?won(l.credit):""]),[40,30,30]));
+    }
+    k.push(H("8. 근거 법령"));
+    (s.citations||[]).forEach(c=>k.push(BU(c)));
+
+    k.push(H("9. 종합 유의사항"));
+    ["분기·결론은 사실관계 가정에 따른 인공지능 추론이며 개별 사안·최신 예규/판례에 따라 달라질 수 있습니다.",
+     "사실관계는 인터뷰로 수집한 사용자 입력으로 증빙 대조·검증이 필요합니다.",
+     "분개·금액은 예시·가정치이며 실제 회계처리·신고 전 담당 회계사의 검토와 서명이 필요합니다(HITL)."].forEach(t=>k.push(BU(t)));
+
+    if(s.journal){
+      k.push(new Paragraph({pageBreakBefore:true,children:[]}));
+      k.push(H("부록 A. 분개장 (가상 dummy)"));
+      k.push(tbl(["일자","적요","계정과목","차변(원)","대변(원)"],s.journal.lines.map((l,i)=>[i===0?"2026-06-12":"",i===0?s.title:"",l.account,l.debit?won(l.debit):"",l.credit?won(l.credit):""]),[14,26,28,16,16]));
+      k.push(H("부록 B. 총계정원장 (가상 dummy)"));
+      const led=ledgerFrom(s.journal);let td=0,tc=0;const rows=Object.keys(led).map(a=>{const[d,c]=led[a];td+=d;tc+=c;return[a,d?won(d):"",c?won(c):"",won(d-c)];});rows.push(["합계",won(td),won(tc),won(td-tc)]);
+      k.push(tbl(["계정과목","차변 합계","대변 합계","잔액"],rows,[34,22,22,22]));
+    }
+
+    const doc=new Document({styles:{default:{document:{run:{font:"Malgun Gothic"}}}},sections:[{children:k}]});
+    const blob=await Packer.toBlob(doc); triggerDownload(blob,fn+".docx");
+  }
+
+  // (B) 폴백 — Word가 여는 .doc(HTML). 이미지 base64 인라인.
+  async function buildDocFallback(R,fn){
+    const s=R.s;
+    const row=c=>"<tr>"+c.map(x=>`<td style="border:1px solid #999;padding:4px;font-size:10pt;">${x}</td>`).join("")+"</tr>";
+    const hrow=c=>"<tr>"+c.map(x=>`<th style="border:1px solid #999;padding:4px;background:#f1f3f4;font-size:10pt;">${x}</th>`).join("")+"</tr>";
+    const IMG=assetImg(R.key);
+    const fimg=IMG.flow||null, mimg=IMG.mx||null, bimg=IMG.burden||null, timg=IMG.tl||null;
+    const cap=t=>`<p style="text-align:center;color:#5f6368;font-size:9pt;font-style:italic;margin-top:3px;">${t}</p>`;
+    const facts=R.facts.map((f,i)=>row([String(i+1),esc(f.q),esc(f.a)])).join("");
+    const gRows=R.findings.map(f=>row([esc(f.gate.key),esc(f.gate.question),statusKo(f.status)])).join("");
+    const mRows=s.leaves.map(lf=>row([esc(lf.case_label+" ("+lf.path+")"),esc(lf.risk_level),esc(lf.tax_risk),esc(lf.management),esc((lf.basis||[]).map(b=>String(b).split("(")[0]).join(", "))])).join("");
+    const altRows=(s.alternatives||[]).map(a=>row([esc(a.key+". "+a.label+(a.recommended?" ◀권고":"")),esc(a.summary),esc(a.burden),esc(a.pros),esc(a.cons)])).join("");
+    const planRows=(s.plan||[]).map(p=>row([esc(p.when),esc(p.what),esc(p.effect)])).join("");
+    const jRows=s.journal?s.journal.lines.map(l=>row([esc(l.account),l.debit?won(l.debit):"",l.credit?won(l.credit):""])).join(""):"";
+    const cites=(s.citations||[]).map(c=>`<li>${esc(c)}</li>`).join("");
+    const after=(s.aftercare||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+    const acts=(s.actions||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+    let led="",td=0,tc=0;if(s.journal){const L=ledgerFrom(s.journal);led=Object.keys(L).map(a=>{const[d,c]=L[a];td+=d;tc+=c;return row([esc(a),d?won(d):"",c?won(c):"",won(d-c)]);}).join("")+row(["<b>합계</b>",won(td),won(tc),won(td-tc)]);}
+    const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8">
+      <style>body{font-family:'Malgun Gothic',sans-serif;font-size:10.5pt;}h1{font-size:16pt;text-align:center;}h2{font-size:12pt;color:#1a73e8;border-bottom:1px solid #ccc;margin-top:18px;}table{border-collapse:collapse;width:100%;}img{max-width:480px;}</style></head><body>
+      <h1>${esc(s.title)} — 세무 검토 패키지 보고서</h1>
+      <p style="text-align:center;color:#b06000;">작성일 ${todayStr()} · 내부 검토용 · 인공지능 추론 초안(HITL 전제)</p>
+      <h2>0. 방법론 및 유의</h2><p>챗봇 인터뷰로 수집한 사실관계를 바탕으로 거래를 판단 게이트로 분해해 경우의 수와 세무리스크·절세전략을 정리한 인공지능 추론 초안입니다. 금액·사실관계는 사용자 입력 가정치이며, 실제 회계처리·신고 전 담당 회계사의 검토·서명이 필요합니다.</p>
+      <h2>1. 수집된 사실관계 (인터뷰 전문)</h2><table>${hrow(["#","질문","답변"])}${facts}</table>
+      <h2>2. 거래 식별 및 판단 게이트 분석</h2><p><b>자동 식별 거래 유형: ${esc(s.title)}</b></p>${fimg?`<p style="text-align:center;"><img src="${fimg}" style="max-width:430px;">${cap("[그림 1] 의사결정 플로우차트 — 주황=분기·빨강=세무리스크·초록=정상 종결")}</p>`:""}<table>${hrow(["게이트","판단 질문","판정"])}${gRows}</table>
+      ${R.unknowns.length?`<p style="color:#b06000;">※ 추가 확인 필요: ${esc(R.unknowns.map(u=>u.gate.key).join(", "))}</p>`:""}
+      <h2>3. 경우의 수별 결론 매트릭스</h2>${mimg?`<p style="text-align:center;"><img src="${mimg}" style="max-width:580px;">${cap("[그림 2] 경우의 수별 결론 매트릭스")}</p>`:""}<table>${hrow(["경우의 수","위험","세무리스크","절세전략·리스크관리","근거"])}${mRows}</table>
+      <h2>4. 권고안</h2><p><b>${esc(R.headline)}</b></p><p>▶ ${esc(R.resultLeaf.case_label)} (${esc(R.resultLeaf.path)}) — 위험등급 ‘${esc(R.resultLeaf.risk_level)}’</p><p>세무리스크: ${esc(R.resultLeaf.tax_risk)}</p><p>절세전략·리스크관리: ${esc(R.resultLeaf.management)}</p>
+      ${altRows?`<h2>5. 절세 대안 비교</h2><table>${hrow(["대안","요지","추가 세부담(가정)","장점","단점"])}${altRows}</table>${bimg?`<p style="text-align:center;"><img src="${bimg}" style="max-width:520px;">${cap("[그림 3] 대안별 추가 세부담 비교 (가정, 단위: 억원)")}</p>`:""}`:""}
+      <h2>6. 사후관리 · 필요조치 · 실행계획</h2><p><b>[사후관리]</b></p><ul>${after}</ul><p><b>[필요조치]</b></p><ul>${acts}</ul>${planRows?`<p><b>[실행계획]</b></p>${timg?`<p style="text-align:center;"><img src="${timg}" style="max-width:560px;">${cap("[그림 4] 실행 타임라인")}</p>`:""}<table>${hrow(["시점","행위","세무효과·목적"])}${planRows}</table>`:""}
+      ${jRows?`<h2>7. 회계처리 분개 예시</h2><p><b>${esc(s.journal.title)}</b></p><table>${hrow(["계정과목","차변(원)","대변(원)"])}${jRows}</table>`:""}
+      <h2>8. 근거 법령</h2><ul>${cites}</ul>
+      <h2>9. 종합 유의사항</h2><ul><li>인공지능 추론 초안 — 개별 사안·최신 예규/판례에 따라 달라질 수 있습니다.</li><li>사실관계는 인터뷰 수집 입력으로 증빙 대조·검증이 필요합니다.</li><li>실제 회계처리·신고 전 담당 회계사의 검토·서명이 필요합니다(HITL).</li></ul>
+      ${led?`<h2>부록. 분개장·총계정원장 (가상 dummy)</h2><table>${hrow(["계정과목","차변 합계","대변 합계","잔액"])}${led}</table>`:""}
+      </body></html>`;
+    triggerDownload(new Blob(["﻿"+html],{type:"application/msword"}),fn+".doc");
+  }
+
+  function triggerDownload(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},900);}
+
+  // 시작
+  if(!DATA.length){bot("시나리오 데이터를 불러오지 못했습니다. (data/scenarios.js 필요)");}
+  else{ bot("안녕하세요. 세무 검토를 위해 <b>거래 사실관계</b>를 인터뷰하겠습니다.\n자유롭게 답해주세요(모르면 ‘모름/없음’도 좋습니다). 답변 내용에 따라 이어서 여쭤보며, 최소 20문항을 권장합니다. 언제든 <b>‘그만하고 분석’</b>으로 검토 패키지를 만들 수 있습니다."); refreshFacts(); nextQuestion(null); }
+})();
+</script>
+</body>
+</html>
