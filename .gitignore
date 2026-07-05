@@ -90,3 +90,12 @@ Thumbs.db
 *.tsbuildinfo
 
 .vercel
+
+# --- 개인 자료 (공개 저장소 제외 — 자소서·타사 자료·개인 보고서) ---
+타사/
+자기소개서/
+*자기소개서*
+scripts/build_coverletter_pdf.py
+scripts/build_ey_coverletter*.py
+scripts/build_kpmg_coverletter*.py
+한미반도체*.pdf
