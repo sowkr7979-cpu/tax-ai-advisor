@@ -99,3 +99,6 @@ scripts/build_coverletter_pdf.py
 scripts/build_ey_coverletter*.py
 scripts/build_kpmg_coverletter*.py
 한미반도체*.pdf
+# 면접·이직 준비 개인 자료 (공개 저장소 제외)
+md 파일/*면접*
+md 파일/Big4_Tax_*
